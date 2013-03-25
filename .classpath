@@ -43,5 +43,19 @@
 	<classpathentry kind="lib" path="tests/libs-external/lib-cobertura/log4j-1.2.9.jar"/>
 	<classpathentry kind="lib" path="tests/libs-external/cobertura.jar"/>
 	<classpathentry kind="lib" path="tests/libs-external/junit-4.8.1.jar"/>
+	<classpathentry exported="true" kind="lib" path="packagelib/PetriNets.jar"/>
+	<classpathentry kind="lib" path="packagelib/PetriNets-lib/exp4j-0.3.8.jar"/>
+	<classpathentry kind="lib" path="packagelib/Widgets.jar"/>
+	<classpathentry kind="lib" path="packagelib/TransitionSystems.jar"/>
+	<classpathentry kind="lib" path="lib/commons-math-3.1.jar"/>
+	<classpathentry kind="lib" path="lib/simple-xml-2.7.jar"/>
+	<classpathentry kind="lib" path="packagelib/PNetReplayer.jar"/>
+	<classpathentry kind="lib" path="packagelib/PNetAlignmentAnalysis.jar"/>
+	<classpathentry kind="lib" path="packagelib/PNetReplayer-lib/javailp-1.2a.jar"/>
+	<classpathentry kind="lib" path="packagelib/PNetReplayer-lib/lpsolve55j.jar"/>
+	<classpathentry kind="lib" path="packagelib/PNetReplayer-lib/trove-3.0.1.jar"/>
+	<classpathentry kind="lib" path="stdlib/EfficientStorage.jar"/>
+	<classpathentry kind="lib" path="lib/JRI.jar"/>
+	<classpathentry kind="lib" path="lib/JRIEngine.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>

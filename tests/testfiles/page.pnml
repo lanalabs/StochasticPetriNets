@@ -1,0 +1,254 @@
+<page id="pg1">
+      <graphics>
+        <position x="156" y="92" />
+        <dimension x="32" y="32" />
+      </graphics>
+      <transition id="tr4">
+        <name>
+          <text>t_start</text>
+        </name>
+        <graphics>
+          <position x="59" y="92" />
+          <dimension x="10" y="32" />
+        </graphics>
+	<toolspecific tool="StochasticPetriNets" version="0.1">
+	  <property key="priority">1</property>
+	  <property key="weight">1</property>
+      	  <property key="distributionType">IMMEDIATE</property>
+          <property key="distributionParameters"></property>
+        </toolspecific>
+      </transition>
+      <transition id="tr9">
+        <name>
+          <text>A</text>
+        </name>
+        <graphics>
+          <position x="154" y="16" />
+          <dimension x="32" y="32" />
+        </graphics>
+	<toolspecific tool="StochasticPetriNets" version="0.1">
+	  <property key="priority">0</property>
+	  <property key="weight">1</property>
+      	  <property key="distributionType">UNIFORM</property>
+          <property key="distributionParameters">2;6</property>
+        </toolspecific>
+      </transition>
+      <transition id="tr15">
+        <name>
+          <text>E</text>
+        </name>
+        <graphics>
+          <position x="250" y="92" />
+          <dimension x="32" y="32" />
+        </graphics>
+	<toolspecific tool="StochasticPetriNets" version="0.1">
+	  <property key="priority">0</property>
+	  <property key="weight">1</property>
+      	  <property key="distributionType">NORMAL</property>
+          <property key="distributionParameters">10;3</property>
+        </toolspecific>
+      </transition>
+      <transition id="tr21">
+        <name>
+          <text>C</text>
+        </name>
+        <graphics>
+          <position x="154" y="117" />
+          <dimension x="32" y="32" />
+        </graphics>
+	<toolspecific tool="StochasticPetriNets" version="0.1">
+	  <property key="priority">0</property>
+	  <property key="weight">1</property>
+      	  <property key="distributionType">NORMAL</property>
+          <property key="distributionParameters">5;1</property>
+        </toolspecific>
+      </transition>
+      <transition id="tr27">
+        <name>
+          <text>D</text>
+        </name>
+        <graphics>
+          <position x="154" y="168" />
+          <dimension x="32" y="32" />
+        </graphics>
+	<toolspecific tool="StochasticPetriNets" version="0.1">
+	  <property key="priority">0</property>
+	  <property key="weight">1</property>
+      	  <property key="distributionType">GAMMA</property>
+          <property key="distributionParameters">4;1</property>
+        </toolspecific>
+      </transition>
+      <transition id="tr5">
+        <name>
+          <text>B</text>
+        </name>
+        <graphics>
+          <position x="154" y="67" />
+          <dimension x="32" y="32" />
+        </graphics>
+	<toolspecific tool="StochasticPetriNets" version="0.1">
+	  <property key="priority">0</property>
+	  <property key="weight">1</property>
+      	  <property key="distributionType">EXPONENTIAL</property>
+          <property key="distributionParameters">5</property>
+        </toolspecific>
+      </transition>
+      <place id="start">
+        <graphics>
+          <position x="10" y="92" />
+          <dimension x="20" y="20" />
+        </graphics>
+        <toolspecific tool="Yasper" version="2.0.4491.32151">
+          <tokenCaseSensitive xmlns="http://www.yasper.org/specs/toolspec-2.0">
+            <text>true</text>
+          </tokenCaseSensitive>
+        </toolspecific>
+        <initialMarking>
+          <text>1</text>
+        </initialMarking>
+      </place>
+      <place id="pl3">
+        <graphics>
+          <position x="109" y="16" />
+          <dimension x="20" y="20" />
+        </graphics>
+        <toolspecific tool="Yasper" version="2.0.4491.32151">
+          <tokenCaseSensitive xmlns="http://www.yasper.org/specs/toolspec-2.0">
+            <text>true</text>
+          </tokenCaseSensitive>
+        </toolspecific>
+        <initialMarking>
+          <text>0</text>
+        </initialMarking>
+      </place>
+      <place id="pl13">
+        <graphics>
+          <position x="204" y="16" />
+          <dimension x="20" y="20" />
+        </graphics>
+        <toolspecific tool="Yasper" version="2.0.4491.32151">
+          <tokenCaseSensitive xmlns="http://www.yasper.org/specs/toolspec-2.0">
+            <text>true</text>
+          </tokenCaseSensitive>
+        </toolspecific>
+        <initialMarking>
+          <text>0</text>
+        </initialMarking>
+      </place>
+      <place id="end">
+        <graphics>
+          <position x="302" y="90" />
+          <dimension x="20" y="20" />
+        </graphics>
+        <toolspecific tool="Yasper" version="2.0.4491.32151">
+          <tokenCaseSensitive xmlns="http://www.yasper.org/specs/toolspec-2.0">
+            <text>true</text>
+          </tokenCaseSensitive>
+        </toolspecific>
+        <initialMarking>
+          <text>0</text>
+        </initialMarking>
+      </place>
+      <place id="pl20">
+        <graphics>
+          <position x="204" y="117" />
+          <dimension x="20" y="20" />
+        </graphics>
+        <toolspecific tool="Yasper" version="2.0.4491.32151">
+          <tokenCaseSensitive xmlns="http://www.yasper.org/specs/toolspec-2.0">
+            <text>true</text>
+          </tokenCaseSensitive>
+        </toolspecific>
+        <initialMarking>
+          <text>0</text>
+        </initialMarking>
+      </place>
+      <place id="pl26">
+        <graphics>
+          <position x="109" y="64" />
+          <dimension x="20" y="20" />
+        </graphics>
+        <toolspecific tool="Yasper" version="2.0.4491.32151">
+          <tokenCaseSensitive xmlns="http://www.yasper.org/specs/toolspec-2.0">
+            <text>true</text>
+          </tokenCaseSensitive>
+        </toolspecific>
+        <initialMarking>
+          <text>0</text>
+        </initialMarking>
+      </place>
+      <place id="pl11">
+        <graphics>
+          <position x="109" y="169" />
+          <dimension x="20" y="20" />
+        </graphics>
+        <toolspecific tool="Yasper" version="2.0.4491.32151">
+          <tokenCaseSensitive xmlns="http://www.yasper.org/specs/toolspec-2.0">
+            <text>true</text>
+          </tokenCaseSensitive>
+        </toolspecific>
+        <initialMarking>
+          <text>0</text>
+        </initialMarking>
+      </place>
+      <place id="pl15">
+        <graphics>
+          <position x="204" y="67" />
+          <dimension x="20" y="20" />
+        </graphics>
+        <toolspecific tool="Yasper" version="2.0.4491.32151">
+          <tokenCaseSensitive xmlns="http://www.yasper.org/specs/toolspec-2.0">
+            <text>true</text>
+          </tokenCaseSensitive>
+        </toolspecific>
+        <initialMarking>
+          <text>0</text>
+        </initialMarking>
+      </place>
+      <place id="pl22">
+        <graphics>
+          <position x="204" y="169" />
+          <dimension x="20" y="20" />
+        </graphics>
+        <toolspecific tool="Yasper" version="2.0.4491.32151">
+          <tokenCaseSensitive xmlns="http://www.yasper.org/specs/toolspec-2.0">
+            <text>true</text>
+          </tokenCaseSensitive>
+        </toolspecific>
+        <initialMarking>
+          <text>0</text>
+        </initialMarking>
+      </place>
+      <place id="pl28">
+        <graphics>
+          <position x="109" y="118" />
+          <dimension x="20" y="20" />
+        </graphics>
+        <toolspecific tool="Yasper" version="2.0.4491.32151">
+          <tokenCaseSensitive xmlns="http://www.yasper.org/specs/toolspec-2.0">
+            <text>true</text>
+          </tokenCaseSensitive>
+        </toolspecific>
+        <initialMarking>
+          <text>0</text>
+        </initialMarking>
+      </place>
+      <arc id="a1" source="start" target="tr4" />
+      <arc id="a2" source="tr4" target="pl3" />
+      <arc id="a3" source="pl3" target="tr9" />
+      <arc id="a4" source="pl13" target="tr15" />
+      <arc id="a5" source="tr15" target="end" />
+      <arc id="a6" source="tr9" target="pl13" />
+      <arc id="a7" source="tr21" target="pl20" />
+      <arc id="a8" source="pl26" target="tr5" />
+      <arc id="a9" source="tr4" target="pl11" />
+      <arc id="a10" source="pl11" target="tr27" />
+      <arc id="a11" source="tr5" target="pl15" />
+      <arc id="a12" source="tr4" target="pl26" />
+      <arc id="a13" source="tr27" target="pl22" />
+      <arc id="a14" source="pl22" target="tr15" />
+      <arc id="a15" source="pl15" target="tr15" />
+      <arc id="a16" source="tr4" target="pl28" />
+      <arc id="a17" source="pl28" target="tr21" />
+      <arc id="a18" source="pl20" target="tr15" />
+    </page>

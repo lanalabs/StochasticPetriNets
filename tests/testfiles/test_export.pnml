@@ -1,0 +1,246 @@
+<pnml xmlns="http://www.pnml.org/version-2009/grammar/pnml">
+   <net type="http://www.pnml.org/version-2009/grammar/ptnet" id="dc1 imported from (parallel2.pnml)">
+      <page id="p1">
+         <transition id="tr4">
+            <graphics>
+               <position x="49.0" y="60.0"/>
+               <dimension x="10.0" y="32.0"/>
+            </graphics>
+            <toolspecific tool="StochasticPetriNet" version="0.1">
+               <property key="distributionType">IMMEDIATE</property>
+               <property key="weight">1.0</property>
+               <property key="distributionParameters"></property>
+               <property key="priority">1</property>
+            </toolspecific>
+            <name>
+               <text>t_start</text>
+               <graphics/>
+            </name>
+         </transition>
+         <transition id="tr9">
+            <graphics>
+               <position x="122.0" y="-16.0"/>
+               <dimension x="32.0" y="32.0"/>
+            </graphics>
+            <toolspecific tool="StochasticPetriNet" version="0.1">
+               <property key="distributionType">UNIFORM</property>
+               <property key="weight">1.0</property>
+               <property key="distributionParameters">2.0;6.0</property>
+               <property key="priority">0</property>
+            </toolspecific>
+            <name>
+               <text>A</text>
+               <graphics/>
+            </name>
+         </transition>
+         <transition id="tr15">
+            <graphics>
+               <position x="218.0" y="60.0"/>
+               <dimension x="32.0" y="32.0"/>
+            </graphics>
+            <toolspecific tool="StochasticPetriNet" version="0.1">
+               <property key="distributionType">NORMAL</property>
+               <property key="weight">1.0</property>
+               <property key="distributionParameters">10.0;3.0</property>
+               <property key="priority">0</property>
+            </toolspecific>
+            <name>
+               <text>E</text>
+               <graphics/>
+            </name>
+         </transition>
+         <transition id="tr21">
+            <graphics>
+               <position x="122.0" y="85.0"/>
+               <dimension x="32.0" y="32.0"/>
+            </graphics>
+            <toolspecific tool="StochasticPetriNet" version="0.1">
+               <property key="distributionType">NORMAL</property>
+               <property key="weight">1.0</property>
+               <property key="distributionParameters">5.0;1.0</property>
+               <property key="priority">0</property>
+            </toolspecific>
+            <name>
+               <text>C</text>
+               <graphics/>
+            </name>
+         </transition>
+         <transition id="tr27">
+            <graphics>
+               <position x="122.0" y="136.0"/>
+               <dimension x="32.0" y="32.0"/>
+            </graphics>
+            <toolspecific tool="StochasticPetriNet" version="0.1">
+               <property key="distributionType">GAMMA</property>
+               <property key="weight">1.0</property>
+               <property key="distributionParameters">4.0;1.0</property>
+               <property key="priority">0</property>
+            </toolspecific>
+            <name>
+               <text>D</text>
+               <graphics/>
+            </name>
+         </transition>
+         <transition id="tr5">
+            <graphics>
+               <position x="122.0" y="35.0"/>
+               <dimension x="32.0" y="32.0"/>
+            </graphics>
+            <toolspecific tool="StochasticPetriNet" version="0.1">
+               <property key="distributionType">EXPONENTIAL</property>
+               <property key="weight">1.0</property>
+               <property key="distributionParameters">5.0</property>
+               <property key="priority">0</property>
+            </toolspecific>
+            <name>
+               <text>B</text>
+               <graphics/>
+            </name>
+         </transition>
+         <place id="start">
+            <graphics>
+               <position x="-10.0" y="72.0"/>
+               <dimension x="20.0" y="20.0"/>
+            </graphics>
+            <initialMarking>
+               <text>1</text>
+            </initialMarking>
+         </place>
+         <place id="pl3">
+            <graphics>
+               <position x="89.0" y="-4.0"/>
+               <dimension x="20.0" y="20.0"/>
+            </graphics>
+            <initialMarking>
+               <text>0</text>
+            </initialMarking>
+         </place>
+         <place id="pl13">
+            <graphics>
+               <position x="184.0" y="-4.0"/>
+               <dimension x="20.0" y="20.0"/>
+            </graphics>
+            <initialMarking>
+               <text>0</text>
+            </initialMarking>
+         </place>
+         <place id="end">
+            <graphics>
+               <position x="282.0" y="70.0"/>
+               <dimension x="20.0" y="20.0"/>
+            </graphics>
+            <initialMarking>
+               <text>0</text>
+            </initialMarking>
+         </place>
+         <place id="pl20">
+            <graphics>
+               <position x="184.0" y="97.0"/>
+               <dimension x="20.0" y="20.0"/>
+            </graphics>
+            <initialMarking>
+               <text>0</text>
+            </initialMarking>
+         </place>
+         <place id="pl26">
+            <graphics>
+               <position x="89.0" y="44.0"/>
+               <dimension x="20.0" y="20.0"/>
+            </graphics>
+            <initialMarking>
+               <text>0</text>
+            </initialMarking>
+         </place>
+         <place id="pl11">
+            <graphics>
+               <position x="89.0" y="149.0"/>
+               <dimension x="20.0" y="20.0"/>
+            </graphics>
+            <initialMarking>
+               <text>0</text>
+            </initialMarking>
+         </place>
+         <place id="pl15">
+            <graphics>
+               <position x="184.0" y="47.0"/>
+               <dimension x="20.0" y="20.0"/>
+            </graphics>
+            <initialMarking>
+               <text>0</text>
+            </initialMarking>
+         </place>
+         <place id="pl22">
+            <graphics>
+               <position x="184.0" y="149.0"/>
+               <dimension x="20.0" y="20.0"/>
+            </graphics>
+            <initialMarking>
+               <text>0</text>
+            </initialMarking>
+         </place>
+         <place id="pl28">
+            <graphics>
+               <position x="89.0" y="98.0"/>
+               <dimension x="20.0" y="20.0"/>
+            </graphics>
+            <initialMarking>
+               <text>0</text>
+            </initialMarking>
+         </place>
+         <arc id="a0" source="node 7db3df8f-2cb5-450f-9cc9-b55bfcee716d" target="node 7785be5a-e4b8-4416-a47e-0b59fae1e4e0">
+            <inscription/>
+         </arc>
+         <arc id="a1" source="node 16592ffd-908c-416e-82d7-164159e855a6" target="node f70ee5be-c189-4fb6-bfdb-98280167b93a">
+            <inscription/>
+         </arc>
+         <arc id="a2" source="node 5eaf5163-6de1-45a5-b596-97fa4572908d" target="node e6ec6ce0-7619-4613-803b-4aca07dbeeef">
+            <inscription/>
+         </arc>
+         <arc id="a3" source="node 058dae30-865b-482e-a5a7-0d5a0dfb4f4b" target="node 486f0121-c15d-41fd-8c51-82d4d7fca5ea">
+            <inscription/>
+         </arc>
+         <arc id="a4" source="node 93f4af48-c23d-4dca-ab76-94fc3b703853" target="node 486f0121-c15d-41fd-8c51-82d4d7fca5ea">
+            <inscription/>
+         </arc>
+         <arc id="a5" source="node 187c51f7-bd18-4f40-b5fe-8a1c1cc3e7d7" target="node c0fa2952-41ea-4a36-8744-c4fb55d12866">
+            <inscription/>
+         </arc>
+         <arc id="a6" source="node 8442aec7-211b-40a3-be32-76ac585016ba" target="node 16592ffd-908c-416e-82d7-164159e855a6">
+            <inscription/>
+         </arc>
+         <arc id="a7" source="node 9e1e3cf4-32d8-4704-97a8-9e941b175d49" target="node 486f0121-c15d-41fd-8c51-82d4d7fca5ea">
+            <inscription/>
+         </arc>
+         <arc id="a8" source="node f70ee5be-c189-4fb6-bfdb-98280167b93a" target="node 486f0121-c15d-41fd-8c51-82d4d7fca5ea">
+            <inscription/>
+         </arc>
+         <arc id="a9" source="node b230760a-04eb-4036-95b9-0ef79c1c700f" target="node 7db3df8f-2cb5-450f-9cc9-b55bfcee716d">
+            <inscription/>
+         </arc>
+         <arc id="a10" source="node 1bbd8245-95db-426c-94e4-4b3c9144d8e4" target="node b230760a-04eb-4036-95b9-0ef79c1c700f">
+            <inscription/>
+         </arc>
+         <arc id="a11" source="node 486f0121-c15d-41fd-8c51-82d4d7fca5ea" target="node 40dc8e73-6419-44e2-a06c-9cca1b43eca9">
+            <inscription/>
+         </arc>
+         <arc id="a12" source="node c0fa2952-41ea-4a36-8744-c4fb55d12866" target="node 9e1e3cf4-32d8-4704-97a8-9e941b175d49">
+            <inscription/>
+         </arc>
+         <arc id="a13" source="node 7785be5a-e4b8-4416-a47e-0b59fae1e4e0" target="node 93f4af48-c23d-4dca-ab76-94fc3b703853">
+            <inscription/>
+         </arc>
+         <arc id="a14" source="node b230760a-04eb-4036-95b9-0ef79c1c700f" target="node 5eaf5163-6de1-45a5-b596-97fa4572908d">
+            <inscription/>
+         </arc>
+         <arc id="a15" source="node b230760a-04eb-4036-95b9-0ef79c1c700f" target="node 8442aec7-211b-40a3-be32-76ac585016ba">
+            <inscription/>
+         </arc>
+         <arc id="a16" source="node e6ec6ce0-7619-4613-803b-4aca07dbeeef" target="node 058dae30-865b-482e-a5a7-0d5a0dfb4f4b">
+            <inscription/>
+         </arc>
+         <arc id="a17" source="node b230760a-04eb-4036-95b9-0ef79c1c700f" target="node 187c51f7-bd18-4f40-b5fe-8a1c1cc3e7d7">
+            <inscription/>
+         </arc>
+      </page>
+   </net>
+</pnml>
