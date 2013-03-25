@@ -37,7 +37,7 @@ public class TimePredictorPlugin {
 	public Double predict(final UIPluginContext context, StochasticNet model, XTrace observedEvents, Date currentTime){
 		Marking initialMarking = StochasticNetUtils.getInitialMarking(context, model);
 		TimePredictor predictor = new TimePredictor();
-		JList<String> list = new JList<String>(StochasticNetUtils.UNIT_NAMES);
+		JList list = new JList(StochasticNetUtils.UNIT_NAMES);
 		JOptionPane.showMessageDialog(null, list, "Select time unit specified in model:", JOptionPane.PLAIN_MESSAGE);
 		if (list.getSelectedIndex()>= 0){
 			return predictor.predict(model, observedEvents, currentTime, initialMarking, (StochasticNetUtils.UNIT_CONVERSION_FACTORS[list.getSelectedIndex()]), false);	
