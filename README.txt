@@ -16,4 +16,16 @@ Usually, these steps are necessary:
 - Select the time units that shall be captured by the paremeters (e.g., mean of exponential distribution)
 - View the resulting StochasticNet in the "StochasticNet Visualizer" and see the distributions.
 
-- Save the enriched Model as "(stochastic) Petri net" in the .pnml format for later use. 
+- Save the enriched Model as "(stochastic) Petri net" in the .pnml format for later use.
+
+#####
+
+Optional: (for log-spline regression on activity durations)
+- Install R
+- add R_HOME to the environment variables to point to the R binaries (e.g. export R_HOME=/usr/lib64/R)
+- make sure to install the "rJava" package in R 
+   - from within R run: 
+               install.packages("rJava")
+- and copy the jri native binaries from the installation to the lib folder
+- load a Petri net and a corresponding log with time stamp data and run the plug-in "Enrich Petri Net model with stochastic performance data"
+- select the LOG_SPLINE distribution type.

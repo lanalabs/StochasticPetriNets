@@ -6,6 +6,7 @@ import java.util.Arrays;
 import javax.swing.JCheckBox;
 import javax.swing.JComboBox;
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 
 import org.deckfour.uitopia.api.event.TaskListener.InteractionResult;
 import org.processmining.contexts.uitopia.UIPluginContext;
@@ -87,7 +88,17 @@ public class PredictionExperimentConfig {
 			
 			fileNameField = addTextField("File name to store experiment results:",String.valueOf(config.getResultFileName()));
 			learnSPNFromDataBox = addCheckBox("Learn stochastic Net properties from data?", config.getLearnSPNFromData());
-			learnedDistributionTypeBox = addComboBox("Learned distribution type for SPN:", new DistributionType[]{DistributionType.NORMAL,DistributionType.EXPONENTIAL,DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM,DistributionType.LOG_SPLINE});
+			
+			DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL,DistributionType.EXPONENTIAL,DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM};
+			if (StochasticNetUtils.splinesSupported()){
+				supportedTypes = Arrays.copyOf(supportedTypes, supportedTypes.length+1);
+				supportedTypes[supportedTypes.length-2] = DistributionType.LOG_SPLINE;
+			} else {
+				add(new JLabel("To enable spline smoothers, make sure you have a running R installation \n" +
+						"and the native jri-binary is accessible in your java.library.path!"));
+			}
+			
+			learnedDistributionTypeBox = addComboBox("Learned distribution type for SPN:", supportedTypes);
 			learnedDistributionTypeBox.setSelectedIndex(0);
 			
 			workerCountBox = this.addComboBox("Parallel Workers:", WORKER_COUNTS);

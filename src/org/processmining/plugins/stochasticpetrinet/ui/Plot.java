@@ -90,8 +90,21 @@ public class Plot {
 					maxX = Math.max(maxY, dist.getSupportUpperBound());
 					minX = Math.min(minX, dist.getSupportLowerBound());
 				} else {
-					maxX = Math.max(maxX, dist.inverseCumulativeProbability(0.99999));
-					minX = Math.min(minX, dist.inverseCumulativeProbability(0.00001));
+					try {
+						if (Double.isInfinite(dist.getSupportLowerBound())){
+							minX = Math.min(minX, dist.inverseCumulativeProbability(0.00001));	
+						} else {
+							minX = Math.min(minX, dist.getSupportLowerBound());
+						}
+						if (Double.isInfinite(dist.getSupportUpperBound())){
+							maxX = Math.max(maxX, dist.inverseCumulativeProbability(0.99999)); 
+						} else {
+							maxX = Math.max(maxX, dist.getSupportUpperBound());
+						}
+					} catch (Exception e){
+						maxX = Math.max(maxX, 50);
+						minX = Math.min(minX, 0);
+					}
 				}
 			}
 		}

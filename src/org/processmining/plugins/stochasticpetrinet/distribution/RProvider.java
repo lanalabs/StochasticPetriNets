@@ -24,6 +24,10 @@ public class RProvider {
 		}
 		return engine;
 	}
+
+	public static boolean getEngineAvailable() {
+		return Rengine.jriLoaded;
+	}
 }
 
 class TextConsole implements RMainLoopCallbacks

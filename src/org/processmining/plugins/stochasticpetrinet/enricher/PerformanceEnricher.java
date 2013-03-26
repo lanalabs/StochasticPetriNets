@@ -8,6 +8,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 
 import javax.swing.JComboBox;
+import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
@@ -42,7 +43,15 @@ public class PerformanceEnricher {
 	public Object[] transform(UIPluginContext context, Manifest manifest){
 		// ask for preferences:
 		Pair<DistributionType,Double> mineConfig = getTypeOfDistributionForNet(context);
-		return transform(context, manifest, mineConfig);
+		try {
+			if (mineConfig != null){
+				return transform(context, manifest, mineConfig);
+			}
+		} catch (Exception e){
+			context.log(e.getMessage());
+			context.getFutureResult(0).cancel(true);
+		}
+		return null;
 	}
 	
 	public Object[] transform(UIPluginContext context, Manifest manifest, Pair<DistributionType,Double> mineConfig) {
@@ -148,10 +157,19 @@ public class PerformanceEnricher {
 
 	public static Pair<DistributionType, Double> getTypeOfDistributionForNet(UIPluginContext context) {
 		ProMPropertiesPanel panel = new ProMPropertiesPanel("Stochastic Net properties:");
-		JComboBox distTypeSelection = panel.addComboBox("Type of distributions", new DistributionType[]{DistributionType.NORMAL, DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM,DistributionType.LOG_SPLINE});
+		DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL, DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM};
+		if (StochasticNetUtils.splinesSupported()){
+			supportedTypes = Arrays.copyOf(supportedTypes, supportedTypes.length+1);
+			supportedTypes[supportedTypes.length-1] = DistributionType.LOG_SPLINE;
+		} else {
+			panel.add(new JLabel("To enable spline smoothers, make sure you have a running R installation \n" +
+					"and the native jri-binary is accessible in your java.library.path!"));
+		}
+		JComboBox distTypeSelection = panel.addComboBox("Type of distributions", supportedTypes);
 		JComboBox timeUnitSelection = panel.addComboBox("Time unit in model", StochasticNetUtils.UNIT_NAMES);
 		InteractionResult result = context.showConfiguration("Select type of distribution:", panel);
 		if (result.equals(InteractionResult.CANCEL)){
+			context.getFutureResult(0).cancel(true);
 			return null;
 		} else {
 			DistributionType distType = (DistributionType) distTypeSelection.getSelectedItem();

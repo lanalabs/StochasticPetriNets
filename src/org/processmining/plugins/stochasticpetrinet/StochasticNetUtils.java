@@ -59,6 +59,7 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.TransClasses;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
+import org.processmining.plugins.stochasticpetrinet.distribution.RProvider;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.TruncatedDistributionFactory;
 
@@ -461,6 +462,21 @@ public class StochasticNetUtils {
 			}
 		}
 		return false;
+	}
+	
+	/**
+	 * Checks, whether the R-engine is accessible over JRI
+	 * @see {@link http://stats.math.uni-augsburg.de/JRI/}
+	 * @return
+	 */
+	public static boolean splinesSupported(){
+		boolean jriAvaialble = false;
+		try{
+			jriAvaialble = RProvider.getEngineAvailable();
+		} catch (UnsatisfiedLinkError error){
+			System.out.println(error.getMessage());
+		}
+		return jriAvaialble;
 	}
 	
 	/**

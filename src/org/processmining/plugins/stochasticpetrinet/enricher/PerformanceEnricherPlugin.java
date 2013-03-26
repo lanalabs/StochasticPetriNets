@@ -22,10 +22,12 @@ import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
 import org.processmining.framework.plugin.annotations.Plugin;
 import org.processmining.framework.util.Pair;
+import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 
 public class PerformanceEnricherPlugin {
 	
@@ -45,6 +47,19 @@ public class PerformanceEnricherPlugin {
 	public static Object[] transform(UIPluginContext context, Manifest manifest, Pair<DistributionType,Double> mineConfig) {
 		PerformanceEnricher collector = new PerformanceEnricher();
 		return collector.transform(context, manifest, mineConfig);
+	}
+	
+	@Plugin(name = "Enrich Petri Net model with stochastic performance data with default mapping", 
+			parameterLabels = { "Petrinet", "Log" }, 
+			returnLabels = { "Stochastic Petri Net", "Marking" }, 
+			returnTypes = { StochasticNet.class, Marking.class }, 
+			userAccessible = true,
+			help = "Creates a new copy of the net enriched with performance data.")
+	@UITopiaVariant(affiliation = "Hasso Plattner Institute", author = "A. Rogge-Solti", email = "andreas.rogge-solti@hpi.uni-potsdam.de", uiLabel = UITopiaVariant.USEPLUGIN)
+	public static Object[] transform(UIPluginContext context, PetrinetGraph net, XLog log) {
+		PerformanceEnricher collector = new PerformanceEnricher();
+		Manifest manifest = (Manifest) StochasticNetUtils.replayLog(context, net, log, true);
+		return collector.transform(context, manifest);
 	}
 	
 	@Plugin(name = "Prepare Durations for Correlation Testing", 

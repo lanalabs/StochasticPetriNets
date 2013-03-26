@@ -43,11 +43,11 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 	}
 
 	public double getNumericalMean() {
-		throw new UnsupportedOperationException("numerical mean not supported!");
+		return Double.NaN;
 	}
 
 	public double getNumericalVariance() {
-		throw new UnsupportedOperationException("numerical variance not supported!");
+		return Double.NaN;
 	}
 
 	public double getSupportLowerBound() {
