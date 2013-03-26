@@ -59,8 +59,8 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.TransClasses;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
-import org.processmining.plugins.stochasticpetrinet.distribution.ConstrainedWrapper;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
+import org.processmining.plugins.stochasticpetrinet.distribution.TruncatedDistributionFactory;
 
 public class StochasticNetUtils {
 	
@@ -198,7 +198,7 @@ public class StochasticNetUtils {
 		} else if (distribution instanceof SimpleHistogramDistribution){
 			sample = ((SimpleHistogramDistribution)distribution).sample(positiveConstraint);
 		} else {
-			ConstrainedWrapper wrapper = new ConstrainedWrapper(distribution, positiveConstraint);
+			RealDistribution wrapper = TruncatedDistributionFactory.getConstrainedWrapper(distribution,positiveConstraint);
 			sample = wrapper.sample();
 		} 
 		return sample;

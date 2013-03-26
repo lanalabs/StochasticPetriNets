@@ -5,28 +5,37 @@ import java.util.Collections;
 import java.util.List;
 
 import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.analysis.integration.IterativeLegendreGaussIntegrator;
 import org.apache.commons.math3.analysis.integration.SimpsonIntegrator;
 import org.apache.commons.math3.analysis.integration.UnivariateIntegrator;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.exception.NumberIsTooLargeException;
 import org.apache.commons.math3.exception.OutOfRangeException;
 
-public class ConstrainedWrapper implements RealDistribution{
+public class TruncatedWrapper implements RealDistribution{
 
-	private RealDistribution wrappedDist;
-	private double constraint;
-		
-	private SliceSampler sampler;
-	private double scale;
+	/** The original distribution  */
+	protected RealDistribution wrappedDist;
+	/** the constraint, such that the distribution is truncated below this constraint */
+	protected double constraint;
 	
-	public ConstrainedWrapper(RealDistribution dist){
+	/** sampler to sample from constrained distribution directly*/
+	protected SliceSampler sampler;
+	/** scaling function, such that the truncated distribution will integrate to 1 */
+	protected double scale;
+	
+	protected double numericalMean = Double.NaN;
+	
+	TruncatedWrapper(RealDistribution dist){
 		this(dist,0);
 	}
 	
-	public ConstrainedWrapper(RealDistribution dist, double constraint){
+	TruncatedWrapper(RealDistribution dist, double constraint){
 		this.wrappedDist = dist;
 		this.constraint = constraint;
+		// rescale the density, such that it integrates to 1:
 		this.scale = 1.0/(1.0-wrappedDist.cumulativeProbability(constraint));
+		// 
 		sampler = new SliceSampler();
 	}
 	
@@ -60,13 +69,31 @@ public class ConstrainedWrapper implements RealDistribution{
 		};
 		return function;
 	}
+	
+	public UnivariateFunction getWeightedFunction(){
+		UnivariateFunction function = new UnivariateFunction() {
+			public double value(double x) {
+				if (x < constraint){
+					return 0;
+				} else {
+					return x*(density(x));
+				}
+			}
+		};
+		return function;
+	}
 
 	public double inverseCumulativeProbability(double p) throws OutOfRangeException {
 		throw new UnsupportedOperationException("inverseCumulativeProbability not implemented!");
 	}
 
 	public double getNumericalMean() {
-		throw new UnsupportedOperationException("numericalMean not implemented!");
+		if (Double.isNaN(numericalMean)){
+			UnivariateIntegrator integrator = new IterativeLegendreGaussIntegrator(16,0.01,0.000001);
+			double upperBound = wrappedDist.inverseCumulativeProbability(.99)+constraint+10;
+			numericalMean = integrator.integrate(integrator.getMaximalIterationCount(), getWeightedFunction(), constraint, upperBound);
+		}
+		return numericalMean;
 	}
 
 	public double getNumericalVariance() {
@@ -97,31 +124,34 @@ public class ConstrainedWrapper implements RealDistribution{
 		sampler.setSeed(seed);
 	}
 
+	/**
+	 * Slice sampling
+	 * Note that due to floating point arithmetic, too large constraints, i.e. those where the 
+	 * density of the truncated distribution is 0, will not work! 
+	 * @throws IllegalArgumentException when constraint is too high, i.e., density is (floating point rounded) zero.
+	 */
 	public double sample() {
-		double xStart = constraint;
-		if (wrappedDist.density(constraint) == 0){
-			try{
-				xStart = wrappedDist.getNumericalMean();
-				if(Double.isNaN(xStart)){
-					xStart = findPositiveX(getFunction());
-				}
-			} catch (UnsupportedOperationException ex){
-				xStart = findPositiveX(getFunction());
-			}
+		double xStart = findPositiveX(getFunction());
+		if (wrappedDist.density(xStart) == 0){
+			throw new IllegalArgumentException("did not find positive values for the wrapped distribution ("+wrappedDist.toString()+") constrained above "+constraint);
 		}
 		return sampler.sample(getFunction(), xStart, wrappedDist.density(xStart)*0.5);
 	}
 
 	private double findPositiveX(UnivariateFunction function) {
 		double current = 1;
-		while (function.value(current)==0){
+		while (function.value(current+constraint)==0){
 			current *= -1.5;
 		}
-		return current;
+		return current+constraint;
 	}
 
 	public double[] sample(int sampleSize) {
-		double[] values = sampler.sample(getFunction(), constraint, wrappedDist.density(constraint)*0.5,sampleSize);
+		double xStart = findPositiveX(getFunction());
+		if (wrappedDist.density(xStart) == 0){
+			throw new IllegalArgumentException("did not find positive values for the wrapped distribution ("+wrappedDist.toString()+") constrained above "+constraint);
+		}
+		double[] values = sampler.sample(getFunction(), xStart, wrappedDist.density(xStart)*0.5,sampleSize);
 		// shuffle and return:
 		List<Double> valuesList = new ArrayList<Double>();
 		for (double val : values){
@@ -133,5 +163,4 @@ public class ConstrainedWrapper implements RealDistribution{
 		}
 		return values;
 	}
-
 }
