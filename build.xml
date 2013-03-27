@@ -126,14 +126,17 @@
 							os="all" 
 							url="http://www.promtools.org/prom6/packages/${project}/${project}-${version}-${os}.zip"
 							desc="Stochastic Petri Nets"
-							org="Eindhoven University of Technology" 
+							org="Hasso Plattner Institute, University of Potsdam, Germany" 
 							license="LGPL" 
-							author="Andreas Rogge-Solti)"
+							author="Andreas Rogge-Solti"
 							auto="false"
 							hasPlugins="true"
-							logo="http://www.promtools.org/prom6/packages/prom_subtitle_hat_300.png"
-						>
+							logo="http://bpt.hpi.uni-potsdam.de/pub/Main/AndreasRoggeSolti/logo.png">
 							<dependency name="PetriNets"/>
+							<dependency name="PNetAlignmentAnalysis"/>
+							<dependency name="PNetReplayer"/>
+							<dependency name="TransitionSystems"/>
+							<dependency name="Widgets"/>
 						</package>
 					</packages>
 				</echoxml>

@@ -2,10 +2,24 @@ package org.processmining.models.graphbased.directed.petrinet;
 
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 
+/**
+ * "stochastic Petri net" = Petri net with annotated stochastic information.
+ * Orientation after GSPN formalism with immediate transitions and timed transitions.
+ * 
+ * Transitions have <b>priority</b> (only transitions with highest priority can fire when enabled).
+ * 
+ * Transitions have a <b>weight</b>, if multiple immediate transitions are enabled concurrently, a
+ * probabilistic choice is made based on their weights, to decide which one can fire first.
+ * 
+ * Timed transitions can have arbitrary distributions. See supported {@link DistributionType}s.
+ *  
+ * @author Andreas Rogge-Solti
+ *
+ */
 public interface StochasticNet extends ResetNet, Petrinet{
 
 	/**  
-	 * Supported parametric distributions
+	 * Supported parametric and non-parametric distributions
 	 */
 	public enum DistributionType{
 		// parametric continuous distributions
