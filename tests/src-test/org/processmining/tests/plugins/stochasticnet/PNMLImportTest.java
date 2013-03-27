@@ -5,6 +5,8 @@ import java.io.File;
 import junit.framework.Assert;
 
 import org.junit.Test;
+import org.processmining.plugins.pnml.simple.PNMLArc;
+import org.processmining.plugins.pnml.simple.PNMLFinalMarkings;
 import org.processmining.plugins.pnml.simple.PNMLMarking;
 import org.processmining.plugins.pnml.simple.PNMLModule;
 import org.processmining.plugins.pnml.simple.PNMLNet;
@@ -51,6 +53,22 @@ public class PNMLImportTest {
 		String pageId = pnml.getId();
 		Assert.assertEquals("pg1", pageId);
 	}
+	
+	@Test
+	public void testImportResetNet() throws Exception{
+		Serializer serializer = new Persister();
+		File source = new File("tests/testfiles/ex1compl_small.pnml");
+
+		PNMLRoot pnml = serializer.read(PNMLRoot.class, source);
+		String netId = pnml.getNet().get(0).getId();
+		Assert.assertEquals("net1", netId);
+		PNMLPage page = pnml.getNet().get(0).getPage().get(0);
+		PNMLTransition transition = (PNMLTransition) page.getList().get(12);
+		Assert.assertEquals("#FFFFFF", transition.getGraphics().getFill().getColor());
+		PNMLArc arc = (PNMLArc) page.getList().get(18);
+		Assert.assertEquals("normal",arc.getArcType().getText());
+	}
+	
 	@Test 
 	public void testImportNet() throws Exception{
 		Serializer serializer = new Persister();
@@ -120,6 +138,18 @@ public class PNMLImportTest {
 		Serializer serializer = new Persister();
 		PNMLPlace pnmlTransition = serializer.read(PNMLPlace.class, place);
 		Assert.assertEquals("pl28",pnmlTransition.getId());
-		Assert.assertEquals(new Integer(0), pnmlTransition.getInitialMarking());
+		Assert.assertEquals("0", pnmlTransition.getInitialMarking().getText());
+	}
+	
+	@Test
+	public void testSignavioImport() throws Exception {
+		Serializer serializer = new Persister();
+		File source = new File("tests/testfiles/xor_and_signavio.pnml");
+
+		PNMLRoot pnml = serializer.read(PNMLRoot.class, source);
+		String netId = pnml.getNet().get(0).getId();
+		Assert.assertEquals("petrinet", netId);
+		PNMLFinalMarkings finalMarkings = pnml.getFinalMarkings();
+		Assert.assertEquals("sid-76C19AEE-579C-48E4-8579-E94EAD5EAF52",finalMarkings.getMarkings().get(0).getPlaces().get(0).getIdRef());
 	}
 }

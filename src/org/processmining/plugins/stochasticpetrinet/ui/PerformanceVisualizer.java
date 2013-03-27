@@ -63,13 +63,17 @@ public class PerformanceVisualizer {
 			map.putViewSpecific(p, AttributeMap.SHOWLABEL, !label.equals(""));
 		}
 		for (Transition t : sNet.getTransitions()){
-			TimedTransition tt = (TimedTransition)t;
-			map.putViewSpecific(t, AttributeMap.LABEL, t.getLabel()+" ("+tt.getWeight()+")");
-			map.putViewSpecific(t, AttributeMap.TOOLTIP, "<html>"+t.getLabel()+"\n<br>" +
-					"priority: "+tt.getPriority()+"\n<br>" +
-					"weight: "+tt.getWeight()+"\n<br>" +
-					"type: "+tt.getDistributionType().toString()+"\n<br>" +
-					"parameters: "+Arrays.toString(tt.getDistributionParameters())+"</html>");
+			if (t instanceof TimedTransition){
+				TimedTransition tt = (TimedTransition)t;
+				map.putViewSpecific(t, AttributeMap.LABEL, t.getLabel()+" ("+tt.getWeight()+")");
+				map.putViewSpecific(t, AttributeMap.TOOLTIP, "<html>"+t.getLabel()+"\n<br>" +
+						"priority: "+tt.getPriority()+"\n<br>" +
+						"weight: "+tt.getWeight()+"\n<br>" +
+						"type: "+tt.getDistributionType().toString()+"\n<br>" +
+						"parameters: "+Arrays.toString(tt.getDistributionParameters())+"</html>");
+			} else {
+				map.putViewSpecific(t, AttributeMap.TOOLTIP, t.getLabel());
+			}
 		}
 		
 		graphPanel = ProMJGraphVisualizer.instance().visualizeGraph(context, sNet, map);
@@ -77,7 +81,7 @@ public class PerformanceVisualizer {
 			
 			public void valueChanged(GraphSelectionEvent e) {
 				for (Object selectedCell : e.getCells()) {
-					if (selectedCell instanceof ProMGraphCell) {
+					if (e.isAddedCell(selectedCell) && selectedCell instanceof ProMGraphCell) {
 						DirectedGraphNode node = ((ProMGraphCell) selectedCell).getNode();
 						if (node instanceof TimedTransition){
 							TimedTransition transition = (TimedTransition)node;
@@ -87,6 +91,8 @@ public class PerformanceVisualizer {
 							plot.add(transition.getDistribution());
 							plots.add(plot);
 							plotForTransition.setPlots(plots);
+						} else {
+							plotForTransition.displayMessage("no timing information available for: "+node.getLabel());
 						}
 					}
 				}

@@ -28,6 +28,7 @@ import org.deckfour.xes.info.impl.XLogInfoImpl;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
+import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.models.connections.petrinets.behavioral.FinalMarkingConnection;
@@ -341,12 +342,12 @@ public class StochasticNetUtils {
 	 * @param getManifest
 	 * @return
 	 */
-	public static Object replayLog(PluginContext context, PetrinetGraph net, XLog log, boolean getManifest) {
+	public static Object replayLog(UIPluginContext context, PetrinetGraph net, XLog log, boolean getManifest) {
 		PNManifestReplayerParameter parameters = getParameters(log, getEvClassMapping(net, log), net, StochasticNetUtils.getInitialMarking(context, net), StochasticNetUtils.getFinalMarking(context, net), XLogInfoImpl.STANDARD_CLASSIFIER);
-		return replayLog(net, log, parameters, getManifest);
+		return replayLog(context, net, log, parameters, getManifest);
 	}
 	
-	public static Object replayLog(PetrinetGraph net, XLog log, PNManifestReplayerParameter parameters, boolean getManifest) {
+	public static Object replayLog(UIPluginContext context, PetrinetGraph net, XLog log, PNManifestReplayerParameter parameters, boolean getManifest) {
 
 		/**
 		 * Local variables
@@ -373,7 +374,7 @@ public class StochasticNetUtils {
 			initialized = true;
 		}
 		
-		PNRepResult pnRepResult  = replayWithILP.replayLog(null, flattener.getNet(), log, flattener.getMap(), parameter);
+		PNRepResult pnRepResult  = replayWithILP.replayLog(context, flattener.getNet(), log, flattener.getMap(), parameter);
 		if (getManifest){
 			// translate result back to desired output
 			try {

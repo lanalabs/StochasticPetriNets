@@ -1,9 +1,9 @@
 package org.processmining.plugins.pnml.simple;
 
 import org.simpleframework.xml.Attribute;
-import org.simpleframework.xml.Element;
+import org.simpleframework.xml.Root;
 
-@Element(name="transition")
+@Root(name="transition", strict=false)
 public class PNMLTransition extends AbstractPNMLElement{
 	@Attribute
 	private String id;

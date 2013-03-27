@@ -31,7 +31,7 @@ import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 
 public class PerformanceEnricherPlugin {
 	
-	@Plugin(name = "Enrich Petri Net model with stochastic performance data", 
+	@Plugin(name = "Enrich Petri Net with performance data", 
 			parameterLabels = { "Manifest" }, 
 			returnLabels = { "Stochastic Petri Net", "Marking" }, 
 			returnTypes = { StochasticNet.class, Marking.class }, 
@@ -49,7 +49,7 @@ public class PerformanceEnricherPlugin {
 		return collector.transform(context, manifest, mineConfig);
 	}
 	
-	@Plugin(name = "Enrich Petri Net model with stochastic performance data with default mapping", 
+	@Plugin(name = "Enrich Petri Net with performance data (default mapping)", 
 			parameterLabels = { "Petrinet", "Log" }, 
 			returnLabels = { "Stochastic Petri Net", "Marking" }, 
 			returnTypes = { StochasticNet.class, Marking.class }, 

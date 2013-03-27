@@ -25,6 +25,7 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.petrinet.impl.StochasticNetImpl;
 import org.processmining.models.semantics.petrinet.Marking;
+import org.processmining.plugins.pnml.PNMLParameter;
 import org.processmining.plugins.pnml.simple.AbstractPNMLElement;
 import org.processmining.plugins.pnml.simple.PNMLArc;
 import org.processmining.plugins.pnml.simple.PNMLMarking;
@@ -37,19 +38,22 @@ import org.processmining.plugins.pnml.simple.PNMLRoot;
 import org.processmining.plugins.pnml.simple.PNMLToolSpecific;
 import org.processmining.plugins.pnml.simple.PNMLTransition;
 
-public class StochasticNetSerializer {
+public class StochasticNetDeserializer {
 
-	public StochasticNetSerializer(){
+	public StochasticNetDeserializer(){
 	}
 	
 	public Object[] convertToNet(PluginContext context, PNMLRoot pnml, String filename, boolean addConnections){
 		PNMLNet pnmlNet = null;
-		PNMLMarking finalMarking = null;
+		PNMLMarking pnmlFinalMarking = null;
 		if (pnml.getModule() != null && pnml.getModule().size()>0){
 			pnmlNet = pnml.getModule().get(0).getNets().get(0);
-			finalMarking = pnml.getModule().get(0).getFinalmarkings().get(0);
+			pnmlFinalMarking = pnml.getModule().get(0).getFinalmarkings().get(0);
 		} else if (pnml.getNet() != null && pnml.getNet().size()>0){
 			pnmlNet = pnml.getNet().get(0);
+			if (pnml.getFinalMarkings()!=null){
+				pnmlFinalMarking = pnml.getFinalMarkings().getMarkings().get(0);
+			}
 		}
 		
 		if (pnml.getNet()!=null && pnml.getNet().size() > 1){
@@ -57,6 +61,7 @@ public class StochasticNetSerializer {
 		}
 		
 		Marking initialMarking = new Marking();
+		Marking finalMarking = null;
 		
 		StochasticNet net = new StochasticNetImpl(pnmlNet.getId()+" imported from ("+filename+")");
 		
@@ -121,10 +126,10 @@ public class StochasticNetSerializer {
 				if (o instanceof PNMLPlace){
 					PNMLPlace place = (PNMLPlace) o;
 					key = place.getId();
-					Place p = net.addPlace(place.getId());
+					Place p = net.addPlace(place.getName()!=null&&place.getName().getValue()!=null?place.getName().getValue():place.getId());
 					objects.put(key, p);
-					if (place.getInitialMarking() != null && place.getInitialMarking()>0){
-						initialMarking.add(p,place.getInitialMarking());
+					if (place.getInitialMarking() != null && Integer.valueOf(place.getInitialMarking().getText())>0){
+						initialMarking.add(p,Integer.valueOf(place.getInitialMarking().getText()));
 					}
 				}
 				
@@ -155,7 +160,7 @@ public class StochasticNetSerializer {
 					} else if (source instanceof Place && target instanceof Transition){
 						a = net.addArc((Place)source,(Transition)target);
 					}
-					if (arc.getGraphics() != null){
+					if (arc.getGraphics() != null && arc.getGraphics().getPosition() != null){
 						List<PNMLPoint> points = arc.getGraphics().getPosition();
 						layout.setEdgePoints(a, getEdgePoints(points, offset));
 					}
@@ -167,17 +172,17 @@ public class StochasticNetSerializer {
 			context.addConnection(conn);
 			LayoutUtils.setLayout(net, layout);
 			context.addConnection(layout);
-			if (finalMarking != null){
-				Marking fMarking = new Marking();
-				for (PNMLPlaceRef placeRef : finalMarking.getPlaces()){
+			if (pnmlFinalMarking != null){
+				finalMarking = new Marking();
+				for (PNMLPlaceRef placeRef : pnmlFinalMarking.getPlaces()){
 					Place p = (Place) objects.get(placeRef.getIdRef());
-					fMarking.add(p,placeRef.getTokens());
+					finalMarking.add(p,placeRef.getTokens());
 				}
-				FinalMarkingConnection fConn = new FinalMarkingConnection(net, fMarking);
+				FinalMarkingConnection fConn = new FinalMarkingConnection(net, finalMarking);
 				context.addConnection(fConn);
 			}
 		}
-		return new Object[]{net,initialMarking};
+		return new Object[]{net,initialMarking,finalMarking};
 	}
 	
 	/**
@@ -187,9 +192,12 @@ public class StochasticNetSerializer {
 	 * @return
 	 */
 	private List<Point2D> getEdgePoints(List<PNMLPoint> points,Point2D offset) {
+		if (points == null){
+			return null;
+		}
 		List<Point2D> pointArray = new ArrayList<Point2D>();
 		for (PNMLPoint p : points){
-			pointArray.add(new Point2D.Double(p.getX()+offset.getX(),p.getY()+offset.getY()));
+			pointArray.add(new Point2D.Double((p.getX()+offset.getX())*PNMLParameter.getScaleForViewInProM(),(p.getY()+offset.getY())*PNMLParameter.getScaleForViewInProM()));
 		}
 		return pointArray;
 	}
@@ -200,7 +208,7 @@ public class StochasticNetSerializer {
 			List<PNMLPoint> positions = element.getGraphics().getPosition();
 			Point2D position = new Point2D.Double(0,0);
 			if (positions.size() == 1){
-				position = new Point2D.Double(element.getGraphics().getPosition().get(0).getX(),element.getGraphics().getPosition().get(0).getY());
+				position = new Point2D.Double(element.getGraphics().getPosition().get(0).getX()*PNMLParameter.getScaleForViewInProM(),element.getGraphics().getPosition().get(0).getY()*PNMLParameter.getScaleForViewInProM());
 			}
 			if (size != null){
 				position.setLocation(position.getX() - size.getWidth()/2, position.getY()-size.getHeight()/2);
@@ -215,7 +223,7 @@ public class StochasticNetSerializer {
 
 	private Dimension2D getSize(AbstractPNMLElement element) {
 		if (element.getGraphics()!= null && element.getGraphics().getDimension()!= null){
-			return new Dimension((int)element.getGraphics().getDimension().getX(),(int)element.getGraphics().getDimension().getY());
+			return new Dimension((int)(element.getGraphics().getDimension().getX()*PNMLParameter.getScaleForViewInProM()),(int)(element.getGraphics().getDimension().getY()*PNMLParameter.getScaleForViewInProM()));
 		}
 		return null;
 	}

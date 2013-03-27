@@ -2,7 +2,6 @@ package org.processmining.plugins.pnml.simple;
 
 import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
-import org.simpleframework.xml.Path;
 
 @Element(name="arc")
 public class PNMLArc extends AbstractPNMLElement{
@@ -13,9 +12,11 @@ public class PNMLArc extends AbstractPNMLElement{
 	@Attribute
 	private String target;
 	
-	@Path("inscription")
-	@Element(name="text",required=false)
-	private Integer inscription = null; 
+	@Element(name="arctype",required=false)
+	private PNMLText arcType;
+	
+	@Element(name="inscription",required=false)
+	private PNMLText inscription; 
 	
 	public String getId() {
 		return id;
@@ -35,11 +36,16 @@ public class PNMLArc extends AbstractPNMLElement{
 	public void setTarget(String target) {
 		this.target = target;
 	}
-	public int getInscription() {
+	public PNMLText getInscription() {
 		return inscription;
 	}
-	public void setInscription(int inscription) {
+	public void setInscription(PNMLText inscription) {
 		this.inscription = inscription;
 	}
-	
+	public PNMLText getArcType() {
+		return arcType;
+	}
+	public void setArcType(PNMLText arcType) {
+		this.arcType = arcType;
+	}
 }

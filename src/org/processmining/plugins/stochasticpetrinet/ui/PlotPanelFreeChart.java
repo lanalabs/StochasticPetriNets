@@ -7,6 +7,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 import javax.swing.JComponent;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 
 import org.jfree.chart.ChartFactory;
@@ -40,6 +41,16 @@ public class PlotPanelFreeChart extends JPanel {
 	public void addPlot(Plot plot){
 		this.plots.add(plot);
 		updateChart();
+	}
+	
+	public void displayMessage(String message){
+		if (currentChart != null){
+			this.remove(currentChart);
+		}
+		currentChart = new JLabel(message);
+		add(currentChart, BorderLayout.CENTER);
+		this.revalidate();
+		this.repaint();	
 	}
 	
 	private void updateChart() {

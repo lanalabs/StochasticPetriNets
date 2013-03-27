@@ -1,0 +1,319 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<pnml>
+  <net id="net1" type="http://www.pnml.org/version-2009/grammar/pnmlcoremodel">
+    <name>
+      <text>net1 imported from (ex1compl.pnml)</text>
+    </name>
+    <page id="n0">
+      <place id="n1">
+        <name>
+          <text>p6</text>
+        </name>
+        <graphics>
+          <position x="222.0" y="8.5"/>
+          <dimension x="6.0" y="6.0"/>
+        </graphics>
+      </place>
+      <place id="n2">
+        <name>
+          <text>p3</text>
+        </name>
+        <graphics>
+          <position x="134.5" y="13.5"/>
+          <dimension x="6.0" y="6.0"/>
+        </graphics>
+      </place>
+      <place id="n3">
+        <name>
+          <text>p5</text>
+        </name>
+        <graphics>
+          <position x="178.0" y="21.5"/>
+          <dimension x="6.0" y="6.0"/>
+        </graphics>
+      </place>
+      <place id="n4">
+        <name>
+          <text>p7</text>
+        </name>
+        <graphics>
+          <position x="222.0" y="21.5"/>
+          <dimension x="6.0" y="6.0"/>
+        </graphics>
+      </place>
+      <place id="n5">
+        <name>
+          <text>p4</text>
+        </name>
+        <graphics>
+          <position x="178.0" y="8.5"/>
+          <dimension x="6.0" y="6.0"/>
+        </graphics>
+      </place>
+      <place id="n6">
+        <name>
+          <text>p2</text>
+        </name>
+        <graphics>
+          <position x="90.5" y="13.5"/>
+          <dimension x="6.0" y="6.0"/>
+        </graphics>
+      </place>
+      <place id="n7">
+        <name>
+          <text>p1</text>
+        </name>
+        <graphics>
+          <position x="47.0" y="13.5"/>
+          <dimension x="6.0" y="6.0"/>
+        </graphics>
+      </place>
+      <place id="n8">
+        <name>
+          <text>Start</text>
+        </name>
+        <graphics>
+          <position x="3.0" y="13.5"/>
+          <dimension x="6.0" y="6.0"/>
+        </graphics>
+        <initialMarking>
+          <text>1</text>
+        </initialMarking>
+      </place>
+      <place id="n9">
+        <name>
+          <text>End</text>
+        </name>
+        <graphics>
+          <position x="265.5" y="14.5"/>
+          <dimension x="6.0" y="6.0"/>
+        </graphics>
+      </place>
+      <transition id="n10">
+        <name>
+          <text>A</text>
+        </name>
+        <graphics>
+          <position x="25.0" y="13.5"/>
+          <dimension x="12.0" y="10.0"/>
+          <fill color="#FFFFFF"/>
+        </graphics>
+      </transition>
+      <transition id="n11">
+        <name>
+          <text>B</text>
+        </name>
+        <graphics>
+          <position x="69.0" y="22.5"/>
+          <dimension x="12.0" y="10.0"/>
+          <fill color="#FFFFFF"/>
+        </graphics>
+      </transition>
+      <transition id="n12">
+        <name>
+          <text>C</text>
+        </name>
+        <graphics>
+          <position x="69.0" y="5.0"/>
+          <dimension x="12.0" y="10.0"/>
+          <fill color="#FFFFFF"/>
+        </graphics>
+      </transition>
+      <transition id="n13">
+        <name>
+          <text>F</text>
+        </name>
+        <graphics>
+          <position x="200.0" y="5.0"/>
+          <dimension x="12.0" y="10.0"/>
+          <fill color="#FFFFFF"/>
+        </graphics>
+      </transition>
+      <transition id="n14">
+        <name>
+          <text>E</text>
+        </name>
+        <graphics>
+          <position x="156.0" y="14.5"/>
+          <dimension x="12.0" y="10.0"/>
+          <fill color="#FFFFFF"/>
+        </graphics>
+      </transition>
+      <transition id="n15">
+        <name>
+          <text>G</text>
+        </name>
+        <graphics>
+          <position x="200.0" y="22.5"/>
+          <dimension x="12.0" y="10.0"/>
+          <fill color="#FFFFFF"/>
+        </graphics>
+      </transition>
+      <transition id="n16">
+        <name>
+          <text>D</text>
+        </name>
+        <graphics>
+          <position x="112.5" y="13.5"/>
+          <dimension x="12.0" y="10.0"/>
+          <fill color="#FFFFFF"/>
+        </graphics>
+      </transition>
+      <transition id="n17">
+        <name>
+          <text>H</text>
+        </name>
+        <graphics>
+          <position x="244.0" y="14.5"/>
+          <dimension x="12.0" y="10.0"/>
+          <fill color="#FFFFFF"/>
+        </graphics>
+      </transition>
+      <arc id="arc18" source="n5" target="n13">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc19" source="n3" target="n15">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc20" source="n1" target="n17">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc21" source="n13" target="n1">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc22" source="n15" target="n4">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc23" source="n7" target="n12">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc24" source="n14" target="n5">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc25" source="n4" target="n17">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc26" source="n2" target="n14">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc27" source="n6" target="n16">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc28" source="n11" target="n6">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc29" source="n7" target="n11">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc30" source="n14" target="n3">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc31" source="n12" target="n6">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc32" source="n17" target="n9">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc33" source="n10" target="n7">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc34" source="n16" target="n2">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+      <arc id="arc35" source="n8" target="n10">
+        <name>
+          <text>1</text>
+        </name>
+        <arctype>
+          <text>normal</text>
+        </arctype>
+      </arc>
+    </page>
+  </net>
+</pnml>
+

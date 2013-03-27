@@ -1,16 +1,14 @@
 package org.processmining.plugins.pnml.simple;
 
 import org.simpleframework.xml.Element;
-import org.simpleframework.xml.Path;
 
 @Element(name="name")
 public class PNMLName {
 	@Element(name="text")
 	private String value;
 	
-	@Path("graphics")
-	@Element(name="offset",required=false)
-	private PNMLPoint offset;
+	@Element(name="graphics",required=false)
+	private PNMLGraphics graphics;
 	
 	public PNMLName(){}
 	
@@ -26,11 +24,12 @@ public class PNMLName {
 		this.value = value;
 	}
 
-	public PNMLPoint getOffset() {
-		return offset;
+	public PNMLGraphics getGraphics() {
+		return graphics;
 	}
 
-	public void setOffset(PNMLPoint offset) {
-		this.offset = offset;
+	public void setGraphics(PNMLGraphics graphics) {
+		this.graphics = graphics;
 	}
+
 }
