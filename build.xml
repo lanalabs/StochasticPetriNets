@@ -5,6 +5,7 @@
 		<property name="build" location="bindist" />
 		<property name="doc" location="doc" />
 		<property name="lib" location="lib" />
+	    <property name="logo" location="logo.png" />
 		<property name="dist" location="dist" />
 		<property name="release" location="latestrelease" />
 		<property name="version" value="6.1.${env.BUILD_NUMBER}" />
@@ -85,6 +86,7 @@
 
 		<!-- create the project's javadoc from all existing sources. Note that only org.processmining.** is included -->
 		<target name="Create Javadoc" description="Generated javadoc">
+			<mkdir dir="${doc}" failonerror="false" />
 			<javadoc packagenames="**" classpathref="classpath" useexternalfile="true" defaultexcludes="yes" destdir="${doc}" author="true" version="true" verbose="false" use="true" windowtitle="${project}">
 				<fileset dir=".">
 					<include name="src/**" />
@@ -118,6 +120,12 @@
 				<copy todir="${release}/lib" overwrite="true">
 					<fileset dir="${lib}"/>
 				</copy>
+				<copy todir="${release}/lib" overwrite="true">
+					<fileset dir="${lib}"/>
+				</copy>
+				<copy todir="${release}" overwrite="true" flatten="true">
+					<file name="${logo}"/>
+				</copy>
 				<echoxml file="${release}/packages.xml">
 					<packages>
 						<package 
@@ -131,7 +139,7 @@
 							author="Andreas Rogge-Solti"
 							auto="false"
 							hasPlugins="true"
-							logo="http://bpt.hpi.uni-potsdam.de/pub/Main/AndreasRoggeSolti/logo.png">
+							logo="www.promtools.org/prom6/packages/StochasticPetriNets/logo.png">
 							<dependency name="PetriNets"/>
 							<dependency name="PNetAlignmentAnalysis"/>
 							<dependency name="PNetReplayer"/>
