@@ -86,7 +86,6 @@
 
 		<!-- create the project's javadoc from all existing sources. Note that only org.processmining.** is included -->
 		<target name="Create Javadoc" description="Generated javadoc">
-			<mkdir dir="${doc}" failonerror="false" />
 			<javadoc packagenames="**" classpathref="classpath" useexternalfile="true" defaultexcludes="yes" destdir="${doc}" author="true" version="true" verbose="false" use="true" windowtitle="${project}">
 				<fileset dir=".">
 					<include name="src/**" />
