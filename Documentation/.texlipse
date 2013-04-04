@@ -1,0 +1,14 @@
+#TeXlipse project settings
+#Thu Mar 28 17:16:24 CET 2013
+markTmpDer=true
+builderNum=2
+outputDir=
+makeIndSty=
+bibrefDir=
+outputFormat=pdf
+tempDir=tmp
+mainTexFile=StochasticPetriNets.tex
+outputFile=Package_StochasticPetriNets.pdf
+langSpell=en
+markDer=true
+srcDir=

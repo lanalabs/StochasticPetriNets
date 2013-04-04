@@ -1,0 +1,84 @@
+
+%Schriftgröße, Layout, Papierformat, Art des Dokumentes
+\documentclass[12pt,oneside,a4paper]{scrreprt}
+
+%Einstellungen der Seitenränder
+\usepackage[left=3cm,right=3cm,top=2cm,bottom=2cm,includeheadfoot]{geometry}
+
+%neue Rechtschreibung
+%\usepackage{ngerman}
+
+%Umlaute ermöglichen
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+
+\usepackage{xspace}
+\usepackage{paralist}
+\usepackage{float}
+
+\usepackage{_style/xml}
+
+\usepackage{chngcntr}
+\counterwithout{figure}{chapter}
+
+%Kopf- und Fußzeile
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+\fancyhf{}
+
+\fancyhead[L]{\mypackagename}
+\fancyhead[R]{\myauthor}
+%Linie oben
+\renewcommand{\headrulewidth}{0.5pt}
+
+%Linie unten
+\renewcommand{\footrulewidth}{0.5pt}
+
+\newcommand{\mypackagename}{StochasticPetriNets\xspace}
+
+\newcommand{\myauthor}{Andreas Rogge-Solti}
+\newcommand{\mytitle}{\mypackagename}
+\newcommand{\mysubtitle}{Stochastic Petri net package.\\~ \\
+Can be used to enrich existing Petri net models with stochastical information obtained from a log.\\~ \\
+Allows different parametric and non-parametric models to specify probabilistic timing of transitions.
+}
+
+
+\graphicspath{{.}{./img/}}
+
+% allows for clickable comments, references, etc. in pdf
+\usepackage[pdftex]{hyperref}
+\hypersetup{
+	pdftitle={\mytitle},           % title
+    pdfauthor={\myauthor}, % author
+    pdfcreator={\myauthor}, % creator of pdf
+    unicode=true,          % non-latin characters in bookmarks?
+    pdffitwindow=false,    % window fit to page when opened
+    pdfstartview={FitH},   % fits width of the page to the window
+    pdftoolbar=true,       % show acrobat toolbar?
+    pdfmenubar=true,       % show acrobat menu?
+    colorlinks=false,      % false: boxed links; true: color links
+    linkcolor=black,       % color of internal links
+    urlcolor=black,        % color of external links
+    citecolor=black,       % color of links to bibliography
+    filecolor=black       % color of file links
+}
+
+\begin{document}
+\begin{titlepage}
+\author{\myauthor} 
+\title{\mytitle} 
+\subtitle{\mysubtitle}
+\date{\today} 
+\maketitle
+\end{titlepage}
+
+\input{text/overview.tex}
+\input{text/introduction.tex}
+\input{text/installation.tex}
+\input{text/usage.tex}
+\input{text/version.tex}
+
+\bibliographystyle{alpha}
+\bibliography{refs}
+\end{document}

@@ -1,0 +1,37 @@
+\section*{Introduction}
+\label{sec:intro}
+Stochastic Petri nets can be used to model performance aspects of a Petri net.
+\begin{itemize}
+  \item What ratio of cases follows the upper path in my model?
+  \item How long does it take to finish activity \emph{A}?
+  \item How long will my current case take?
+\end{itemize}
+These and further analysis questions can not be answered by pure Petri nets. Therefore different ways to encorporate stochastic execution information into Petri nets were devised. See \cite{ciardo1994characterization} for an overview about different expressivity and analysis capabilities of stochastic Petri net formalisms that were proposed in literature.
+
+In this plugin, we assume stochastic Petri nets to not be restricted to any special parametric form of duration distributions, i.e., we use simply \emph{SPN} in the convention of \cite{ciardo1994characterization}.
+
+\subsubsection{Semantics}
+For the execution semantics, we stick to the text-book semantics defined for GSPNs in~\cite{marsan1984class}. However, we allow generalized distributions, and do not restrict times to be exponentially distributed. We use the \emph{race semantics with enabling memory}\footnote{If you're interested, see the original discussion of different execution semantics in~\cite{marsan1989execution}.}, as initially defined in \cite{marsan1989execution}. This semantics allows to model time-outs in a process model, as well as parallelism. The same semantics is also used in the popular analysis tool TimeNET \cite{german1995timenet}. 
+
+Transitions are separated into immediate transitions (firing without taking time) and timed transitions (delayed by a random duration) 
+\begin{compactitem}
+  \item a priority $p$ (used to specify sets of transitions that always fire before those with lower priority, $p$ is 0 for timed transitions, $p > 0$ for immediate transitions)
+  \item a weight (used to probabilistically choose a transition from the group of highest priority transitions)
+  \item a duration distribution (capturing the random delay of firing for timed transitions) 
+\end{compactitem}
+
+The semantics is as follows:
+\begin{compactitem}
+  \item determine the set of transitions $t_{enabled}$ that are candidates for being enabled (all transitions that have $> 1$ input tokens on their input places)
+  \item determine the highest priority $p$ of these transitions.
+  \item remove all transitions from $t_{enabled}$ with a lower priority than $p$
+  \begin{compactitem}
+    \item if $p > 0$, we choose an immediate transition randomly based on their weights.
+    \item if $p = 0$,  the timed transitions race for the right to fire. Each pick a random duration from their distribution (sample a random value).
+  \end{compactitem}
+\end{compactitem}
+
+
+
+
+ 
