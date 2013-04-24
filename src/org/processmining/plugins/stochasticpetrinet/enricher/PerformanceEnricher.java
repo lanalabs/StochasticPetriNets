@@ -74,6 +74,9 @@ public class PerformanceEnricher {
 		Iterator<Transition> originalTransitions = net.getTransitions().iterator();
 		Iterator<Transition> newTimedTransitions = sNet.getTransitions().iterator();
 		int progress = 0;
+		
+		String feedbackMessage = ""; // captures messages occurring during conversion
+		
 		context.getProgress().setMaximum(sNet.getTransitions().size());
 		while(originalTransitions.hasNext()){
 			context.getProgress().setValue(progress++);
@@ -87,7 +90,7 @@ public class PerformanceEnricher {
 				if (containsOnlyZeros(transitionStats)){
 					newTimedTransition.setImmediate(true);
 				} else {
-					addTimingInformationToTransition(newTimedTransition, transitionStats, mineConfig.getFirst(),mineConfig.getSecond());
+					feedbackMessage += addTimingInformationToTransition(newTimedTransition, transitionStats, mineConfig.getFirst(),mineConfig.getSecond());
 				}
 			} else {
 				// silent or unobserved transition (or very first transition just containing 0-values)
@@ -96,6 +99,10 @@ public class PerformanceEnricher {
 			}
 			
 			newTimedTransition.updateDistribution();
+		}
+		if (!feedbackMessage.isEmpty()){
+			JOptionPane.showMessageDialog(null, feedbackMessage, "Distribution estimation information", JOptionPane.INFORMATION_MESSAGE);
+
 		}
 		return stochasticNetAndMarking;
 		
@@ -122,9 +129,11 @@ public class PerformanceEnricher {
 	 * @param newTimedTransition
 	 * @param transitionStats
 	 * @param typeToMine
+	 * @return String reporting special notes during estimation (e.g. for undefined log values) 
 	 */
-	private void addTimingInformationToTransition(TimedTransition newTimedTransition, List<Double> transitionStats,
+	private String addTimingInformationToTransition(TimedTransition newTimedTransition, List<Double> transitionStats,
 			DistributionType typeToMine, Double unitConversionFactor) {
+		String message = "";
 		double[] values = new double[transitionStats.size()];
 		int i = 0;
 		for (Iterator<Double> iter = transitionStats.iterator(); iter.hasNext();){
@@ -140,7 +149,26 @@ public class PerformanceEnricher {
 			case NORMAL:
 				newTimedTransition.setDistributionParameters(new double[]{meanValue,standardDeviation});
 				break;
-			case EXPONENTIAL:
+			case LOGNORMAL:
+				double[] logValues = new double[transitionStats.size()];
+				int nanValues = 0;
+				i = 0;
+				for (int j = 0; j < values.length; j++){
+					logValues[j] = Math.log(values[j]);
+					nanValues += (Double.isNaN(logValues[j]) || Double.isInfinite(logValues[j])?1:0);
+				}
+				// take log of values:
+				if (nanValues > 0){
+					// zeros or negative numbers break log-normal function.
+					message = "Omitting "+nanValues+" values of "+logValues.length+" for estimation of " +
+							"log-normal distribution of activity "+newTimedTransition.getLabel()+".\n";
+
+				} 
+				double logMeanValue = mean.evaluate(logValues);
+				double logStandardDeviation = sd.evaluate(logValues, logMeanValue);
+				newTimedTransition.setDistributionParameters(new double[]{logMeanValue,logStandardDeviation});
+				break;
+				case EXPONENTIAL:
 				newTimedTransition.setDistributionParameters(new double[]{meanValue});
 				break;
 			case GAUSSIAN_KERNEL:
@@ -153,17 +181,19 @@ public class PerformanceEnricher {
 		}
 		newTimedTransition.setWeight(transitionStats.size());
 		newTimedTransition.setPriority(0);
+		
+		return message;
 	}
 
 	public static Pair<DistributionType, Double> getTypeOfDistributionForNet(UIPluginContext context) {
 		ProMPropertiesPanel panel = new ProMPropertiesPanel("Stochastic Net properties:");
-		DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL, DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM};
+		DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL, DistributionType.LOGNORMAL, DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM};
 		if (StochasticNetUtils.splinesSupported()){
 			supportedTypes = Arrays.copyOf(supportedTypes, supportedTypes.length+1);
 			supportedTypes[supportedTypes.length-1] = DistributionType.LOG_SPLINE;
 		} else {
-			panel.add(new JLabel("To enable spline smoothers, make sure you have a running R installation \n" +
-					"and the native jri-binary is accessible in your java.library.path!"));
+			panel.add(new JLabel("<html><body><p>To enable spline smoothers, make sure you have a running R installation \n<br>" +
+					"and the native jri-binary is accessible in your java.library.path!</p></body></html>"));
 		}
 		JComboBox distTypeSelection = panel.addComboBox("Type of distributions", supportedTypes);
 		JComboBox timeUnitSelection = panel.addComboBox("Time unit in model", StochasticNetUtils.UNIT_NAMES);

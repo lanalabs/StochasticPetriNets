@@ -63,6 +63,7 @@ import org.processmining.plugins.petrinet.replayresult.PNRepResult;
 import org.processmining.plugins.stochasticpetrinet.distribution.RProvider;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.TruncatedDistributionFactory;
+import org.rosuda.JRI.Rengine;
 
 public class StochasticNetUtils {
 	
@@ -471,13 +472,19 @@ public class StochasticNetUtils {
 	 * @return
 	 */
 	public static boolean splinesSupported(){
-		boolean jriAvaialble = false;
+		boolean jriAvailable = false;
 		try{
-			jriAvaialble = RProvider.getEngineAvailable();
+			jriAvailable = RProvider.getJRIAvailable();
+			
+			Rengine engine = RProvider.getEngine();
+			
+			jriAvailable = jriAvailable && engine != null;
 		} catch (UnsatisfiedLinkError error){
 			System.out.println(error.getMessage());
+		} catch (UnsupportedOperationException e){
+			jriAvailable = false;
 		}
-		return jriAvaialble;
+		return jriAvailable;
 	}
 	
 	/**

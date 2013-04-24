@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.InputStreamReader;
 
 import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 
 import org.rosuda.JRI.RMainLoopCallbacks;
 import org.rosuda.JRI.Rengine;
@@ -18,6 +19,14 @@ public class RProvider {
 	        System.out.println("Rengine created, waiting for R");
 	        if (!engine.waitForR()) {
 	            System.out.println("Cannot load R");
+	            JOptionPane.showMessageDialog(null, "Could not start up R!\n" +
+	            		"Please make sure, R is installed and the the R_HOME environment variable points to the R installation directory.\n" +
+	            		"(in linux systems, this might be /usr/lib/R, or /usr/lib64/R, depending on your system.)\n" +
+	            		"\n" +
+	            		"You can install R from:\n" +
+	            		"http://www.r-project.org/");
+	            engine.end();
+	            engine = null;
 	            throw new UnsupportedOperationException("Cannot load R");
 	        }
 	        engine.eval("library(\"logspline\")",false);
@@ -25,7 +34,7 @@ public class RProvider {
 		return engine;
 	}
 
-	public static boolean getEngineAvailable() {
+	public static boolean getJRIAvailable() {
 		return Rengine.jriLoaded;
 	}
 }

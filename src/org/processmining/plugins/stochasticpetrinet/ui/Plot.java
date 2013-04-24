@@ -2,6 +2,7 @@ package org.processmining.plugins.stochasticpetrinet.ui;
 
 import java.util.Vector;
 
+import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
 
@@ -82,7 +83,7 @@ public class Plot {
 	}
 	
 	private void updateMaxValues(){
-		maxX = 1;
+		maxX = 0.01;
 		minX = 0;
 		for (RealDistribution dist : weightedPlots){
 			if (dist != null){
@@ -97,7 +98,14 @@ public class Plot {
 							minX = Math.min(minX, dist.getSupportLowerBound());
 						}
 						if (Double.isInfinite(dist.getSupportUpperBound())){
-							maxX = Math.max(maxX, dist.inverseCumulativeProbability(0.99999)); 
+							if (dist instanceof LogNormalDistribution){
+								// very heavy tailed distribution: to be able to see something useful, we clip already at 3 * the mean.
+								LogNormalDistribution lnorm = (LogNormalDistribution) dist;
+								double realMean = Math.pow(Math.E, lnorm.getScale());
+								maxX = Math.max(maxX, 3*realMean);
+							} else {
+								maxX = Math.max(maxX, dist.inverseCumulativeProbability(0.99999));
+							}
 						} else {
 							maxX = Math.max(maxX, dist.getSupportUpperBound());
 						}
