@@ -35,7 +35,13 @@ public class RProvider {
 	}
 
 	public static boolean getJRIAvailable() {
-		return Rengine.jriLoaded;
+		try {
+			System.setProperty("jri.ignore.ule", "yes");
+			return Rengine.jriLoaded;
+		} catch (Throwable t){
+			t.printStackTrace();
+			return false;
+		}
 	}
 }
 

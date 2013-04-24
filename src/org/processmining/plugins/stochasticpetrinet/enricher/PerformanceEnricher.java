@@ -192,8 +192,9 @@ public class PerformanceEnricher {
 			supportedTypes = Arrays.copyOf(supportedTypes, supportedTypes.length+1);
 			supportedTypes[supportedTypes.length-1] = DistributionType.LOG_SPLINE;
 		} else {
-			panel.add(new JLabel("<html><body><p>To enable spline smoothers, make sure you have a running R installation \n<br>" +
-					"and the native jri-binary is accessible in your java.library.path!</p></body></html>"));
+			panel.add(new JLabel("<html><body><p>To enable spline smoothers, make sure you have a running R installation<br>" +
+					"and the native jri-binary is accessible in your java.library.path!</p></body></html"));
+			panel.add(StochasticNetUtils.linkify("See also the documentation PDF", "https://svn.win.tue.nl/repos/prom/Documentation/Package_StochasticPetriNets.pdf", "PDF-Documentation of the StochasticPetriNets plugin"));
 		}
 		JComboBox distTypeSelection = panel.addComboBox("Type of distributions", supportedTypes);
 		JComboBox timeUnitSelection = panel.addComboBox("Time unit in model", StochasticNetUtils.UNIT_NAMES);
