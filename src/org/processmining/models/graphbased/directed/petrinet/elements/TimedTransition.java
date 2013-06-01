@@ -210,7 +210,7 @@ public class TimedTransition extends Transition{
 		distributionParameters = parameters;
 	}
 
-	public void setWeight(int weight) {
+	public void setWeight(double weight) {
 		this.weight = weight;
 	}
 

@@ -26,23 +26,24 @@ import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.contexts.uitopia.UIPluginContext;
-import org.processmining.framework.util.Pair;
 import org.processmining.framework.util.ui.widgets.ProMPropertiesPanel;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.petrinet.impl.ToStochasticNet;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.manifestreplayresult.ManifestEvClassPattern;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.enricher.optimizer.WeightsOptimizer;
 
 public class PerformanceEnricher {
 
 	public Object[] transform(UIPluginContext context, Manifest manifest){
 		// ask for preferences:
-		Pair<DistributionType,Double> mineConfig = getTypeOfDistributionForNet(context);
+		PerformanceEnricherConfig mineConfig = getTypeOfDistributionForNet(context);
 		try {
 			if (mineConfig != null){
 				return transform(context, manifest, mineConfig);
@@ -54,7 +55,7 @@ public class PerformanceEnricher {
 		return null;
 	}
 	
-	public Object[] transform(UIPluginContext context, Manifest manifest, Pair<DistributionType,Double> mineConfig) {
+	public Object[] transform(UIPluginContext context, Manifest manifest, PerformanceEnricherConfig mineConfig) {
 		XLog log = manifest.getLog();
 		XLogInfo logInfo = XLogInfoImpl.create(log, manifest.getEvClassifier());
 		XEventClasses ec = logInfo.getEventClasses();
@@ -77,6 +78,16 @@ public class PerformanceEnricher {
 		
 		String feedbackMessage = ""; // captures messages occurring during conversion
 		
+		// weights of the transitions are calculated based on firing ratios on each marking.
+		double[] weights = new double[net.getTransitions().size()];
+		if (mineConfig.getPolicy().equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
+			// weights of the transitions are calculated based on firing ratios on each marking.
+			Arrays.fill(weights, 1);
+			WeightsOptimizer optimizer = new WeightsOptimizer(weights, performanceCounter.getMarkingBasedSelections());
+			weights = optimizer.optimizeWeights();
+		}
+		
+		
 		context.getProgress().setMaximum(sNet.getTransitions().size());
 		while(originalTransitions.hasNext()){
 			context.getProgress().setValue(progress++);
@@ -84,13 +95,18 @@ public class PerformanceEnricher {
 			TimedTransition newTimedTransition = (TimedTransition) newTimedTransitions.next();
 			int indexOfTransition = performanceCounter.getEncOfTrans(originalTransition);
 			List<Double> transitionStats = performanceCounter.getPerformanceData(indexOfTransition);
-			int weight = performanceCounter.getDataCount(indexOfTransition);
-			newTimedTransition.setWeight(weight);
+			
+			double weight = performanceCounter.getDataCount(indexOfTransition);
+			if (mineConfig.getPolicy().equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
+				newTimedTransition.setWeight(weights[indexOfTransition]);
+			} else {
+				newTimedTransition.setWeight(weight);
+			}
 			if (transitionStats != null && transitionStats.size() > 0){
 				if (containsOnlyZeros(transitionStats)){
 					newTimedTransition.setImmediate(true);
 				} else {
-					feedbackMessage += addTimingInformationToTransition(newTimedTransition, transitionStats, mineConfig.getFirst(),mineConfig.getSecond());
+					feedbackMessage += addTimingInformationToTransition(newTimedTransition, transitionStats, mineConfig);
 				}
 			} else {
 				// silent or unobserved transition (or very first transition just containing 0-values)
@@ -132,7 +148,9 @@ public class PerformanceEnricher {
 	 * @return String reporting special notes during estimation (e.g. for undefined log values) 
 	 */
 	private String addTimingInformationToTransition(TimedTransition newTimedTransition, List<Double> transitionStats,
-			DistributionType typeToMine, Double unitConversionFactor) {
+			PerformanceEnricherConfig config) {
+		double unitConversionFactor = config.getUnitFactor();
+		DistributionType typeToMine = config.getType();
 		String message = "";
 		double[] values = new double[transitionStats.size()];
 		int i = 0;
@@ -185,7 +203,7 @@ public class PerformanceEnricher {
 		return message;
 	}
 
-	public static Pair<DistributionType, Double> getTypeOfDistributionForNet(UIPluginContext context) {
+	public static PerformanceEnricherConfig getTypeOfDistributionForNet(UIPluginContext context) {
 		ProMPropertiesPanel panel = new ProMPropertiesPanel("Stochastic Net properties:");
 		DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL, DistributionType.LOGNORMAL, DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM};
 		if (StochasticNetUtils.splinesSupported()){
@@ -198,6 +216,7 @@ public class PerformanceEnricher {
 		}
 		JComboBox distTypeSelection = panel.addComboBox("Type of distributions", supportedTypes);
 		JComboBox timeUnitSelection = panel.addComboBox("Time unit in model", StochasticNetUtils.UNIT_NAMES);
+		JComboBox executionPolicySelection = panel.addComboBox("Execution policy", StochasticNet.ExecutionPolicy.values());
 		InteractionResult result = context.showConfiguration("Select type of distribution:", panel);
 		if (result.equals(InteractionResult.CANCEL)){
 			context.getFutureResult(0).cancel(true);
@@ -205,7 +224,7 @@ public class PerformanceEnricher {
 		} else {
 			DistributionType distType = (DistributionType) distTypeSelection.getSelectedItem();
 			Double timeUnit = StochasticNetUtils.UNIT_CONVERSION_FACTORS[timeUnitSelection.getSelectedIndex()];
-			return new Pair<StochasticNet.DistributionType, Double>(distType, timeUnit);
+			return new PerformanceEnricherConfig(distType, timeUnit, (ExecutionPolicy) executionPolicySelection.getSelectedItem());
 		}
 	}
 

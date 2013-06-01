@@ -32,7 +32,6 @@ import org.processmining.framework.util.Pair;
 import org.processmining.models.connections.petrinets.behavioral.FinalMarkingConnection;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
-import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.transitionsystem.TransitionSystem;
@@ -41,6 +40,7 @@ import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.enricher.PerformanceEnricherConfig;
 import org.processmining.plugins.stochasticpetrinet.enricher.PerformanceEnricherPlugin;
 import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
@@ -141,7 +141,7 @@ public class PredictionExperimentPlugin {
 					System.out.println("Learning stochastic Petri net from data, as no stochastic Petri net was passed!");
 				}
 				Manifest manifest = (Manifest)StochasticNetUtils.replayLog(context, model, trainingLog, true);
-				Object[] netAndMarking = PerformanceEnricherPlugin.transform(context, manifest, new Pair<DistributionType,Double>(config.getLearnedDistributionType(),config.getTimeUnitFactor()));
+				Object[] netAndMarking = PerformanceEnricherPlugin.transform(context, manifest, new PerformanceEnricherConfig(config.getLearnedDistributionType(),config.getTimeUnitFactor(),config.getExecutionPolicy()));
 				stochasticNet = (StochasticNet) netAndMarking[0];
 				stochasticNet.getAttributeMap().put(StochasticNetUtils.ITERATION_KEY, kFold);
 				initialStochasticMarking = (Marking) netAndMarking[1];

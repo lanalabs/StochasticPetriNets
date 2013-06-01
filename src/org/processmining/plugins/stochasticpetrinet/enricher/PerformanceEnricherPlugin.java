@@ -21,10 +21,8 @@ import org.deckfour.xes.model.XTrace;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
 import org.processmining.framework.plugin.annotations.Plugin;
-import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
-import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
@@ -44,7 +42,7 @@ public class PerformanceEnricherPlugin {
 		return collector.transform(context, manifest);
 	}
 	
-	public static Object[] transform(UIPluginContext context, Manifest manifest, Pair<DistributionType,Double> mineConfig) {
+	public static Object[] transform(UIPluginContext context, Manifest manifest, PerformanceEnricherConfig mineConfig) {
 		PerformanceEnricher collector = new PerformanceEnricher();
 		return collector.transform(context, manifest, mineConfig);
 	}

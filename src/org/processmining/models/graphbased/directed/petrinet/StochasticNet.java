@@ -45,6 +45,17 @@ public interface StochasticNet extends ResetNet, Petrinet{
 			return UNDEFINED;
 		}
 	}
+
+	/**
+	 * Execution policy of the network.
+	 * 
+	 * @see paper:
+	 * Ajmone Marsan, M., et al. "The effect of execution policies on the semantics and analysis of stochastic Petri nets." Software Engineering, IEEE Transactions on 15.7 (1989): 832-846.
+	 *
+	 */
+	public enum ExecutionPolicy{
+		GLOBAL_PRESELECTION, RACE_RESAMPLING, RACE_ENABLING_MEMORY, RACE_AGE_MEMORY;
+	}
 	
 	// immediate transitions
 	TimedTransition addImmediateTransition(String label);

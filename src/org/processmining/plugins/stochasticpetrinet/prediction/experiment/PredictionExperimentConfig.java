@@ -13,6 +13,7 @@ import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.util.ui.widgets.ProMPropertiesPanel;
 import org.processmining.framework.util.ui.widgets.ProMTextField;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 
 import com.fluxicon.slickerbox.components.RoundedPanel;
@@ -25,6 +26,7 @@ public class PredictionExperimentConfig {
 	
 	private boolean learnSPNFromData = true;
 	private DistributionType learnedDistributionType = DistributionType.GAUSSIAN_KERNEL;
+	private ExecutionPolicy executionPolicy = ExecutionPolicy.GLOBAL_PRESELECTION;
 	
 	private String resultFileName = "predictionResults.csv";
 	private int workerCount = 4;
@@ -57,6 +59,7 @@ public class PredictionExperimentConfig {
 		resultFileName = panel.getResultFileName();
 		learnSPNFromData = panel.getLearnSPNFromData();
 		learnedDistributionType = panel.getLearnedDistributionType();
+		executionPolicy = panel.getExecutionPolicy();
 		workerCount = panel.getWorkerCount();
 	}
 	
@@ -67,6 +70,7 @@ public class PredictionExperimentConfig {
 		private ProMTextField monitoringIterationsField;
 		private JCheckBox learnSPNFromDataBox;
 		private JComboBox learnedDistributionTypeBox;
+		private JComboBox learnedExecutionPolicyBox;
 		private JComboBox unitFactorBox;
 		private ProMTextField fileNameField;
 		private JComboBox workerCountBox;
@@ -101,6 +105,9 @@ public class PredictionExperimentConfig {
 			learnedDistributionTypeBox = addComboBox("Learned distribution type for SPN:", supportedTypes);
 			learnedDistributionTypeBox.setSelectedIndex(0);
 			
+			learnedExecutionPolicyBox = addComboBox("Assumed execution policy of the SPN:", ExecutionPolicy.values());
+			learnedExecutionPolicyBox.setSelectedIndex(0);
+			
 			workerCountBox = this.addComboBox("Parallel Workers:", WORKER_COUNTS);
 			workerCountBox.setSelectedIndex(Arrays.binarySearch(WORKER_COUNTS, config.getWorkerCount()));
 		}
@@ -117,6 +124,9 @@ public class PredictionExperimentConfig {
 		}
 		public DistributionType getLearnedDistributionType(){
 			return (DistributionType) learnedDistributionTypeBox.getSelectedItem();
+		}
+		public ExecutionPolicy getExecutionPolicy(){
+			return (ExecutionPolicy) learnedExecutionPolicyBox.getSelectedItem();
 		}
 		public double getTimeUnitFactor(){
 			return StochasticNetUtils.UNIT_CONVERSION_FACTORS[unitFactorBox.getSelectedIndex()];
@@ -153,6 +163,9 @@ public class PredictionExperimentConfig {
 	}
 	public DistributionType getLearnedDistributionType(){
 		return learnedDistributionType;
+	}
+	public ExecutionPolicy getExecutionPolicy(){
+		return executionPolicy;
 	}
 	public double getTimeUnitFactor() {
 		return timeUnitFactor;
