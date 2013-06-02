@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pnml>
+  <net id="petrinet" type="PTNet">
+    <page id="pg1">
+      <place id="start">
+        <initialMarking>
+          <text>1</text>
+        </initialMarking>
+      </place>      
+      <place id="s1"/>
+      <place id="s2"/>
+      <place id="s3"/>
+      <place id="s4"/>
+      
+      <transition id="t_a">
+        <name>
+          <text>A</text>
+        </name>
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="priority">0</property>
+	  <property key="weight">1</property>
+      	  <property key="distributionType">UNIFORM</property>
+          <property key="distributionParameters">9;11</property>
+        </toolspecific>
+      </transition>
+      <transition id="t_b">
+        <name>
+          <text>B</text>
+	</name>
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="priority">0</property>
+	  <property key="weight">4</property>
+      	  <property key="distributionType">UNIFORM</property>
+          <property key="distributionParameters">4;6</property>
+        </toolspecific>
+      </transition>
+      <transition id="t_init">
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="priority">1</property>
+	  <property key="weight">1</property>
+      	  <property key="distributionType">IMMEDIATE</property>
+          <property key="distributionParameters"></property>
+        </toolspecific>
+      </transition>
+      <transition id="t_loopback">
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="priority">1</property>
+	  <property key="weight">1</property>
+      	  <property key="distributionType">IMMEDIATE</property>
+          <property key="distributionParameters"></property>
+        </toolspecific>
+      </transition>
+      <arc id="a1" source="start" target="t_init"/>
+      
+      <arc id="a2" source="s1" target="t_b"/>
+      <arc id="a3" source="t_b" target="s2"/>
+
+      <arc id="a4" source="s3" target="t_a"/>
+      <arc id="a5" source="t_a" target="s4"/>
+      
+      <arc id="a6" source="t_init" target="s1"/>
+      <arc id="a9" source="t_init" target="s3"/>
+
+      <arc id="a7" source="s2" target="t_loopback"/>
+      <arc id="a8" source="t_loopback" target="s1"/>
+    </page>
+  </net>
+  <finalmarkings>
+      <marking>
+        <place idref="s4">
+          <text>1</text>
+        </place>
+      </marking>
+    </finalmarkings>
+</pnml>
+

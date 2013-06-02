@@ -1,13 +1,9 @@
 package org.processmining.plugins.stochasticpetrinet.prediction;
 
-import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -18,7 +14,6 @@ import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
-import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.IllegalTransitionException;
 import org.processmining.models.semantics.Semantics;
@@ -40,8 +35,7 @@ public class TimePredictor {
 	 * @return
 	 */
 	public double predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, double unitFactor, boolean useTime) {
-		Map<Place, List<Long>> placeTimes = new HashMap<Place, List<Long>>();
-		Semantics<Marking,Transition> semantics = getCurrentState(model, initialMarking, observedEvents, placeTimes);
+		Semantics<Marking,Transition> semantics = getCurrentState(model, initialMarking, observedEvents);
 		Marking currentMarking = semantics.getCurrentState();
 		Long lastEventTime = ((XAttributeTimestamp)observedEvents.get(observedEvents.size()-1).getAttributes().get(PNSimulator.TIME_TIMESTAMP)).getValueMillis();
 //		System.out.println("Time between last event and current time: "+(currentTime.getTime()-lastEventTime)+"ms");
@@ -51,13 +45,7 @@ public class TimePredictor {
 		DescriptiveStatistics stats = new DescriptiveStatistics();
 		//long now = System.currentTimeMillis(); 
 		for (int i = 1; i < 1000; i++){
-			Map<Place,List<Long>> pt = new HashMap<Place, List<Long>>();
-			for (Place p : placeTimes.keySet()){
-				List<Long> l = placeTimes.get(p);
-				List<Long> newList = new ArrayList<Long>(l);
-				pt.put(p, newList);
-			}
-			stats.addValue(simulator.simulateTraceEnd(model, semantics, config, currentMarking, currentTime, i, pt, useTime));
+			stats.addValue(simulator.simulateTraceEnd(model, semantics, config, currentMarking, lastEventTime, currentTime.getTime(), i, useTime));
 			semantics.setCurrentState(currentMarking);
 		}
 		//System.out.println("Simulated 1000 traces in "+(System.currentTimeMillis()-now)+"ms ("+(useTime?"constrained":"unconstrained")+")");
@@ -72,7 +60,7 @@ public class TimePredictor {
 	 * @param observedEvents
 	 * @return
 	 */
-	private Semantics<Marking,Transition> getCurrentState(StochasticNet model, Marking initialMarking, XTrace observedEvents, Map<Place, List<Long>> placeTimes) {
+	private Semantics<Marking,Transition> getCurrentState(StochasticNet model, Marking initialMarking, XTrace observedEvents) {
 		Semantics<Marking, Transition> semantics = StochasticNetUtils.getSemantics(model);
 		semantics.initialize(model.getTransitions(), initialMarking);
 		Set<Marking> visitedMarkings = new HashSet<Marking>();
@@ -93,7 +81,7 @@ public class TimePredictor {
 				try {
 					if (enabledTransition.getLabel().equals(transitionName)) {
 						foundTransition = true;
-						executeTransition(semantics, enabledTransition, time, placeTimes);
+						executeTransition(semantics, enabledTransition, time);
 					} else {
 						semantics.executeExecutableTransition(enabledTransition);
 						if (!visitedMarkings.contains(semantics.getCurrentState())) {
@@ -136,7 +124,7 @@ public class TimePredictor {
 //		return false;
 //	}
 	
-	private void executeTransition(Semantics<Marking, Transition> semantics, Transition transition, Long time, Map<Place, List<Long>> placeTimes) throws IllegalTransitionException{
+	private void executeTransition(Semantics<Marking, Transition> semantics, Transition transition, Long time) throws IllegalTransitionException{
 		Marking before = semantics.getCurrentState();
 		semantics.executeExecutableTransition(transition);
 		Marking after = semantics.getCurrentState();
@@ -144,17 +132,17 @@ public class TimePredictor {
 		oldInvalidPlaces.removeAll(after);
 		Marking newPlaces = new Marking(after);
 		newPlaces.removeAll(before);
-		for (Place p : oldInvalidPlaces){
-			if (placeTimes.containsKey(p) && placeTimes.get(p).size() > 0){
-				placeTimes.get(p).remove(0);
-			}
-		}
-		for (Place p : newPlaces){
-			if (!placeTimes.containsKey(p)){
-				placeTimes.put(p, new ArrayList<Long>());
-			}
-			placeTimes.get(p).add(time);
-		}
+//		for (Place p : oldInvalidPlaces){
+//			if (placeTimes.containsKey(p) && placeTimes.get(p).size() > 0){
+//				placeTimes.get(p).remove(0);
+//			}
+//		}
+//		for (Place p : newPlaces){
+//			if (!placeTimes.containsKey(p)){
+//				placeTimes.put(p, new ArrayList<Long>());
+//			}
+//			placeTimes.get(p).add(time);
+//		}
 	}
 		
 }

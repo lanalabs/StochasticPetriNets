@@ -25,6 +25,14 @@ public class StochasticNetSemanticsImpl extends AbstractResetInhibitorNetSemanti
 		Collection<Transition> executableTransitions = super.getExecutableTransitions();
 		return getTransitionsOfHighestPriority(executableTransitions);
 	}
+	/**
+	 * Gets all transitions, that are still enabled, even though some immediate transitions can fire first. 
+	 * @return all enabled transitions (these do not lose progress in the "enabling memory" policy, 
+	 * even though they can not fire in a vanishing marking...)
+	 */
+	public Collection<Transition> getEnabledTransitions() {
+		return super.getExecutableTransitions();
+	}
 
 	private Collection<Transition> getTransitionsOfHighestPriority(Collection<Transition> executableTransitions) {
 		int priority = 0;

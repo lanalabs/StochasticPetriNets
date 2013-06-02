@@ -1,13 +1,12 @@
 package org.processmining.plugins.stochasticpetrinet.simulator;
 
-import java.util.Arrays;
-
 import javax.swing.JComboBox;
 
 import org.deckfour.uitopia.api.event.TaskListener.InteractionResult;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.util.ui.widgets.ProMPropertiesPanel;
 import org.processmining.framework.util.ui.widgets.ProMTextField;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 
 /**
@@ -35,6 +34,8 @@ public class PNSimulatorConfigUI {
 		//		private JTextField startDateField;
 
 		private JComboBox timeUnitSelection;
+		
+		private JComboBox executionPolicySelection;
 
 		public ConfigPanel() {
 			super("Configure simple simulation settings.");
@@ -53,8 +54,11 @@ public class PNSimulatorConfigUI {
 			arrivalRateField = this.addTextField("arrival rate of new instances:", String.valueOf(config.arrivalRate));
 
 			timeUnitSelection = this.addComboBox("select time unit for time-axis:", StochasticNetUtils.UNIT_NAMES);
-			timeUnitSelection.setSelectedIndex(Arrays.binarySearch(StochasticNetUtils.UNIT_CONVERSION_FACTORS,
-					config.arrivalRate));
+//			timeUnitSelection.setSelectedIndex(Arrays.binarySearch(StochasticNetUtils.UNIT_CONVERSION_FACTORS,
+//					config.unitFactor));
+			timeUnitSelection.setSelectedItem(config.unitFactor);
+			executionPolicySelection = this.addComboBox("select the execution policy:", ExecutionPolicy.values());
+			executionPolicySelection.setSelectedItem(config.executionPolicy);
 		}
 
 		public PNSimulatorConfig getConfig() {
@@ -68,6 +72,7 @@ public class PNSimulatorConfigUI {
 			config.maxEventsInOneTrace = Integer.valueOf(maxEventsInOneTraceField.getText());
 			config.arrivalRate = Double.valueOf(arrivalRateField.getText());
 			config.unitFactor = StochasticNetUtils.UNIT_CONVERSION_FACTORS[timeUnitSelection.getSelectedIndex()];
+			config.executionPolicy = (ExecutionPolicy) executionPolicySelection.getSelectedItem();
 		}
 	}
 

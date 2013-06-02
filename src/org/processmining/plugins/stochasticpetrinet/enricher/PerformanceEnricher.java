@@ -62,7 +62,7 @@ public class PerformanceEnricher {
 		
 		PetrinetGraph net = manifest.getNet();
 		
-		CollectorCounter performanceCounter = new CollectorCounter((ManifestEvClassPattern) manifest);
+		CollectorCounter performanceCounter = new CollectorCounter((ManifestEvClassPattern) manifest, mineConfig.getPolicy());
 		
 		String timeAttr = getTimeAttribute(manifest);
 		boolean[] caseFilter = getCaseFilter(manifest);
