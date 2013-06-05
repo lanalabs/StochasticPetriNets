@@ -1,0 +1,123 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<pnml>
+  <module>
+    <net id="petrinet" type="PTNet">
+      <page id="page1">
+      <place id="start">
+        <initialMarking>
+          <text>1</text>
+        </initialMarking>
+      </place>
+      <place id="p1"/>
+      <place id="p2"/>
+      <place id="p3"/>
+      <place id="p4"/>
+      <place id="p5"/>
+      <place id="p6"/>
+      <place id="p7"/>
+      <transition id="t_a">
+        <name>
+          <text>A</text>
+        </name>
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="distributionType">DETERMINISTIC</property>
+  	  <property key="weight">1</property>
+	  <property key="distributionParameters">1</property>
+	  <property key="priority">0</property>
+	</toolspecific>
+      </transition>
+      <transition id="t_b">
+        <name>
+          <text>B</text>
+        </name>
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="distributionType">UNIFORM</property>
+  	  <property key="weight">1</property>
+	  <property key="distributionParameters">1;3</property>
+	  <property key="priority">0</property>
+	</toolspecific>
+      </transition>
+      <transition id="t_d">
+        <name>
+          <text>D</text>
+        </name>
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="distributionType">UNIFORM</property>
+  	  <property key="weight">1</property>
+	  <property key="distributionParameters">3;5</property>
+	  <property key="priority">0</property>
+	</toolspecific>
+      </transition>
+      <transition id="t_e">
+        <name>
+          <text>C</text>
+        </name>
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="distributionType">UNIFORM</property>
+  	  <property key="weight">1</property>
+	  <property key="distributionParameters">2;4</property>
+	  <property key="priority">0</property>
+	</toolspecific>
+      </transition>
+      <transition id="t_split">
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="distributionType">IMMEDIATE</property>
+  	  <property key="weight">1</property>
+	  <property key="distributionParameters"></property>
+	  <property key="priority">1</property>
+	</toolspecific>
+      </transition>
+      <transition id="t_join">
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="distributionType">IMMEDIATE</property>
+  	  <property key="weight">1</property>
+	  <property key="distributionParameters"></property>
+	  <property key="priority">1</property>
+	</toolspecific>
+      </transition>
+      <transition id="t2">
+      	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="distributionType">IMMEDIATE</property>
+  	  <property key="weight">1.4</property>
+	  <property key="distributionParameters"></property>
+	  <property key="priority">1</property>
+	</toolspecific>
+      </transition>
+      <transition id="t3">
+	<toolspecific tool="StochasticPetriNet" version="0.1">
+	  <property key="distributionType">IMMEDIATE</property>
+  	  <property key="weight">0.6</property>
+	  <property key="distributionParameters"></property>
+	  <property key="priority">1</property>
+	</toolspecific>
+      </transition>
+      <arc id="from_start_to_t_a" source="start" target="t_a"/>
+      <arc id="from_t_a_to_p1" source="t_a" target="p1"/>
+      <arc id="from_p2_to_t_b" source="p2" target="t_b"/>
+      <arc id="from_p3_to_t_d" source="p3" target="t_d"/>
+      <arc id="from_p3_to_t_e" source="p3" target="t_e"/>
+      <arc id="from_t_d_to_p4" source="t_d" target="p4"/>
+      <arc id="from_t_e_to_p4" source="t_e" target="p4"/>
+      <arc id="from_t_b_to_p5" source="t_b" target="p5"/>
+      <arc id="from_p4_to_t_join" source="p4" target="t_join"/>
+      <arc id="from_p5_to_t_join" source="p5" target="t_join"/>
+      <arc id="from_t_join_to_p6" source="t_join" target="p6"/>
+      <arc id="from_p1_to_t_split" source="p1" target="t_split"/>
+      <arc id="from_t_split_to_p2" source="t_split" target="p2"/>
+      <arc id="from_t_split_to_p3" source="t_split" target="p3"/>
+      <arc id="from_p6_to_t3" source="p6" target="t3"/>
+      <arc id="from_p6_to_t2" source="p6" target="t2"/>
+      <arc id="from_t3_to_p1" source="t3" target="p1"/>
+      <arc id="from_t2_to_p7" source="t2" target="p7"/>
+    </page>
+    </net>
+    <finalmarkings>
+      <marking>
+        <place idref="p7">
+          <text>1</text>
+        </place>
+      </marking>
+    </finalmarkings>
+  </module>
+</pnml>
+

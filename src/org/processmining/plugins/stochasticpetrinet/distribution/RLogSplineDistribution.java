@@ -13,6 +13,8 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 	private String rName;
 	
 	private Rengine engine;
+
+	private double numericalMean = Double.NaN;
 	
 	public RLogSplineDistribution(){
 		super(new JDKRandomGenerator());
@@ -43,7 +45,25 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 	}
 
 	public double getNumericalMean() {
-		return Double.NaN;
+		long now = System.currentTimeMillis();
+//		if (Double.isNaN(numericalMean)){
+//			UnivariateIntegrator integrator = new IterativeLegendreGaussIntegrator(16,0.01,0.000001);
+//			double upperBound = inverseCumulativeProbability(.99)+10;
+//			numericalMean = integrator.integrate(integrator.getMaximalIterationCount(), DistributionUtils.getWeightedFunction(this), 0, upperBound);
+//			System.out.println("Mean calculation based on integration took "+(System.currentTimeMillis()-now)+"ms");
+//		}
+		if (Double.isNaN(numericalMean)){
+			// work around to find the mean by drawing a 10000 size sample and getting it's mean:
+			now = System.currentTimeMillis();
+			int N = 10000; // a sample mean of 10000 samples has a 
+			double sampleMean =  engine.eval("mean(rlogspline("+N+","+rName+"))").asDouble();
+			System.out.println("Mean calculation based on "+N+" samples took "+(System.currentTimeMillis()-now)+"ms.\n" +
+					"sample mean = "+sampleMean);
+//							", numerical mean = "+numericalMean+"\n" +
+//					"Difference to numerical mean based on integration: "+(numericalMean-sampleMean)+" ~= " +((numericalMean/sampleMean - 1.)*100)+" percent.");
+			numericalMean = sampleMean;
+		}
+		return numericalMean;
 	}
 
 	public double getNumericalVariance() {

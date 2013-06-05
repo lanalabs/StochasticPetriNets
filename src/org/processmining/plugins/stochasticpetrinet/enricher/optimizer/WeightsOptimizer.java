@@ -8,16 +8,14 @@ import org.processmining.plugins.stochasticpetrinet.enricher.CollectorCounter;
 public class WeightsOptimizer {
 
 	private double[] weights;
-	
-	private CollectorCounter collectorCounter;
-	Map<short[],int[]> markingBasedSelections;
+	Map<String,int[]> markingBasedSelections;
 	
 	/**
 	 * 
 	 * @param weights initial weights
 	 * @param performanceCounter {@link CollectorCounter} containing collected transition counts for each marking after replay
 	 */
-	public WeightsOptimizer(double[] weights, Map<short[], int[]> markingBasedSelections) {
+	public WeightsOptimizer(double[] weights, Map<String, int[]> markingBasedSelections) {
 		this.weights =  weights;
 		this.markingBasedSelections = markingBasedSelections; 
 	}
@@ -30,7 +28,7 @@ public class WeightsOptimizer {
 	public double[] optimizeWeights() {
 		MarkingBasedSelectionWeightCostFunction markingBasedCostFunction = new MarkingBasedSelectionWeightCostFunction(markingBasedSelections);
 		
-		GradientDescent gradientDescent = new GradientDescent();
+		GradientDescent gradientDescent = new NormalizedPositiveGradientDescent();
 		return gradientDescent.optimize(weights, markingBasedCostFunction);
 	}
 	

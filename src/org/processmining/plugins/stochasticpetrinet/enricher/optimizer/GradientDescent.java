@@ -38,7 +38,7 @@ public class GradientDescent {
 			if (Math.abs(change) < EPSILON){
 				converged = true;
 			}
-			System.out.println("iteration "+iterations+", change: "+change+", theta: "+Arrays.toString(theta)+ "Cost: "+ costFunction.getCost(theta));
+//			System.out.println("iteration "+iterations+", change: "+change+", theta: "+Arrays.toString(theta)+ "Cost: "+ costFunction.getCost(theta));
 			// can be overwritten by sub-classes for normalization purposes
 			postProcessWeights(theta);
 		}

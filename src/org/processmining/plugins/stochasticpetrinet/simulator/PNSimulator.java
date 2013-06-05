@@ -219,23 +219,26 @@ public class PNSimulator {
 					dormantTransitions = ((StochasticNetSemanticsImpl) semantics).getEnabledTransitions();
 				}
 				// reset timers of all disabled transitions (not in the set of enabled (possibly dormant) transitions
-				for (Transition t : transitionRemainingTimes.keySet()) {
+				Object[] transitions = transitionRemainingTimes.keySet().toArray();
+				for (Object t : transitions) {
 					// entering a state where timed transitions are competing...
 					if (!dormantTransitions.contains(t)){
 						// transition got disabled in current marking: needs to be resampled next time, it becomes enabled
-						transitionRemainingTimes.remove(t);	
+						transitionRemainingTimes.remove(t);
 					}
 					// if current marking is not vanishing, time has passed, and we reduce the clocks of the transitions still enabled
 					if (transitionRemainingTimes.containsKey(t)){
-						transitionRemainingTimes.put(t, transitionRemainingTimes.get(t) - elapsedTimeInCurrentMarking);	
+						transitionRemainingTimes.put((Transition) t, transitionRemainingTimes.get(t) - elapsedTimeInCurrentMarking);	
 					}
 				}
 				break;
 			case RACE_AGE_MEMORY:
-				// reduce clocks of all transitions 
-				for (Transition t : transitionsEnabledInMarking) {
-					if (!t.equals(transitionAndDuration.getFirst())) {
-						transitionRemainingTimes.put(t, transitionRemainingTimes.get(t) - elapsedTimeInCurrentMarking);
+				if (elapsedTimeInCurrentMarking > 0) {
+					// reduce clocks of all enabled transitions 
+					for (Transition t : transitionsEnabledInMarking) {
+						if (!t.equals(transitionAndDuration.getFirst())) {
+							transitionRemainingTimes.put(t, transitionRemainingTimes.get(t) - elapsedTimeInCurrentMarking);
+						}
 					}
 				}
 				break;

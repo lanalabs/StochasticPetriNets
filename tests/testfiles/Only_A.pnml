@@ -16,20 +16,9 @@
         </name>
 	<toolspecific tool="StochasticPetriNet" version="0.1">
 	  <property key="priority">0</property>
-	  <property key="weight">0.4</property>
+	  <property key="weight">1</property>
       	  <property key="distributionType">UNIFORM</property>
           <property key="distributionParameters">1;3</property>
-        </toolspecific>
-      </transition>
-      <transition id="t_b">
-        <name>
-          <text>B</text>
-	</name>
-	<toolspecific tool="StochasticPetriNet" version="0.1">
-	  <property key="priority">0</property>
-	  <property key="weight">1.6</property>
-      	  <property key="distributionType">UNIFORM</property>
-          <property key="distributionParameters">2;4</property>
         </toolspecific>
       </transition>
       <transition id="t_init">
@@ -41,8 +30,6 @@
         </toolspecific>
       </transition>
       <arc id="a1" source="s1" target="t_a"/>
-      <arc id="a2" source="s1" target="t_b"/>
-      <arc id="a3" source="t_b" target="s2"/>
       <arc id="a4" source="t_a" target="s2"/>
       <arc id="a5" source="start" target="t_init"/>
       <arc id="a6" source="t_init" target="s1"/>

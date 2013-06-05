@@ -1,9 +1,12 @@
 package org.processmining.plugins.stochasticpetrinet.enricher;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 
@@ -37,10 +40,16 @@ import org.processmining.models.graphbased.directed.petrinet.impl.ToStochasticNe
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.manifestreplayresult.ManifestEvClassPattern;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.distribution.NonConvergenceException;
+import org.processmining.plugins.stochasticpetrinet.distribution.RCensoredLogSplineDistribution;
 import org.processmining.plugins.stochasticpetrinet.enricher.optimizer.WeightsOptimizer;
 
 public class PerformanceEnricher {
 
+	public static final double EPSILON = 0.00001;
+	
+	private int failCount;
+	
 	public Object[] transform(UIPluginContext context, Manifest manifest){
 		// ask for preferences:
 		PerformanceEnricherConfig mineConfig = getTypeOfDistributionForNet(context);
@@ -62,15 +71,14 @@ public class PerformanceEnricher {
 		
 		PetrinetGraph net = manifest.getNet();
 		
-		CollectorCounter performanceCounter = new CollectorCounter((ManifestEvClassPattern) manifest, mineConfig.getPolicy());
+		failCount = 0;
 		
-		String timeAttr = getTimeAttribute(manifest);
-		boolean[] caseFilter = getCaseFilter(manifest);
+		StochasticManifestCollector performanceCounter = new StochasticManifestCollector((ManifestEvClassPattern) manifest, mineConfig.getPolicy(), mineConfig);
 		
 		Object[] stochasticNetAndMarking = ToStochasticNet.fromPetriNetExternal(context, net, manifest.getInitMarking());
 		StochasticNet sNet = (StochasticNet) stochasticNetAndMarking[0];
 		
-		performanceCounter.init((ManifestEvClassPattern) manifest, timeAttr, getClassFor(timeAttr, manifest), caseFilter);
+		performanceCounter.collectDataFromManifest();
 		
 		Iterator<Transition> originalTransitions = net.getTransitions().iterator();
 		Iterator<Transition> newTimedTransitions = sNet.getTransitions().iterator();
@@ -78,128 +86,187 @@ public class PerformanceEnricher {
 		
 		String feedbackMessage = ""; // captures messages occurring during conversion
 		
-		// weights of the transitions are calculated based on firing ratios on each marking.
-		double[] weights = new double[net.getTransitions().size()];
-		if (mineConfig.getPolicy().equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
-			// weights of the transitions are calculated based on firing ratios on each marking.
-			Arrays.fill(weights, 1);
-			WeightsOptimizer optimizer = new WeightsOptimizer(weights, performanceCounter.getMarkingBasedSelections());
-			weights = optimizer.optimizeWeights();
+		if (context != null){
+			context.getProgress().setMaximum(sNet.getTransitions().size());
 		}
-		
-		
-		context.getProgress().setMaximum(sNet.getTransitions().size());
 		while(originalTransitions.hasNext()){
-			context.getProgress().setValue(progress++);
+			if (context != null){
+				context.getProgress().setValue(progress++);
+			}
 			Transition originalTransition = originalTransitions.next();
 			TimedTransition newTimedTransition = (TimedTransition) newTimedTransitions.next();
 			int indexOfTransition = performanceCounter.getEncOfTrans(originalTransition);
-			List<Double> transitionStats = performanceCounter.getPerformanceData(indexOfTransition);
+			List<Double> transitionStats = performanceCounter.getFiringTimes(indexOfTransition);
+			List<Double> censoredStats = performanceCounter.getCensoredFiringTimes(indexOfTransition);
 			
-			double weight = performanceCounter.getDataCount(indexOfTransition);
-			if (mineConfig.getPolicy().equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
-				newTimedTransition.setWeight(weights[indexOfTransition]);
-			} else {
-				newTimedTransition.setWeight(weight);
-			}
-			if (transitionStats != null && transitionStats.size() > 0){
-				if (containsOnlyZeros(transitionStats)){
-					newTimedTransition.setImmediate(true);
-				} else {
-					feedbackMessage += addTimingInformationToTransition(newTimedTransition, transitionStats, mineConfig);
-				}
-			} else {
-				// silent or unobserved transition (or very first transition just containing 0-values)
-				// for now treat as immediate transition
-				newTimedTransition.setImmediate(true);
+			if (!censoredStats.isEmpty()){
+				System.out.println("Transition "+originalTransition.getLabel()+" has "+censoredStats.size()+" censored and "+ transitionStats.size() +" observed firings...");
 			}
 			
-			newTimedTransition.updateDistribution();
+			feedbackMessage += addTimingInformationToTransition(newTimedTransition, transitionStats, censoredStats, mineConfig);
+			
+			newTimedTransition.initDistribution();
 		}
+		// weights of the transitions are calculated based on firing ratios on each marking.
+		double[] weights = new double[net.getTransitions().size()];
+		Arrays.fill(weights, 1);
+		Map<String, int[]> markingBasedSelections = performanceCounter.getMarkingBasedSelections();
+		if (!mineConfig.getPolicy().equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
+			// Race policy: using weights ONLY for immediate transitions! remove all Marking based selections, where no immediate transitions are fired!
+			Transition[] timedTransitions = sNet.getTransitions().toArray(new Transition[sNet.getTransitions().size()]);
+			List<String> markingsWhereRaceConditionApplies = new LinkedList<String>();
+			for (String marking : markingBasedSelections.keySet()){
+				int[] firingCountsInMarking = markingBasedSelections.get(marking);
+				boolean raceConditionAppliesInMarking = true;
+				for (int tId = 0; tId < firingCountsInMarking.length; tId++){
+					if (firingCountsInMarking[tId] > 0) {
+						// race condition only applies, if there are no immediate transitions firing in marking...
+						raceConditionAppliesInMarking &= !((TimedTransition) timedTransitions[tId]).getDistributionType().equals(DistributionType.IMMEDIATE);
+					}
+				}
+				if (raceConditionAppliesInMarking){
+					markingsWhereRaceConditionApplies.add(marking);
+				}
+			}
+			for (String raceConditionMarking : markingsWhereRaceConditionApplies){
+				markingBasedSelections.remove(raceConditionMarking);
+			}
+		}
+			
+		WeightsOptimizer optimizer = new WeightsOptimizer(weights, markingBasedSelections);
+		weights = optimizer.optimizeWeights();
+		
+		int i = 0;
+		for (Transition timedTransition : sNet.getTransitions()){
+			((TimedTransition) timedTransition).setWeight(weights[i++]);
+		}
+		
 		if (!feedbackMessage.isEmpty()){
 			JOptionPane.showMessageDialog(null, feedbackMessage, "Distribution estimation information", JOptionPane.INFORMATION_MESSAGE);
 
 		}
 		return stochasticNetAndMarking;
-		
-//		
-//		Map<Integer, List<Double>> timesForActivities = new HashMap<Integer, List<Double>>(); 
-//		
-//		int[] casePointer = manifest.getCasePointers();
-//		for (int i = 0; i < casePointer.length; i++) {
-//			// construct alignment from manifest
-//			int[] caseEncoded = manifest.getManifestForCase(i);
-//
-//			List<StepTypes> stepTypesLst = new ArrayList<StepTypes>(caseEncoded.length / 2);
-//			List<Object> eventClassLst = new ArrayList<Object>(caseEncoded.length / 2);
-//			int pointer = 0;
-//			Iterator<XEvent> it = log.get(i).iterator();
-//			
-////			TIntSet countedManifest = new TIntHashSet(caseEncoded.length / 2);
-//		}
-//		return new StochasticNetImpl("test");
+	}
+
+	private boolean getIsDeterministic(List<Double> transitionStats, List<Double> censoredStats) {
+		assert(!transitionStats.isEmpty());
+		double value = transitionStats.get(0);
+		for (double obs : transitionStats){
+			if (Math.abs(value-obs)>EPSILON){
+				return false;
+			}
+		}
+		// looks deterministic, now check if censored entries all contain the value:
+		for (double cens : censoredStats){
+			if (cens > value){
+				return false;
+			}
+		}
+		return true;
 	}
 
 	/**
 	 * 
 	 * @param newTimedTransition
-	 * @param transitionStats
+	 * @param transitionStats observed transition durations
+	 * @param censoredStats unobserved transition durations (right censored, i.e., some other transition was faster...)
 	 * @param typeToMine
 	 * @return String reporting special notes during estimation (e.g. for undefined log values) 
 	 */
 	private String addTimingInformationToTransition(TimedTransition newTimedTransition, List<Double> transitionStats,
-			PerformanceEnricherConfig config) {
-		double unitConversionFactor = config.getUnitFactor();
+			List<Double> censoredStats, PerformanceEnricherConfig config) {
 		DistributionType typeToMine = config.getType();
 		String message = "";
-		double[] values = new double[transitionStats.size()];
-		int i = 0;
-		for (Iterator<Double> iter = transitionStats.iterator(); iter.hasNext();){
-			Double d = iter.next();
-			values[i++] = d/unitConversionFactor;
-		}
-		Mean mean = new Mean();
-		double meanValue = mean.evaluate(values);
-		StandardDeviation sd = new StandardDeviation();
-		double standardDeviation = sd.evaluate(values, meanValue);
-		newTimedTransition.setDistributionType(typeToMine);
-		switch(typeToMine){
-			case NORMAL:
-				newTimedTransition.setDistributionParameters(new double[]{meanValue,standardDeviation});
-				break;
-			case LOGNORMAL:
-				double[] logValues = new double[transitionStats.size()];
-				int nanValues = 0;
-				i = 0;
-				for (int j = 0; j < values.length; j++){
-					logValues[j] = Math.log(values[j]);
-					nanValues += (Double.isNaN(logValues[j]) || Double.isInfinite(logValues[j])?1:0);
-				}
-				// take log of values:
-				if (nanValues > 0){
-					// zeros or negative numbers break log-normal function.
-					message = "Omitting "+nanValues+" values of "+logValues.length+" for estimation of " +
-							"log-normal distribution of activity "+newTimedTransition.getLabel()+".\n";
-
-				} 
-				double logMeanValue = mean.evaluate(logValues);
-				double logStandardDeviation = sd.evaluate(logValues, logMeanValue);
-				newTimedTransition.setDistributionParameters(new double[]{logMeanValue,logStandardDeviation});
-				break;
-				case EXPONENTIAL:
-				newTimedTransition.setDistributionParameters(new double[]{meanValue});
-				break;
-			case GAUSSIAN_KERNEL:
-			case HISTOGRAM:
-			case LOG_SPLINE:
-				newTimedTransition.setDistributionParameters(values);
-				break;
-			default:
-				// other distributions not supported yet...
-		}
-		newTimedTransition.setWeight(transitionStats.size());
 		newTimedTransition.setPriority(0);
 		
+		// special cases:
+		if (transitionStats.isEmpty()){
+			// we have no sample values! assume uniform over all positive values:
+			double lowerLimit = 0;
+			double upperLimit = Double.MAX_VALUE;
+		    if(!censoredStats.isEmpty()){
+		    	// we know some lower limit for the transition:  
+		    	lowerLimit = Collections.min(censoredStats);
+		    } else {
+		    	// silent or unobserved transition (or very first transition just containing 0-values)
+				// for now treat as immediate transition
+				newTimedTransition.setInvisible(true);	
+		    }
+	    	newTimedTransition.setDistributionType(DistributionType.UNIFORM);
+	    	newTimedTransition.setDistributionParameters(new double[]{lowerLimit,upperLimit});
+		} else if (containsOnlyZeros(transitionStats)){
+			// immediate transition
+			newTimedTransition.setImmediate(true);
+		} else if (getIsDeterministic(transitionStats,censoredStats)){
+			// deterministic transition
+			newTimedTransition.setDistributionType(DistributionType.DETERMINISTIC);
+			newTimedTransition.setDistributionParameters(new double[]{transitionStats.get(0)});
+		} else {
+			// regular fitting according to selected distribution model specified in the configuration.
+			double[] values = StochasticNetUtils.getAsDoubleArray(transitionStats);
+			Mean mean = new Mean();
+			double meanValue = mean.evaluate(values);
+			StandardDeviation sd = new StandardDeviation();
+			double standardDeviation = sd.evaluate(values, meanValue);
+			newTimedTransition.setDistributionType(typeToMine);
+			// degenerate case: all same values...
+			if (values.length > 1 && standardDeviation == 0 && !typeToMine.equals(DistributionType.EXPONENTIAL)){
+				newTimedTransition.setDistributionType(DistributionType.DETERMINISTIC);
+			} 
+			switch(typeToMine){
+				case NORMAL:
+					newTimedTransition.setDistributionParameters(new double[]{meanValue,standardDeviation});
+					break;
+				case LOGNORMAL:
+					double[] logValues = new double[transitionStats.size()];
+					int nanValues = 0;
+					for (int j = 0; j < values.length; j++){
+						logValues[j] = Math.log(values[j]);
+						nanValues += (Double.isNaN(logValues[j]) || Double.isInfinite(logValues[j])?1:0);
+					}
+					// take log of values:
+					if (nanValues > 0){
+						// zeros or negative numbers break log-normal function.
+						message = "Omitting "+nanValues+" values of "+logValues.length+" for estimation of " +
+								"log-normal distribution of activity "+newTimedTransition.getLabel()+".\n";
+					} 
+					double logMeanValue = mean.evaluate(logValues);
+					double logStandardDeviation = sd.evaluate(logValues, logMeanValue);
+					newTimedTransition.setDistributionParameters(new double[]{logMeanValue,logStandardDeviation});
+					break;
+					case EXPONENTIAL:
+					newTimedTransition.setDistributionParameters(new double[]{meanValue});
+					break;
+				case GAUSSIAN_KERNEL:
+				case HISTOGRAM:
+					newTimedTransition.setDistributionParameters(values);
+					break;
+				case LOG_SPLINE:
+					if (transitionStats.size() < 10 && typeToMine.equals(DistributionType.LOG_SPLINE)){
+						// log-spline fitting needs more data -> fall back to Gaussian kernel
+						newTimedTransition.setDistributionType(DistributionType.GAUSSIAN_KERNEL);
+					}
+					if (censoredStats.size() > 0 && transitionStats.size()>10){
+						try{
+							// try using better approximation capable to deal with right censored data
+							RCensoredLogSplineDistribution censoredDistribution = new RCensoredLogSplineDistribution();
+							censoredDistribution.initWithValues(StochasticNetUtils.getAsDoubleArray(transitionStats), StochasticNetUtils.getAsDoubleArray(censoredStats));
+							newTimedTransition.setDistribution(censoredDistribution);
+						} catch (NonConvergenceException e){
+							System.err.println("----> bias correction failed the "+(failCount++) +". time!");
+							message = "Fitting of logspline with "+transitionStats.size()+" observed values and "+censoredStats.size()+" censored values failed to converge.\n" +
+									"Falling back to log-spline estimation for transition "+newTimedTransition.getLabel()+" based on the observed values. (creating bias)\n";
+						}
+					} 
+					newTimedTransition.setDistributionParameters(values);
+					break;
+				case DETERMINISTIC:
+					newTimedTransition.setDistributionParameters(new double[]{meanValue});
+					break;
+				default:
+					// other distributions not supported yet...
+			}
+		}
 		return message;
 	}
 

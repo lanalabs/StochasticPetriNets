@@ -30,7 +30,10 @@ public class ToStochasticNet {
 		Map<DirectedGraphElement, DirectedGraphElement> mapping = newNet.cloneFrom(net);
 
 		Marking newMarking = ToResetInhibitorNet.cloneMarking(marking, mapping);
-		context.addConnection(new InitialMarkingConnection(newNet, newMarking));
+		
+		if (context != null){
+			context.addConnection(new InitialMarkingConnection(newNet, newMarking));
+		}
 		
 
 		return new Object[] { newNet, newMarking };

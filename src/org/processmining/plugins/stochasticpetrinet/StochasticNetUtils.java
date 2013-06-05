@@ -19,11 +19,13 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.TreeMap;
 
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 
 import org.apache.commons.math3.distribution.RealDistribution;
+import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.deckfour.xes.classification.XEventClass;
 import org.deckfour.xes.classification.XEventClasses;
@@ -41,6 +43,7 @@ import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.models.connections.petrinets.behavioral.FinalMarkingConnection;
 import org.processmining.models.connections.petrinets.behavioral.InitialMarkingConnection;
+import org.processmining.models.graphbased.directed.DirectedGraphElement;
 import org.processmining.models.graphbased.directed.petrinet.InhibitorNet;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
@@ -51,6 +54,7 @@ import org.processmining.models.graphbased.directed.petrinet.ResetNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
+import org.processmining.models.graphbased.directed.petrinet.impl.PetrinetImpl;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.PetrinetSemanticsFactory;
@@ -68,6 +72,7 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.TransClasses;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
+import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.RProvider;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.TruncatedDistributionFactory;
@@ -140,11 +145,15 @@ public class StochasticNetUtils {
 		if (useCache && initialMarkings.containsKey(petriNet)){
 			return initialMarkings.get(petriNet);
 		}
-		try { 
+		try {
+			if (context == null){
+				throw new ConnectionCannotBeObtained("No plugin context available!", InitialMarkingConnection.class, null);
+			}
 			InitialMarkingConnection imc = context.getConnectionManager().getFirstConnection(InitialMarkingConnection.class, context, petriNet);
 			initialMarking = imc.getObjectWithRole(InitialMarkingConnection.MARKING);
 		} catch (ConnectionCannotBeObtained e) {
-			e.printStackTrace();
+//			e.printStackTrace();
+			System.err.println("Unable to get initial marking connection -> setting a default one (each place without input gets a token).");
 			
 			// creating initial marking with a token on each input place. 
 			initialMarking = new Marking();
@@ -176,11 +185,15 @@ public class StochasticNetUtils {
 		if (useCache && finalMarkings.containsKey(petriNet)){
 			return finalMarkings.get(petriNet);
 		}
-		try { 
+		try {
+			if (context == null){
+				throw new ConnectionCannotBeObtained("No plugin context available!", FinalMarkingConnection.class, null);
+			}
 			FinalMarkingConnection imc = context.getConnectionManager().getFirstConnection(FinalMarkingConnection.class, context, petriNet);
 			finalMarking = imc.getObjectWithRole(FinalMarkingConnection.MARKING);
 		} catch (ConnectionCannotBeObtained e) {
-			e.printStackTrace();
+			System.err.println("Unable to get final marking connection -> setting a default one.");
+			//e.printStackTrace();
 			
 			// creating final marking with a token on each output place. 
 			finalMarking = new Marking();
@@ -208,6 +221,22 @@ public class StochasticNetUtils {
 			sample = distribution.sample();
 		} else if (distribution instanceof SimpleHistogramDistribution){
 			sample = ((SimpleHistogramDistribution)distribution).sample(positiveConstraint);
+		} else if (distribution instanceof DiracDeltaDistribution){
+			sample = distribution.sample();
+			if (positiveConstraint > sample){
+				sample = positiveConstraint;
+			}
+		} else if (distribution instanceof UniformRealDistribution) {
+			if (distribution.getSupportLowerBound() < positiveConstraint){
+				if (distribution.getSupportUpperBound() < positiveConstraint){
+					sample = positiveConstraint;
+				} else {
+					RealDistribution constrainedDist = new UniformRealDistribution(positiveConstraint, distribution.getSupportUpperBound());
+					sample = constrainedDist.sample();
+				}
+			} else {
+				sample = distribution.sample();
+			}
 		} else {
 			RealDistribution wrapper = TruncatedDistributionFactory.getConstrainedWrapper(distribution,positiveConstraint);
 			sample = wrapper.sample();
@@ -349,13 +378,71 @@ public class StochasticNetUtils {
 	 * @param log the Log that contains time information (time stamps) for performance analysis
 	 * @param parameters different replay parameters.
 	 * @param getManifest
+	 * @param addSmallDeltaCosts specifies, if a small cost should be added to increase the cost of uncommon transitions 
+	 * (favors alignment containing more frequent activities)
 	 * @return
 	 */
-	public static Object replayLog(UIPluginContext context, PetrinetGraph net, XLog log, boolean getManifest) {
-		PNManifestReplayerParameter parameters = getParameters(log, getEvClassMapping(net, log), net, StochasticNetUtils.getInitialMarking(context, net), StochasticNetUtils.getFinalMarking(context, net), XLogInfoImpl.STANDARD_CLASSIFIER);
+	public static Object replayLog(UIPluginContext context, PetrinetGraph net, XLog log, boolean getManifest, boolean addSmallDeltaCosts) {
+		TransEvClassMapping transitionEventClassMap = getEvClassMapping(net, log);
+		TransClasses transClasses = new TransClasses(net, new DefTransClassifier());
+		PNManifestReplayerParameter parameters = getParameters(log, transitionEventClassMap, net, StochasticNetUtils.getInitialMarking(context, net), StochasticNetUtils.getFinalMarking(context, net), XLogInfoImpl.STANDARD_CLASSIFIER, transClasses);
+		if (addSmallDeltaCosts){
+			// update costs accordingly (use a minimum cost and add a little for frequent transitions, and a bit more to infrequent  
+			Map<Integer, Set<XEventClass>> sortedCount = getEventClassCountsInLog(log);
+			int i = sortedCount.keySet().size();
+			int highestCost = 2*i+100;
+			// add highest costs to infrequent activities and less to frequent activities, but maintain that 2* cost > highestCost, i.e., 
+			// to use two frequent transitions should be always more expensive than to select one less frequent transition! (base this on absolute occurrences in the log)
+			for (Integer count : sortedCount.keySet()){
+				int cost = highestCost + --i;
+				assert(cost > 0);
+				assert(2 * cost > highestCost);
+				for (XEventClass eClass : sortedCount.get(count)){
+					parameters.getMapEvClass2Cost().put(eClass, cost);
+					if(transitionEventClassMap.containsValue(eClass)){
+						for (Entry<Transition, XEventClass> entry : transitionEventClassMap.entrySet()){
+							if (entry.getValue().equals(eClass)){
+								TransClass transClassT = transClasses.getClassOf(entry.getKey());
+								parameters.getTransClass2Cost().put(transClassT,cost);
+							}
+						}
+					}
+				}
+			}
+			System.out.println("------ Parameters --------");
+			System.out.println(parameters.getMapEvClass2Cost());
+			System.out.println(parameters.getTransClass2Cost());
+		}
 		return replayLog(context, net, log, parameters, getManifest);
 	}
 	
+	
+	
+	private static Map<Integer, Set<XEventClass>> getEventClassCountsInLog(XLog log) {
+		XLogInfo logInfo = XLogInfoImpl.create(log, XLogInfoImpl.STANDARD_CLASSIFIER);
+		XEventClasses eventClasses = logInfo.getEventClasses();
+		Map<XEventClass, Integer> eventCounts = new HashMap<XEventClass, Integer>();
+		
+		for (XTrace trace : log){
+			for (XEvent e : trace){
+				XEventClass eventClass = eventClasses.getClassOf(e);
+				if (!eventCounts.containsKey(eventClass)){
+					eventCounts.put(eventClass, 1);
+				} else {
+					eventCounts.put(eventClass, eventCounts.get(eventClass)+1);
+				}
+			}
+		}
+		Map<Integer, Set<XEventClass>> sortedEventClasses = new TreeMap<Integer, Set<XEventClass>>();
+		for (XEventClass eClass : eventCounts.keySet()){
+			Integer eventCount = eventCounts.get(eClass); 
+			if (!sortedEventClasses.containsKey(eventCount)){
+				sortedEventClasses.put(eventCount, new HashSet<XEventClass>());
+			}
+			sortedEventClasses.get(eventCount).add(eClass);
+		}
+		return sortedEventClasses;
+	}
 	public static Object replayLog(UIPluginContext context, PetrinetGraph net, XLog log, PNManifestReplayerParameter parameters, boolean getManifest) {
 
 		/**
@@ -399,26 +486,25 @@ public class StochasticNetUtils {
 		}
 	}
 	public static PNManifestReplayerParameter getParameters(XLog originalTrace, TransEvClassMapping mapping, PetrinetGraph net,
-			Marking initialMarking, Marking finalMarking, XEventClassifier classifier) {
+			Marking initialMarking, Marking finalMarking, XEventClassifier classifier, TransClasses transClasses) {
 		// event classes, costs
 		Map<XEventClass, Integer> mapEvClass2Cost = new HashMap<XEventClass, Integer>();
 		for ( XEventClass c : mapping.values()) {
-			mapEvClass2Cost.put(c, 1);
+			mapEvClass2Cost.put(c, 100);
 		}
 		// transition classes
 		Map<TransClass, Integer> trans2Cost = new HashMap<TransClass, Integer>();
 		Map<TransClass, Integer> transSync2Cost = new HashMap<TransClass, Integer>();
-		TransClasses transClasses = new TransClasses(net, new DefTransClassifier());
 		for (TransClass tc : transClasses.getTransClasses()) {
 			// check if tc corresponds with invisible transition
 			boolean check =  getTransitionClassIsInvisible(tc, net);
 			if (!check) {
-				trans2Cost.put(tc, 1);
+				trans2Cost.put(tc, 100);
 			}
 			else {
-				trans2Cost.put(tc, 0);
+				trans2Cost.put(tc, 2);
 			}
-			transSync2Cost.put(tc, 0);
+			transSync2Cost.put(tc, 1);
 		}
 		
 		Map<TransClass, Set<EvClassPattern>> mapTCtiECP = new HashMap<TransClass, Set<EvClassPattern>>();
@@ -565,4 +651,50 @@ public class StochasticNetUtils {
 		});
 		return link;
 	}
+	
+	/**
+	 * Converts any advanced Petri net into a plain net -> (useful for stochastic nets, especially)
+	 * 
+	 * @param context plugin context
+	 * @param net the net
+	 * @return
+	 */
+	public static Petrinet getPlainNet(UIPluginContext context, Petrinet net) {
+		Petrinet plainNet;
+		Marking initialMarking = getInitialMarking(context, net);
+		
+		Map<DirectedGraphElement, DirectedGraphElement> mapping = new HashMap<DirectedGraphElement, DirectedGraphElement>();
+		plainNet = new PetrinetImpl(net.getLabel());
+		for(Place p : net.getPlaces()){
+			Place pNew = plainNet.addPlace(p.getLabel());
+			mapping.put(p, pNew);
+		}
+		for (Transition t : net.getTransitions()){
+			Transition tNew = plainNet.addTransition(t.getLabel());
+			mapping.put(t, tNew);
+			for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : t.getGraph().getInEdges(t)){
+				plainNet.addArc((Place) mapping.get(edge.getSource()), tNew);
+			}
+			for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : t.getGraph().getOutEdges(t)){
+				plainNet.addArc(tNew, (Place) mapping.get(edge.getTarget()));
+			}
+		}
+		Marking newMarking = new Marking();
+		for (Place p : initialMarking){
+			newMarking.add((Place) mapping.get(p));
+		}
+		if (context != null){
+			context.addConnection(new InitialMarkingConnection(plainNet, newMarking));
+		}
+		return plainNet;
+	}
+	public static double[] getAsDoubleArray(Collection<Double> values) {
+		double[] arr = new double[values.size()];
+		Iterator<Double> iter = values.iterator();
+		int i = 0;
+		while(iter.hasNext()){
+			arr[i++] = iter.next();
+		}
+		return arr;
+	}	
 }

@@ -56,7 +56,7 @@ public class PerformanceEnricherPlugin {
 	@UITopiaVariant(affiliation = "Hasso Plattner Institute", author = "A. Rogge-Solti", email = "andreas.rogge-solti@hpi.uni-potsdam.de", uiLabel = UITopiaVariant.USEPLUGIN)
 	public static Object[] transform(UIPluginContext context, PetrinetGraph net, XLog log) {
 		PerformanceEnricher collector = new PerformanceEnricher();
-		Manifest manifest = (Manifest) StochasticNetUtils.replayLog(context, net, log, true);
+		Manifest manifest = (Manifest) StochasticNetUtils.replayLog(context, net, log, true, true);
 		return collector.transform(context, manifest);
 	}
 	

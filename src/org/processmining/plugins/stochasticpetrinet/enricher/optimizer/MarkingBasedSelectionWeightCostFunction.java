@@ -7,21 +7,21 @@ import java.util.Map;
 
 public class MarkingBasedSelectionWeightCostFunction implements CostFunction {
 
-	private Map<Integer, List<short[]>> markingsInWhichTransitionWasSelected;
-	private Map<short[], int[]> markingBasedSelectionCounts;
+	private Map<Integer, List<String>> markingsInWhichTransitionWasSelected;
+	private Map<String, int[]> markingBasedSelectionCounts;
 
-	public MarkingBasedSelectionWeightCostFunction(Map<short[], int[]> markingBasedSelections) {
+	public MarkingBasedSelectionWeightCostFunction(Map<String, int[]> markingBasedSelections) {
 		this.markingBasedSelectionCounts = markingBasedSelections;
-		this.markingsInWhichTransitionWasSelected = new HashMap<Integer, List<short[]>>();
-		for (short[] marking : markingBasedSelections.keySet()) {
-			for (int idx = 0; idx < markingBasedSelections.get(marking).length; idx++){
-				int count = markingBasedSelections.get(marking)[idx];
+		this.markingsInWhichTransitionWasSelected = new HashMap<Integer, List<String>>();
+		for (String markingString : markingBasedSelections.keySet()) {
+			for (int idx = 0; idx < markingBasedSelections.get(markingString).length; idx++){
+				int count = markingBasedSelections.get(markingString)[idx];
 				
 				if (count > 0) {
 					if (!markingsInWhichTransitionWasSelected.containsKey(idx)) {
-						markingsInWhichTransitionWasSelected.put(idx, new ArrayList<short[]>());
+						markingsInWhichTransitionWasSelected.put(idx, new ArrayList<String>());
 					}
-					markingsInWhichTransitionWasSelected.get(idx).add(marking);
+					markingsInWhichTransitionWasSelected.get(idx).add(markingString);
 				}
 			}
 		}
@@ -31,37 +31,39 @@ public class MarkingBasedSelectionWeightCostFunction implements CostFunction {
 	 * Simply return the average error (not squared)
 	 */
 	public double getPartialDerivation(double[] theta, int i) {
-		List<short[]> markingsInWhichTransitionIFired = markingsInWhichTransitionWasSelected.get(i);
+		List<String> markingsInWhichTransitionIFired = markingsInWhichTransitionWasSelected.get(i);
 		double errorSum = 0;
 		int errorCount = 0;
-		for (short[] marking : markingsInWhichTransitionIFired){
-			List<Integer> transitionIndices = new ArrayList<Integer>();
-			int[] transitionCounts = markingBasedSelectionCounts.get(marking);
-			int sumOfFiringsInMarking = 0;
-			int ownFirings = 0;
-			for (int idx = 0; idx < transitionCounts.length; idx++){
-				if (idx == i){
-					ownFirings = transitionCounts[idx];
+		if (markingsInWhichTransitionIFired != null) {
+			for (String marking : markingsInWhichTransitionIFired){
+				List<Integer> transitionIndices = new ArrayList<Integer>();
+				int[] transitionCounts = markingBasedSelectionCounts.get(marking);
+				int sumOfFiringsInMarking = 0;
+				int ownFirings = 0;
+				for (int idx = 0; idx < transitionCounts.length; idx++){
+					if (idx == i){
+						ownFirings = transitionCounts[idx];
+					}
+					if (transitionCounts[idx] > 0){
+						transitionIndices.add(idx);
+					}
+					sumOfFiringsInMarking += transitionCounts[idx];
 				}
-				if (transitionCounts[idx] > 0){
-					transitionIndices.add(idx);
-				}
-				sumOfFiringsInMarking += transitionCounts[idx];
-			}
-			assert sumOfFiringsInMarking > 0; // we should only have markings here, where firings occurred!
-			
-			// condition: at least two transitions should have fired in current marking to impose restrictions on the weight!
-			if (transitionIndices.size()>1){
-				// normalize:
-				errorCount++;
-				double toBeRatio = ownFirings / (double)sumOfFiringsInMarking;
+				assert sumOfFiringsInMarking > 0; // we should only have markings here, where firings occurred!
 				
-				double weightSum = 0;
-				for (int index : transitionIndices){
-					weightSum += theta[index];
+				// condition: at least two transitions should have fired in current marking to impose restrictions on the weight!
+				if (transitionIndices.size()>1){
+					// normalize:
+					errorCount++;
+					double toBeRatio = ownFirings / (double)sumOfFiringsInMarking;
+					
+					double weightSum = 0;
+					for (int index : transitionIndices){
+						weightSum += theta[index];
+					}
+					double currentRatio = theta[i]/weightSum;
+					errorSum += currentRatio-toBeRatio;
 				}
-				double currentRatio = theta[i]/weightSum;
-				errorSum += currentRatio-toBeRatio;
 			}
 		}
 		if (errorCount == 0){
@@ -74,10 +76,10 @@ public class MarkingBasedSelectionWeightCostFunction implements CostFunction {
 	public double getCost(double[] theta) {
 		double errorSum = 0;
 		int errorCount = 0;
-		for (short[] marking : markingBasedSelectionCounts.keySet()){
+		for (String markingString : markingBasedSelectionCounts.keySet()){
 			//scale both firing counts and theta weights to sum to 1:
 			List<Integer> transitionIndices = new ArrayList<Integer>();
-			int[] transitionCounts = markingBasedSelectionCounts.get(marking);
+			int[] transitionCounts = markingBasedSelectionCounts.get(markingString);
 			double sumOfFiringsInMarking = 0;
 			double sumOfWeights = 0;
 			for (int idx = 0; idx < transitionCounts.length; idx++){

@@ -1,6 +1,5 @@
 package org.processmining.tests.plugins.stochasticnet;
 
-import java.io.File;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,18 +13,14 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.StochasticNetSemanticsImpl;
-import org.processmining.plugins.pnml.importing.StochasticNetDeserializer;
-import org.processmining.plugins.pnml.simple.PNMLRoot;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
-import org.simpleframework.xml.Serializer;
-import org.simpleframework.xml.core.Persister;
 
 public class SimulatorTest {
 
 	@Test
 	public void testFiringPolicyPreselection_vs_Race() throws Exception {
-		Object[] netAndMarking = loadModel("Race_AB");
+		Object[] netAndMarking = TestUtils.loadModel("Race_AB");
 		
 		StochasticNet net = (StochasticNet) netAndMarking[0];
 		Marking marking = (Marking) netAndMarking[1];
@@ -51,7 +46,7 @@ public class SimulatorTest {
 	
 	@Test
 	public void testFiringPolicyAgeMemory_vs_Resampling() throws Exception {
-		Object[] netAndMarking = loadModel("Race_AB_Loop");
+		Object[] netAndMarking = TestUtils.loadModel("Race_AB_Loop");
 		
 		StochasticNet net = (StochasticNet) netAndMarking[0];
 		Marking marking = (Marking) netAndMarking[1];
@@ -81,7 +76,7 @@ public class SimulatorTest {
 	
 	@Test
 	public void testFiringPolicyEnablingMemory_vs_Resampling() throws Exception {
-		Object[] netAndMarking = loadModel("Race_A_parallelTo_B_Loop");
+		Object[] netAndMarking = TestUtils.loadModel("Race_A_parallelTo_B_Loop");
 		
 		StochasticNet net = (StochasticNet) netAndMarking[0];
 		Marking marking = (Marking) netAndMarking[1];
@@ -109,6 +104,26 @@ public class SimulatorTest {
 		Assert.assertTrue(countsAge.get("A") == 1);
 		
 	}
+	
+	@Test
+	public void testSimulatingComplexModel() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("Parallel_Loop_A-F");
+		
+		StochasticNet net = (StochasticNet) netAndMarking[0];
+		Marking marking = (Marking) netAndMarking[1];
+		
+		PNSimulator simulator = new PNSimulator();
+		
+		int traces = 1000;
+		
+		// do a simulation with global preselection:
+		PNSimulatorConfig config = new PNSimulatorConfig(traces,1000,0,1,1000,ExecutionPolicy.RACE_ENABLING_MEMORY);
+		XLog log = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), config, marking);
+		
+		Assert.assertNotNull(log);
+		Assert.assertEquals(traces, log.size());
+	}
+	
 
 	private Map<String, Integer> getEventCounts(XLog logPreselection, String... names) {
 		Map<String,Integer> counts = new HashMap<String, Integer>();
@@ -127,15 +142,6 @@ public class SimulatorTest {
 		return counts;
 	}
 
-	public Object[] loadModel(String name) throws Exception {
-		Serializer serializer = new Persister();
-		File source = new File("tests/testfiles/"+name+".pnml");
 
-		PNMLRoot pnml = serializer.read(PNMLRoot.class, source);
-
-		StochasticNetDeserializer converter = new StochasticNetDeserializer();
-		Object[] netAndMarking = converter.convertToNet(null, pnml, name, false);
-		return netAndMarking;
-	}
 
 }

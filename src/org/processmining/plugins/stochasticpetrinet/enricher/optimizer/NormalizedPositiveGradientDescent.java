@@ -7,17 +7,22 @@ public class NormalizedPositiveGradientDescent extends GradientDescent {
 	 */
 	protected void postProcessWeights(double[] theta) {
 		super.postProcessWeights(theta);
+		normalize(theta);
+	}
+	
+	
+	public static void normalize(double[] weights){
 		double sum = 0;
-		for (int i = 0; i < theta.length; i++){
-			if (theta[i] < 0){
-				theta[i] = 0;
+		for (int i = 0; i < weights.length; i++){
+			if (weights[i] < 0){
+				weights[i] = 0;
 			}
-			sum += theta[i];
+			sum += weights[i];
 		}
-		double scaleNormal = theta.length/sum;
+		double scaleNormal = weights.length/sum;
 		
-		for (int i = 0; i < theta.length; i++){
-			theta[i] *= scaleNormal;
+		for (int i = 0; i < weights.length; i++){
+			weights[i] *= scaleNormal;
 		}
 	}
 

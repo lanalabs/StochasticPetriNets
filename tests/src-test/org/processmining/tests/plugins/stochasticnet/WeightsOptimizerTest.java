@@ -12,7 +12,7 @@ public class WeightsOptimizerTest {
 
 	@Test
 	public void testOptimizer() throws Exception {
-		Map<short[], int[]> markingBasedSelections = new HashMap<short[], int[]>();
+		Map<String, int[]> markingBasedSelections = new HashMap<String, int[]>();
 		
 		int[] selectionsM1 = new int[]{0,0,0,0,19,0};
 		int[] selectionsM2 = new int[]{3,6,10,0,0,0};
@@ -30,13 +30,13 @@ public class WeightsOptimizerTest {
 		short[] m6 = new short[]{0,0,0,1,1,0,0};
 		short[] m7 = new short[]{0,0,0,0,1,5,0};
 		
-		markingBasedSelections.put(m1, selectionsM1);
-		markingBasedSelections.put(m2, selectionsM2);
-		markingBasedSelections.put(m3, selectionsM3);
-		markingBasedSelections.put(m4, selectionsM4);
-		markingBasedSelections.put(m5, selectionsM5);
-		markingBasedSelections.put(m6, selectionsM6);
-		markingBasedSelections.put(m7, selectionsM7);
+		markingBasedSelections.put(Arrays.toString(m1), selectionsM1);
+		markingBasedSelections.put(Arrays.toString(m2), selectionsM2);
+		markingBasedSelections.put(Arrays.toString(m3), selectionsM3);
+		markingBasedSelections.put(Arrays.toString(m4), selectionsM4);
+		markingBasedSelections.put(Arrays.toString(m5), selectionsM5);
+		markingBasedSelections.put(Arrays.toString(m6), selectionsM6);
+		markingBasedSelections.put(Arrays.toString(m7), selectionsM7);
 		
 		double[] theta = new double[6];
 		Arrays.fill(theta, 1);

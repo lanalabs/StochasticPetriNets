@@ -56,8 +56,11 @@ public class CollectorCounter extends ReliableInvisibleTransitionPerfCounter{
 	/** stores all censored sample times, where the transition could not use it's sampled duration, because it lost against another. */
 	protected Map<Integer, List<Double>> censoredTimes;
 	
-	/** Stores the age of a transition since the last sampling period */ 
-	protected Map<Integer, Double> ageVariables;
+	/** Stores the age of a transition in ms since the last sampling period */ 
+	protected Map<Integer, Long> ageVariables;
+	
+	/** The time of the last event, that was replayed in the model */
+	protected long lastFiringTime;
 	
 	private ManifestEvClassPattern manifest;
 	
@@ -89,20 +92,23 @@ public class CollectorCounter extends ReliableInvisibleTransitionPerfCounter{
 		this.manifest = manifest;
 		this.executionPolicy  = executionPolicy;
 		currentlyEnabled = new HashSet<Integer>();
-		ageVariables = new HashMap<Integer, Double>();
+		ageVariables = new HashMap<Integer, Long>();
 		firingTimes = new HashMap<Integer, List<Double>>();
 		censoredTimes = new HashMap<Integer, List<Double>>();
-		for (int tId = 0; tId < idx2Trans.length; tId++){
-			ageVariables.put(tId, 0.);
-		}
 		markingBasedSelections = new HashMap<short[], int[]>();
 	}
 	
 	
 
+//	public void init(ManifestEvClassPattern manifest, String timeAtt, Class<?> c, boolean[] caseFilter) {
+//		super.init(manifest, timeAtt, c, caseFilter);
+//	}
+
+
+
 	protected void updateMarkingMoveModel(TIntObjectMap<List<Long>> timedPlaces, short[] marking,
 			int encTrans) {
-		addMarkingTransitionCounter(marking,encTrans, Double.NaN);
+		addMarkingTransitionCounter(marking, encTrans);
 		
 		super.updateMarkingMoveModel(timedPlaces, marking, encTrans);
 
@@ -119,13 +125,26 @@ public class CollectorCounter extends ReliableInvisibleTransitionPerfCounter{
 	 * 
 	 * @param marking the marking in which the transition fired
 	 * @param encTrans the transition that fired
-	 * @param timeForTransition the time difference of the time on the last token and the event, or NaN (if model moved alone) 
 	 */
-	private void addMarkingTransitionCounter(short[] marking, int encTrans, double timeForTransition) {
-		if (!markingBasedSelections.containsKey(marking)){
+	private void addMarkingTransitionCounter(short[] marking, int encTrans) {
+		boolean markingFound = false;
+		short[] markingInMap = null;
+		for (short[] m : markingBasedSelections.keySet()){
+			boolean equals = true;
+			for (int i= 0; i < m.length; i++){
+				equals = equals && marking[i] == m[i];
+			}
+			if(equals){
+				markingInMap = m;
+			}
+		}
+		if (markingInMap == null){
+			markingInMap = marking;
+		}
+		if (!markingBasedSelections.containsKey(markingInMap)){
 			markingBasedSelections.put(marking, new int[idx2Trans.length]);
 		}
-		markingBasedSelections.get(marking)[encTrans]++;
+		markingBasedSelections.get(markingInMap)[encTrans]++;
 		currentMarking = null;
 	}
 	
@@ -188,7 +207,7 @@ public class CollectorCounter extends ReliableInvisibleTransitionPerfCounter{
 			timeForTransition = (double)(firingTime - lastTokenTakenTime);
 			
 			if (executionPolicy.equals(ExecutionPolicy.RACE_AGE_MEMORY)){
-				timeForTransition += ageVariables.get(encodedTransitionId);
+				timeForTransition += getAge(encodedTransitionId);
 			}
 			
 			if (executionPolicy.equals(ExecutionPolicy.RACE_ENABLING_MEMORY)){
@@ -214,7 +233,7 @@ public class CollectorCounter extends ReliableInvisibleTransitionPerfCounter{
 			firingTimes.get(encodedTransitionId).add(timeForTransition);
 		}
 		if (currentMarking != null){
-			addMarkingTransitionCounter(currentMarking, encodedTransitionId, timeForTransition);
+			addMarkingTransitionCounter(currentMarking, encodedTransitionId);
 		} 
 	}
 
@@ -244,6 +263,12 @@ public class CollectorCounter extends ReliableInvisibleTransitionPerfCounter{
 
 
 	protected Long takeTokens(TIntObjectMap<List<Long>> timedPlaces, short[] marking, int encTrans, long currentEventFiringTime) {
+		long timeSpendInMarking = 0;
+		if (lastFiringTime > -1){
+			timeSpendInMarking = currentEventFiringTime-lastFiringTime;
+		}
+		lastFiringTime = currentEventFiringTime;
+		
 		currentMarking = marking.clone();
 		currentlyEnabled = getConcurrentlyEnabledTransitions(currentMarking);
 		Long maxInputTokenTime = super.takeTokens(timedPlaces, marking, encTrans, currentEventFiringTime);
@@ -266,12 +291,12 @@ public class CollectorCounter extends ReliableInvisibleTransitionPerfCounter{
 		} else if (executionPolicy.equals(ExecutionPolicy.RACE_AGE_MEMORY) && maxInputTokenTime != null){
 			for (Integer disabled:disabledTransitions){
 				// increment age variables of transitions by the firing duration of the current transition:
-				double previousAge = ageVariables.get(disabled);
+				long previousAge = getAge(disabled);
 				previousAge += currentEventFiringTime-maxInputTokenTime;
 				ageVariables.put(disabled, previousAge);
 			}
 			// reset age variable of firing transition
-			ageVariables.put(encTrans,0.);
+			ageVariables.put(encTrans,0l);
 		} 
 		/* In race - resampling, EVERY transition loses its progress after firing, that is has to start new */
 		/* in global preselection, ONLY ONE transition makes progress at a time */
@@ -280,11 +305,20 @@ public class CollectorCounter extends ReliableInvisibleTransitionPerfCounter{
 			for (int key : timedPlaces.keys()){
 				Long[] newValues = new Long[timedPlaces.get(key).size()];
 				Arrays.fill(newValues, currentEventFiringTime);
-				timedPlaces.put(key, Arrays.asList(newValues));
+				timedPlaces.put(key, new LinkedList<Long>(Arrays.asList(newValues)));
 			}
 		}
 		
 		return maxInputTokenTime;
+	}
+
+
+
+	private long getAge(Integer tId) {
+		if (!ageVariables.containsKey(tId)){
+			ageVariables.put(tId, 0l);
+		}
+		return ageVariables.get(tId);
 	}
 	
 	

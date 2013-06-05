@@ -140,7 +140,7 @@ public class PredictionExperimentPlugin {
 				if (!config.getLearnSPNFromData()){
 					System.out.println("Learning stochastic Petri net from data, as no stochastic Petri net was passed!");
 				}
-				Manifest manifest = (Manifest)StochasticNetUtils.replayLog(context, model, trainingLog, true);
+				Manifest manifest = (Manifest)StochasticNetUtils.replayLog(context, model, trainingLog, true, true);
 				Object[] netAndMarking = PerformanceEnricherPlugin.transform(context, manifest, new PerformanceEnricherConfig(config.getLearnedDistributionType(),config.getTimeUnitFactor(),config.getExecutionPolicy()));
 				stochasticNet = (StochasticNet) netAndMarking[0];
 				stochasticNet.getAttributeMap().put(StochasticNetUtils.ITERATION_KEY, kFold);

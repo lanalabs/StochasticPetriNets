@@ -55,6 +55,20 @@ public interface StochasticNet extends ResetNet, Petrinet{
 	 */
 	public enum ExecutionPolicy{
 		GLOBAL_PRESELECTION, RACE_RESAMPLING, RACE_ENABLING_MEMORY, RACE_AGE_MEMORY;
+
+		public String shortName() {
+			switch (this){
+				case GLOBAL_PRESELECTION:
+					return "preSel";
+				case RACE_AGE_MEMORY:
+					return "raceAge";
+				case RACE_ENABLING_MEMORY:
+					return "raceEnabl";
+				case RACE_RESAMPLING:
+					return "raceResampl";
+			}
+			return null;
+		}
 	}
 	
 	// immediate transitions
