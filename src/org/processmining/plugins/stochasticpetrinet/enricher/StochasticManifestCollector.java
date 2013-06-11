@@ -13,8 +13,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.model.XEvent;
+import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
@@ -73,15 +75,13 @@ public class StochasticManifestCollector {
 	/** Stores the age of a transition in model time units since the last sampling period */ 
 	protected Map<Integer, Double> ageVariables;
 	
-	/** The time of the last event, that was replayed in the model */
-	protected long lastFiringTime = Long.MIN_VALUE;
-	
 	protected ManifestEvClassPattern manifest;
 	
 	/**
 	 * Mapping the Petri net to integer-encoded numbers
 	 */
 	protected Transition[] idx2Trans;
+	
 	private TObjectIntMap<Transition> trans2Idx;
 
 	private Place[] idx2Place;
@@ -96,6 +96,10 @@ public class StochasticManifestCollector {
 	*/  
 	protected Map<String, int[]> markingBasedSelections;
 	
+	/**
+	 * Stores the longest trace's duration in time units of the model
+	 */
+	protected double longestTrace = 0;
 	
 	/**
 	 * Stores the transitions that are enabled in the current marking.
@@ -113,6 +117,11 @@ public class StochasticManifestCollector {
 	/** Configuration for the enricher */
 	private PerformanceEnricherConfig config;
 	
+	/**
+	 * Captures the average fitness of the log and the model.
+	 */
+	private DescriptiveStatistics fitnessStatistic;
+	
 	public StochasticManifestCollector(ManifestEvClassPattern manifest, ExecutionPolicy executionPolicy, PerformanceEnricherConfig config){
 		this.manifest = manifest;
 		this.executionPolicy  = executionPolicy;
@@ -122,6 +131,7 @@ public class StochasticManifestCollector {
 		firingTimes = new HashMap<Integer, List<Double>>();
 		censoredTimes = new HashMap<Integer, List<Double>>();
 		markingBasedSelections = new HashMap<String, int[]>();
+		fitnessStatistic = new DescriptiveStatistics();
 		
 		// init transitions
 		PetrinetGraph net = manifest.getNet();
@@ -183,11 +193,12 @@ public class StochasticManifestCollector {
 		// performance calculation
 		int[] cases = manifest.getCasePointers();
 		for (int i = 0; i < cases.length; i++) {
+			Pair<Long,Long> caseBounds = new Pair<Long, Long>(-1l, -1l);
 			if (cases[i] >= 0) {
 				// create initial marking
 				short[] marking = constructEncInitMarking(manifest.getInitMarking());
 				// reset last firing time
-				lastFiringTime = Long.MIN_VALUE;
+				long lastFiringTime = Long.MIN_VALUE;
 				ageVariables.clear();
 				
 				// create trace iterator
@@ -195,21 +206,32 @@ public class StochasticManifestCollector {
 
 				// now, iterate through all manifests for the case
 				int[] man = manifest.getManifestForCase(i);
-
+				int stepsInAlignment = 0;
+				int synchronousAndInvisibleMoves = 0; 
 				int currIdx = 0;
 				while (currIdx < man.length) {
 					if (man[currIdx] == Manifest.MOVELOG) {
 						XEvent currEvent = it.next();
+						long timeStamp = XTimeExtension.instance().extractTimestamp(currEvent).getTime();
+						caseBounds = updateCaseBounds(timeStamp, caseBounds);
 						// ignore for now... TODO: maybe use logmoves too
 						currIdx++;
+						stepsInAlignment++;
 					} else if (man[currIdx] == Manifest.MOVEMODEL) {
-						updateMarking(marking, manifest.getEncTransOfManifest(man[currIdx+1]), Double.NaN);
+						double time= Double.NaN;
+						if (idx2Trans[man[currIdx+1]].isInvisible()){
+							synchronousAndInvisibleMoves++;
+							time = 0; // assume that invisible transitions are immediate
+						}
+						updateMarking(marking, man[currIdx+1], time);
 						currIdx += 2;
+						stepsInAlignment++;
 					} else if (man[currIdx] == Manifest.MOVESYNC) {
 						// shared variable
 						XEvent currEvent = it.next();
 						// extract time information 
 						long currEventTime = XTimeExtension.instance().extractTimestamp(currEvent).getTime();
+						caseBounds = updateCaseBounds(currEventTime, caseBounds);
 						long timeSpentInMarking = 0;
 						if (lastFiringTime!=Long.MIN_VALUE){
 							timeSpentInMarking = currEventTime - lastFiringTime;
@@ -217,80 +239,100 @@ public class StochasticManifestCollector {
 						lastFiringTime = currEventTime;
 						updateMarking(marking, manifest.getEncTransOfManifest(man[currIdx+1]), timeSpentInMarking / config.getUnitFactor());
 						currIdx += 2;
+						stepsInAlignment++;
+						synchronousAndInvisibleMoves++;
 					}
 				}
+				double traceDurationInUnits = (caseBounds.getSecond()-caseBounds.getFirst())/ config.getUnitFactor();
+				longestTrace = Math.max(longestTrace,traceDurationInUnits);
+				fitnessStatistic.addValue(synchronousAndInvisibleMoves/(double)stepsInAlignment);
 				// after every replay, we collect the age variables:
 				for (Integer transitionId : ageVariables.keySet()){
-					censoredTimes.get(transitionId).add(ageVariables.remove(transitionId));
+					censoredTimes.get(transitionId).add(ageVariables.get(transitionId));
 				}
+				ageVariables.clear();
 			}
 		}
 	}
 
+	private Pair<Long, Long> updateCaseBounds(long timeStamp, Pair<Long,Long> caseBounds) {
+		long start = caseBounds.getFirst();
+		long end = caseBounds.getSecond();
+		if(start < 0){
+			start = timeStamp;
+		}
+		end = timeStamp;
+		return new Pair<Long, Long>(start, end);
+	}
+
 	private void updateMarking(short[] marking, int encTrans, double timeSpentInMarking) {
-			currentlyEnabled = getConcurrentlyEnabledTransitions(marking);
-			fireTransitionInMarking(marking, encTrans);
-			Set<Integer> afterwardsEnabled = getConcurrentlyEnabledTransitions(marking);
-			
-			// collect conflicting transitions that get disabled by this transition firing
-			disabledTransitions = new HashSet<Integer>();
-			for (Integer enabledBefore : currentlyEnabled){
-				if (enabledBefore != encTrans && !afterwardsEnabled.contains(enabledBefore)){
-					disabledTransitions.add(enabledBefore);
-				}
+		if (timeSpentInMarking < 0){
+			System.out.println("Debug me! time should not be < 0!");
+		}
+		
+		currentlyEnabled = getConcurrentlyEnabledTransitions(marking);
+		fireTransitionInMarking(marking, encTrans);
+		Set<Integer> afterwardsEnabled = getConcurrentlyEnabledTransitions(marking);
+		
+		// collect conflicting transitions that get disabled by this transition firing
+		disabledTransitions = new HashSet<Integer>();
+		for (Integer enabledBefore : currentlyEnabled){
+			if (enabledBefore != encTrans && !afterwardsEnabled.contains(enabledBefore)){
+				disabledTransitions.add(enabledBefore);
 			}
-			
-			if (!Double.isNaN(timeSpentInMarking)){
-				// we know that (0, or more) time passed! update transition ages of enabled transitions, if applicable
-				if (executionPolicy.equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
-					// add the time spent in the marking to the sole active transition:
-					firingTimes.get(encTrans).add(timeSpentInMarking);
-					// don't use transition ages
-				} else if (executionPolicy.equals(ExecutionPolicy.RACE_RESAMPLING)){
-					// add the time spent in the marking to the sole active transition:
-					firingTimes.get(encTrans).add(timeSpentInMarking);
-					// add right-censored values for all the other enabled transitions in this marking:
-					if (timeSpentInMarking>0){ 	// ignore vanishing markings of immediate transitions 
-						for (Integer enabledBefore : currentlyEnabled){
-							if (enabledBefore != encTrans){
-								censoredTimes.get(enabledBefore).add(timeSpentInMarking);
-							}
+		}
+		
+		if (!Double.isNaN(timeSpentInMarking)){
+			// we know that (0, or more) time passed! update transition ages of enabled transitions, if applicable
+			if (executionPolicy.equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
+				// add the time spent in the marking to the sole active transition:
+				firingTimes.get(encTrans).add(timeSpentInMarking);
+				// don't use transition ages
+			} else if (executionPolicy.equals(ExecutionPolicy.RACE_RESAMPLING)){
+				// add the time spent in the marking to the sole active transition:
+				firingTimes.get(encTrans).add(timeSpentInMarking);
+				// add right-censored values for all the other enabled transitions in this marking:
+				if (timeSpentInMarking>0){ 	// ignore vanishing markings of immediate transitions 
+					for (Integer enabledBefore : currentlyEnabled){
+						if (enabledBefore != encTrans){
+							censoredTimes.get(enabledBefore).add(timeSpentInMarking);
 						}
 					}
-					// don't use transition ages
-				} else {
-					// either race - enabling, or race - age (minor difference: reset age for disabled transitions, only)
-					
-					// get enabled time of transition:
-					double transitionEnabledTime = 0;
-					if (ageVariables.containsKey(encTrans)){
-						transitionEnabledTime = ageVariables.remove(encTrans);
-					}
-					firingTimes.get(encTrans).add(timeSpentInMarking+transitionEnabledTime);
-					
-					if (timeSpentInMarking > 0){
-						for (Integer enabled : currentlyEnabled){
-							// update other enabled transition ages:
-							if (enabled != encTrans){
-								if (!ageVariables.containsKey(enabled)){
-									ageVariables.put(enabled, 0.);
-								}
-								ageVariables.put(enabled, ageVariables.get(enabled)+timeSpentInMarking);
+				}
+				// don't use transition ages
+			} else {
+				// either race - enabling, or race - age (minor difference: reset age for disabled transitions, only)
+				
+				// get enabled time of transition:
+				double transitionEnabledTime = 0;
+				if (ageVariables.containsKey(encTrans)){
+					transitionEnabledTime = ageVariables.remove(encTrans);
+				}
+				firingTimes.get(encTrans).add(timeSpentInMarking+transitionEnabledTime);
+				
+				if (timeSpentInMarking > 0){
+					for (Integer enabled : currentlyEnabled){
+						// update other enabled transition ages:
+						if (enabled != encTrans){
+							if (!ageVariables.containsKey(enabled)){
+								ageVariables.put(enabled, 0.);
 							}
+							ageVariables.put(enabled, ageVariables.get(enabled)+timeSpentInMarking);
 						}
 					}
-					if (executionPolicy.equals(ExecutionPolicy.RACE_ENABLING_MEMORY)){
-						for (Integer disabled : disabledTransitions){
-							Double censoredTime = ageVariables.remove(disabled);
-							if (censoredTime != null && censoredTime > 0){ // ignore losing against immediate transitions
-								// only add to censored times, if transition had some progress before losing against the current transition
-								censoredTimes.get(disabled).add(censoredTime); 
-							}
+				}
+				if (executionPolicy.equals(ExecutionPolicy.RACE_ENABLING_MEMORY)){
+					for (Integer disabled : disabledTransitions){
+						Double censoredTime = ageVariables.remove(disabled);
+						if (censoredTime != null && censoredTime > 0){ // ignore losing against immediate transitions
+							// only add to censored times, if transition had some progress before losing against the current transition
+							censoredTimes.get(disabled).add(censoredTime); 
 						}
 					}
 				}
 			}
 		}
+	}
 		
 	private void fireTransitionInMarking(short[] marking, int encTrans) {
 		addMarkingTransitionCounter(marking, encTrans);
@@ -320,6 +362,13 @@ public class StochasticManifestCollector {
 	 * @param encTrans the transition that fired
 	 */
 	private void addMarkingTransitionCounter(short[] marking, int encTrans) {
+		// sanity check:
+		for (short s : marking){
+			if (s < 0){
+				System.out.println("Debug me! Marking < 0!");
+			}
+		}
+			
 		String markingString = Arrays.toString(marking);
 		if (!markingBasedSelections.containsKey(markingString)){
 			markingBasedSelections.put(markingString, new int[idx2Trans.length]);
@@ -376,6 +425,10 @@ public class StochasticManifestCollector {
 		return enabledTransitions;
 	}
 
+	public double getMeanTraceFitness(){
+		return fitnessStatistic.getMean();
+	}
+	
 	public Map<String, int[]> getMarkingBasedSelections() {
 		return markingBasedSelections;
 	}
@@ -397,5 +450,9 @@ public class StochasticManifestCollector {
 
 	public List<Double> getCensoredFiringTimes(int indexOfTransition) {
 		return censoredTimes.get(indexOfTransition);
+	}
+
+	public double getMaxTraceDuration() {
+		return longestTrace;
 	}
 }

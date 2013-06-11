@@ -41,6 +41,7 @@ import org.deckfour.xes.model.XTrace;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.plugin.PluginContext;
+import org.processmining.framework.util.Pair;
 import org.processmining.models.connections.petrinets.behavioral.FinalMarkingConnection;
 import org.processmining.models.connections.petrinets.behavioral.InitialMarkingConnection;
 import org.processmining.models.graphbased.directed.DirectedGraphElement;
@@ -409,9 +410,9 @@ public class StochasticNetUtils {
 					}
 				}
 			}
-			System.out.println("------ Parameters --------");
-			System.out.println(parameters.getMapEvClass2Cost());
-			System.out.println(parameters.getTransClass2Cost());
+//			System.out.println("------ Parameters --------");
+//			System.out.println(parameters.getMapEvClass2Cost());
+//			System.out.println(parameters.getTransClass2Cost());
 		}
 		return replayLog(context, net, log, parameters, getManifest);
 	}
@@ -671,6 +672,7 @@ public class StochasticNetUtils {
 		}
 		for (Transition t : net.getTransitions()){
 			Transition tNew = plainNet.addTransition(t.getLabel());
+			tNew.setInvisible(t.isInvisible());
 			mapping.put(t, tNew);
 			for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : t.getGraph().getInEdges(t)){
 				plainNet.addArc((Place) mapping.get(edge.getSource()), tNew);
@@ -696,5 +698,17 @@ public class StochasticNetUtils {
 			arr[i++] = iter.next();
 		}
 		return arr;
-	}	
+	}
+	
+	public static Pair<Long, Long> getBufferedTraceBounds(XTrace trace) {
+		long lowerBound = Long.MAX_VALUE;
+		long upperBound = Long.MIN_VALUE;
+		
+		for (XEvent event : trace){
+			long eventTime = XTimeExtension.instance().extractTimestamp(event).getTime();
+			lowerBound = Math.min(lowerBound, eventTime);
+			upperBound = Math.max(upperBound, eventTime);
+		}
+		return new Pair<Long,Long>(lowerBound-10, upperBound+10);
+	}
 }

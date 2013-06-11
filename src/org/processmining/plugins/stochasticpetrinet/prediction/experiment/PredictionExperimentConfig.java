@@ -96,7 +96,7 @@ public class PredictionExperimentConfig {
 			DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL,DistributionType.EXPONENTIAL,DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM};
 			if (StochasticNetUtils.splinesSupported()){
 				supportedTypes = Arrays.copyOf(supportedTypes, supportedTypes.length+1);
-				supportedTypes[supportedTypes.length-2] = DistributionType.LOG_SPLINE;
+				supportedTypes[supportedTypes.length-2] = DistributionType.LOGSPLINE;
 			} else {
 				add(new JLabel("To enable spline smoothers, make sure you have a running R installation \n" +
 						"and the native jri-binary is accessible in your java.library.path!"));

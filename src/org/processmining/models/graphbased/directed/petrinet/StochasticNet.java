@@ -25,7 +25,7 @@ public interface StochasticNet extends ResetNet, Petrinet{
 		// parametric continuous distributions
 		BETA, EXPONENTIAL, NORMAL, LOGNORMAL, GAMMA, STUDENT_T, UNIFORM, WEIBULL,
 		// nonparametric continuous distributions
-		GAUSSIAN_KERNEL,HISTOGRAM,LOG_SPLINE,
+		GAUSSIAN_KERNEL,HISTOGRAM,LOGSPLINE,
 		// immediate transitions
 		IMMEDIATE, 
 		// a deterministic transition (e.g. takes always exactly 5 time units)

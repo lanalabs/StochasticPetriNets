@@ -82,6 +82,7 @@ public class PNSimulatorConfig {
 	 * @param logName the name of the generated log.
 	 */
 	public PNSimulatorConfig(int numberOfTraces, double unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace, ExecutionPolicy policy, String logName){
+		this.seed = seed;
 		this.numberOfTraces = numberOfTraces;
 		this.arrivalRate = arrivalRate;
 		this.unitFactor = unitFactor; // default to seconds (= 1000 ms)

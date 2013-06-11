@@ -48,7 +48,11 @@ public class PerformanceEnricher {
 
 	public static final double EPSILON = 0.00001;
 	
-	private int failCount;
+	private static int failCount = 0;
+	
+	private StochasticManifestCollector performanceCollector;
+	
+	private Map<String, int[]> markingBasedSelections;
 	
 	public Object[] transform(UIPluginContext context, Manifest manifest){
 		// ask for preferences:
@@ -71,14 +75,12 @@ public class PerformanceEnricher {
 		
 		PetrinetGraph net = manifest.getNet();
 		
-		failCount = 0;
-		
-		StochasticManifestCollector performanceCounter = new StochasticManifestCollector((ManifestEvClassPattern) manifest, mineConfig.getPolicy(), mineConfig);
+		performanceCollector = new StochasticManifestCollector((ManifestEvClassPattern) manifest, mineConfig.getPolicy(), mineConfig);
 		
 		Object[] stochasticNetAndMarking = ToStochasticNet.fromPetriNetExternal(context, net, manifest.getInitMarking());
 		StochasticNet sNet = (StochasticNet) stochasticNetAndMarking[0];
 		
-		performanceCounter.collectDataFromManifest();
+		performanceCollector.collectDataFromManifest();
 		
 		Iterator<Transition> originalTransitions = net.getTransitions().iterator();
 		Iterator<Transition> newTimedTransitions = sNet.getTransitions().iterator();
@@ -95,22 +97,22 @@ public class PerformanceEnricher {
 			}
 			Transition originalTransition = originalTransitions.next();
 			TimedTransition newTimedTransition = (TimedTransition) newTimedTransitions.next();
-			int indexOfTransition = performanceCounter.getEncOfTrans(originalTransition);
-			List<Double> transitionStats = performanceCounter.getFiringTimes(indexOfTransition);
-			List<Double> censoredStats = performanceCounter.getCensoredFiringTimes(indexOfTransition);
+			int indexOfTransition = performanceCollector.getEncOfTrans(originalTransition);
+			List<Double> transitionStats = performanceCollector.getFiringTimes(indexOfTransition);
+			List<Double> censoredStats = performanceCollector.getCensoredFiringTimes(indexOfTransition);
 			
 			if (!censoredStats.isEmpty()){
 				System.out.println("Transition "+originalTransition.getLabel()+" has "+censoredStats.size()+" censored and "+ transitionStats.size() +" observed firings...");
 			}
 			
-			feedbackMessage += addTimingInformationToTransition(newTimedTransition, transitionStats, censoredStats, mineConfig);
+			feedbackMessage += addTimingInformationToTransition(newTimedTransition, transitionStats, censoredStats, mineConfig, performanceCollector.getMeanTraceFitness(), performanceCollector.getMaxTraceDuration());
 			
-			newTimedTransition.initDistribution();
+			newTimedTransition.initDistribution(performanceCollector.getMaxTraceDuration());
 		}
 		// weights of the transitions are calculated based on firing ratios on each marking.
 		double[] weights = new double[net.getTransitions().size()];
 		Arrays.fill(weights, 1);
-		Map<String, int[]> markingBasedSelections = performanceCounter.getMarkingBasedSelections();
+		markingBasedSelections = performanceCollector.getMarkingBasedSelections();
 		if (!mineConfig.getPolicy().equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
 			// Race policy: using weights ONLY for immediate transitions! remove all Marking based selections, where no immediate transitions are fired!
 			Transition[] timedTransitions = sNet.getTransitions().toArray(new Transition[sNet.getTransitions().size()]);
@@ -142,23 +144,38 @@ public class PerformanceEnricher {
 		}
 		
 		if (!feedbackMessage.isEmpty()){
-			JOptionPane.showMessageDialog(null, feedbackMessage, "Distribution estimation information", JOptionPane.INFORMATION_MESSAGE);
-
+			if (context != null){
+				// provide user feedback only in GUI mode
+				JOptionPane.showMessageDialog(null, feedbackMessage, "Distribution estimation information", JOptionPane.INFORMATION_MESSAGE);
+			} else {
+				System.out.println(feedbackMessage);
+			}
 		}
+		System.out.println("finished discovery of GDT_SPN model for "+mineConfig.getPolicy()+" policy.");
 		return stochasticNetAndMarking;
 	}
 
-	private boolean getIsDeterministic(List<Double> transitionStats, List<Double> censoredStats) {
+	private boolean getIsDeterministic(List<Double> transitionStats, List<Double> censoredStats, double traceFitness) {
 		assert(!transitionStats.isEmpty());
-		double value = transitionStats.get(0);
-		for (double obs : transitionStats){
+		
+		Collections.sort(transitionStats);
+		
+		double value = getMedian(transitionStats);
+		
+		
+		int quantile = (int) Math.max(5, ((1.0-traceFitness)*50));
+		
+		// Strip outliers:
+		List<Double> removedOutliers = removeOutliers(transitionStats,quantile);
+		
+		for (double obs : removedOutliers){
 			if (Math.abs(value-obs)>EPSILON){
 				return false;
 			}
 		}
 		// looks deterministic, now check if censored entries all contain the value:
 		for (double cens : censoredStats){
-			if (cens > value){
+			if (cens > value+EPSILON){
 				return false;
 			}
 		}
@@ -166,15 +183,43 @@ public class PerformanceEnricher {
 	}
 
 	/**
+	 * Trims the values in the upper and lower x-quantiles
+	 * @param transitionStats
+	 * @param x percent
+	 * @return
+	 */
+	private List<Double> removeOutliers(List<Double> transitionStats, int x) {
+		int valuesToRemove = x*transitionStats.size()/100;
+		Iterator<Double> iter = transitionStats.iterator();
+		int pos = 0;
+		List<Double> trimmedValues = new LinkedList<Double>(); 
+		while (iter.hasNext()){
+			if (pos > valuesToRemove && pos < transitionStats.size()-valuesToRemove){
+				trimmedValues.add(iter.next());
+			} else {
+				iter.next();
+			}
+			pos++;
+		}
+		return trimmedValues;
+	}
+
+	private double getMedian(List<Double> transitionStats) {
+		return transitionStats.get(transitionStats.size()/2);
+	}
+
+	/**
 	 * 
 	 * @param newTimedTransition
 	 * @param transitionStats observed transition durations
 	 * @param censoredStats unobserved transition durations (right censored, i.e., some other transition was faster...)
+	 * @param traceFitness 
 	 * @param typeToMine
+	 * @param maxTraceLength the duration of the trace in model-units (ms divided by unit factor)
 	 * @return String reporting special notes during estimation (e.g. for undefined log values) 
 	 */
 	private String addTimingInformationToTransition(TimedTransition newTimedTransition, List<Double> transitionStats,
-			List<Double> censoredStats, PerformanceEnricherConfig config) {
+			List<Double> censoredStats, PerformanceEnricherConfig config, double traceFitness, double maxTraceLength) {
 		DistributionType typeToMine = config.getType();
 		String message = "";
 		newTimedTransition.setPriority(0);
@@ -183,7 +228,7 @@ public class PerformanceEnricher {
 		if (transitionStats.isEmpty()){
 			// we have no sample values! assume uniform over all positive values:
 			double lowerLimit = 0;
-			double upperLimit = Double.MAX_VALUE;
+			double upperLimit = 20;
 		    if(!censoredStats.isEmpty()){
 		    	// we know some lower limit for the transition:  
 		    	lowerLimit = Collections.min(censoredStats);
@@ -197,10 +242,15 @@ public class PerformanceEnricher {
 		} else if (containsOnlyZeros(transitionStats)){
 			// immediate transition
 			newTimedTransition.setImmediate(true);
-		} else if (getIsDeterministic(transitionStats,censoredStats)){
+		} else if (getIsDeterministic(transitionStats, censoredStats, traceFitness)){
 			// deterministic transition
 			newTimedTransition.setDistributionType(DistributionType.DETERMINISTIC);
-			newTimedTransition.setDistributionParameters(new double[]{transitionStats.get(0)});
+			newTimedTransition.setDistributionParameters(new double[]{getMedian(transitionStats)});
+		} else if (transitionStats.size() == 1) {
+			// only one sample!
+			// assume a gaussian heap with standard deviation 1:
+			newTimedTransition.setDistributionType(DistributionType.NORMAL);
+			newTimedTransition.setDistributionParameters(new double[]{transitionStats.get(0), 1});
 		} else {
 			// regular fitting according to selected distribution model specified in the configuration.
 			double[] values = StochasticNetUtils.getAsDoubleArray(transitionStats);
@@ -241,17 +291,22 @@ public class PerformanceEnricher {
 				case HISTOGRAM:
 					newTimedTransition.setDistributionParameters(values);
 					break;
-				case LOG_SPLINE:
-					if (transitionStats.size() < 10 && typeToMine.equals(DistributionType.LOG_SPLINE)){
-						// log-spline fitting needs more data -> fall back to Gaussian kernel
-						newTimedTransition.setDistributionType(DistributionType.GAUSSIAN_KERNEL);
-					}
+				case LOGSPLINE:
+//					if (transitionStats.size() < 10){
+//						// log-spline fitting needs more data -> fall back to Gaussian kernel
+//						newTimedTransition.setDistributionType(DistributionType.GAUSSIAN_KERNEL);
+//					}
 					if (censoredStats.size() > 0 && transitionStats.size()>10){
 						try{
 							// try using better approximation capable to deal with right censored data
-							RCensoredLogSplineDistribution censoredDistribution = new RCensoredLogSplineDistribution();
+							RCensoredLogSplineDistribution censoredDistribution = new RCensoredLogSplineDistribution(maxTraceLength);
 							censoredDistribution.initWithValues(StochasticNetUtils.getAsDoubleArray(transitionStats), StochasticNetUtils.getAsDoubleArray(censoredStats));
 							newTimedTransition.setDistribution(censoredDistribution);
+							double newMean = censoredDistribution.getNumericalMean();
+							if(Double.isInfinite(newMean) || newMean > 100){
+								System.out.println("Debug me!");
+								newMean = censoredDistribution.getNumericalMean();
+							}
 						} catch (NonConvergenceException e){
 							System.err.println("----> bias correction failed the "+(failCount++) +". time!");
 							message = "Fitting of logspline with "+transitionStats.size()+" observed values and "+censoredStats.size()+" censored values failed to converge.\n" +
@@ -275,7 +330,7 @@ public class PerformanceEnricher {
 		DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL, DistributionType.LOGNORMAL, DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM};
 		if (StochasticNetUtils.splinesSupported()){
 			supportedTypes = Arrays.copyOf(supportedTypes, supportedTypes.length+1);
-			supportedTypes[supportedTypes.length-1] = DistributionType.LOG_SPLINE;
+			supportedTypes[supportedTypes.length-1] = DistributionType.LOGSPLINE;
 		} else {
 			panel.add(new JLabel("<html><body><p>To enable spline smoothers, make sure you have a running R installation<br>" +
 					"and the native jri-binary is accessible in your java.library.path!</p></body></html"));
@@ -297,7 +352,7 @@ public class PerformanceEnricher {
 
 	private boolean containsOnlyZeros(List<Double> transitionStats) {
 		for (Double d : transitionStats){
-			if (!Double.isNaN(d) && d != 0){
+			if (!Double.isNaN(d) && Math.abs(d) > EPSILON){
 				return false;
 			}
 		}
@@ -373,6 +428,18 @@ public class PerformanceEnricher {
 		return timeAttr;
 	}
 	
+	public StochasticManifestCollector getPerformanceCollector(){
+		return performanceCollector;
+	}
+	
+	/**
+	 * Gets all markings, where selection is based on weights (markings, where only immediate transitions are enabled, or all markings, where )
+	 * @return
+	 */
+	public Map<String, int[]> getMarkingBasedSelections() {
+		return markingBasedSelections;
+	}
+
 	private Class<?> getClassFor(String timeAtt, Manifest m) {
 		XAttribute xattr = m.getLog().iterator().next().iterator().next().getAttributes().get(timeAtt);
 		if (xattr instanceof XAttributeTimestamp) {

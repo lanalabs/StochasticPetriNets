@@ -9,6 +9,7 @@ import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.distribution.UniformRealDistribution;
+import org.apache.commons.math3.exception.TooManyEvaluationsException;
 import org.processmining.models.graphbased.directed.AbstractDirectedGraph;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
@@ -16,6 +17,7 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet.Distr
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.GaussianKernelDistribution;
+import org.processmining.plugins.stochasticpetrinet.distribution.NonConvergenceException;
 import org.processmining.plugins.stochasticpetrinet.distribution.RLogSplineDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
 
@@ -99,10 +101,10 @@ public class TimedTransition extends Transition{
 		this.priority = priority;
 		this.distributionType = type;
 		this.distributionParameters = parameters;
-		initDistribution();
+		initDistribution(Double.MAX_VALUE);
 	}
 
-	public void initDistribution() {
+	public void initDistribution(double maxValue) {
 		if (distribution == null){
 			switch(distributionType){
 				case BETA:
@@ -136,11 +138,7 @@ public class TimedTransition extends Transition{
 					distribution = new UniformRealDistribution(distributionParameters[0], distributionParameters[1]);
 					break;
 				case GAUSSIAN_KERNEL:
-					if (distributionParameters.length < 1){
-						throw new IllegalArgumentException("Cannot create a nonparametric distribution without sample values!");
-					}
-					distribution = new GaussianKernelDistribution();
-					((GaussianKernelDistribution)distribution).addValues(distributionParameters);
+					fitGaussianKernels();
 					break;
 				case HISTOGRAM:
 					if (distributionParameters.length < 1){
@@ -149,12 +147,23 @@ public class TimedTransition extends Transition{
 					distribution = new SimpleHistogramDistribution();
 					((SimpleHistogramDistribution)distribution).addValues(distributionParameters);
 					break;
-				case LOG_SPLINE:
+				case LOGSPLINE:
 					if (distributionParameters.length < 10){
 						throw new IllegalArgumentException("Cannot create a logspline distribution with less than 10 sample values!");
 					}
-					distribution = new RLogSplineDistribution();
-					((RLogSplineDistribution)distribution).addValues(distributionParameters);
+					try {
+						distribution = new RLogSplineDistribution(maxValue);
+						((RLogSplineDistribution)distribution).addValues(distributionParameters);
+						distribution.getNumericalMean();
+					} catch (NonConvergenceException e){
+						System.out.println("LogSpline fit not converged! Falling back to Gaussian Kernel density estimation");
+						distributionType = DistributionType.GAUSSIAN_KERNEL;
+						fitGaussianKernels();
+					} catch (TooManyEvaluationsException e){
+						System.out.println("Could not compute the mean of the logspline! Falling back to Gaussian Kernel density estimation");
+						distributionType = DistributionType.GAUSSIAN_KERNEL;
+						fitGaussianKernels();
+					}
 					break;
 				case UNDEFINED:
 					// do nothing
@@ -163,6 +172,14 @@ public class TimedTransition extends Transition{
 					throw new IllegalArgumentException(distributionType.toString()+" distributions not supported yet!");
 			}
 		}
+	}
+
+	public void fitGaussianKernels() {
+		if (distributionParameters.length < 1){
+			throw new IllegalArgumentException("Cannot create a nonparametric distribution without sample values!");
+		}
+		distribution = new GaussianKernelDistribution();
+		((GaussianKernelDistribution)distribution).addValues(distributionParameters);
 	}
 
 	private void checkParameterLengthForDistribution(int parameters, String... names) {
@@ -225,7 +242,7 @@ public class TimedTransition extends Transition{
 			distributionParameters = new double[]{1};
 		}
 		distribution = null;
-		initDistribution();
+		initDistribution(0);
 	}
 
 	public void setDistribution(RealDistribution dist){

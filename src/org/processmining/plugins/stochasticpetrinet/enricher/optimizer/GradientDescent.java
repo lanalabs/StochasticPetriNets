@@ -43,7 +43,7 @@ public class GradientDescent {
 			postProcessWeights(theta);
 		}
 		System.out.println("Gradient descent converged: "+converged+ " after "+iterations+" iterations.");
-		System.out.println("Cost: "+ costFunction.getCost(theta));
+		System.out.println("Cost: "+ costFunction.getCost(theta)+" for vector "+Arrays.toString(theta));
 		return theta;
 	}
 

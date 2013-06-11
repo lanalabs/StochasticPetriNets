@@ -1,31 +1,63 @@
 package org.processmining.plugins.stochasticpetrinet.distribution;
 
+import org.apache.commons.math3.analysis.integration.TrapezoidIntegrator;
+import org.apache.commons.math3.analysis.integration.UnivariateIntegrator;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
-import org.apache.commons.math3.random.JDKRandomGenerator;
 import org.rosuda.JRI.REXP;
 import org.rosuda.JRI.Rengine;
 
+/**
+ * Logspline density fitting to data using the logspline package in R.
+ * @author Andreas Rogge-Solti
+ *
+ */
 public class RLogSplineDistribution extends AbstractRealDistribution{
 	private static final long serialVersionUID = -8263917191038257266L;
 
 	private static int counter = 0;
 	
-	private String rName;
+	protected double upperBound = Double.MAX_VALUE;
 	
-	private Rengine engine;
+	/** name of the spline in R */
+	protected String rName;
+	
+	/** reference to the R engine */
+	protected Rengine engine;
+	
+	/** The logspline method is used of the logspline package of R */
+	protected String method = "logspline";
 
-	private double numericalMean = Double.NaN;
+	protected double numericalMean = Double.NaN;
 	
 	public RLogSplineDistribution(){
-		super(new JDKRandomGenerator());
-		rName = "my_spline"+counter++;
+		this ("my_spline"+counter++);
+	}
+	public RLogSplineDistribution(double maxValue){
+		this(maxValue, "my_spline"+counter++);
+	}
+	public RLogSplineDistribution(String name){
+		this(Double.MAX_VALUE, name);
+	}
+	
+	public RLogSplineDistribution(double maxValue, String name){
+		super(null);
+		rName = name;
+		upperBound = maxValue;
 		engine = RProvider.getEngine();
 	}
 	
-	public void addValues(double... values){
-		REXP rValues = new REXP(values);
-		engine.assign(getValsString(), rValues);
-		engine.eval(rName+" <- logspline("+getValsString()+")");
+	public void addValues(double... values) throws NonConvergenceException{
+		try{
+			REXP rValues = new REXP(values);
+			engine.assign(getValsString(), rValues);
+			REXP exp = engine.eval(rName+" <- logspline("+getValsString()+")");
+			if (exp == null){
+				// failed to converge!
+				throw new NonConvergenceException("Logspline fit to "+values.length+" did not converge (maybe the values are too close to each other...)");
+			}
+		} finally {
+			engine.eval("rm("+getValsString()+")");
+		}
 	}
 
 	public String getValsString() {
@@ -37,31 +69,42 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 	}
 
 	public double density(double x) {
-		return engine.eval("dlogspline("+x+","+rName+")").asDouble();
+		return engine.eval("d"+method+"("+x+","+rName+")").asDouble();
 	}
 
 	public double cumulativeProbability(double x) {
-		return engine.eval("plogspline("+x+","+rName+")").asDouble();
+		return engine.eval("p"+method+"("+x+","+rName+")").asDouble();
 	}
 
+	/**
+	 * Calculates the numerical mean under the plot function of the log-spline fit.
+	 * The upper bound for integration is the longest observed trace. 
+	 * Might return Double.NaN in the worst case.
+	 * 
+	 */
 	public double getNumericalMean() {
 		long now = System.currentTimeMillis();
-//		if (Double.isNaN(numericalMean)){
-//			UnivariateIntegrator integrator = new IterativeLegendreGaussIntegrator(16,0.01,0.000001);
-//			double upperBound = inverseCumulativeProbability(.99)+10;
-//			numericalMean = integrator.integrate(integrator.getMaximalIterationCount(), DistributionUtils.getWeightedFunction(this), 0, upperBound);
-//			System.out.println("Mean calculation based on integration took "+(System.currentTimeMillis()-now)+"ms");
-//		}
+		if (Double.isNaN(numericalMean)){
+			UnivariateIntegrator integrator = new TrapezoidIntegrator(0.01,0.0001,3,64);
+			numericalMean = integrator.integrate(100000, DistributionUtils.getWeightedFunction(this), 0, upperBound);
+				
+			System.out.println("Mean calculation ("+numericalMean+") based on integration ("+method+" method) took "+(System.currentTimeMillis()-now)+"ms");
+			if (numericalMean < 0){
+				System.out.println("Debug me!");
+			}
+		}
+
 		if (Double.isNaN(numericalMean)){
 			// work around to find the mean by drawing a 10000 size sample and getting it's mean:
 			now = System.currentTimeMillis();
 			int N = 10000; // a sample mean of 10000 samples has a 
-			double sampleMean =  engine.eval("mean(rlogspline("+N+","+rName+"))").asDouble();
-			System.out.println("Mean calculation based on "+N+" samples took "+(System.currentTimeMillis()-now)+"ms.\n" +
-					"sample mean = "+sampleMean);
-//							", numerical mean = "+numericalMean+"\n" +
-//					"Difference to numerical mean based on integration: "+(numericalMean-sampleMean)+" ~= " +((numericalMean/sampleMean - 1.)*100)+" percent.");
-			numericalMean = sampleMean;
+			REXP exp = engine.eval("mean(r"+method+"("+N+","+rName+"))");
+			if (exp != null){
+				double sampleMean = exp.asDouble();
+				System.out.println("Mean calculation based on "+N+" samples took "+(System.currentTimeMillis()-now)+"ms.\n" +
+						"sample mean = "+sampleMean);
+				numericalMean = sampleMean;
+			}
 		}
 		return numericalMean;
 	}
@@ -71,7 +114,7 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 	}
 
 	public double getSupportLowerBound() {
-		return Double.NEGATIVE_INFINITY;
+		return 0;
 	}
 
 	public double getSupportUpperBound() {
