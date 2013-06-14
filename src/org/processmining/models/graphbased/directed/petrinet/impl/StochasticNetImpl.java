@@ -1,12 +1,15 @@
 package org.processmining.models.graphbased.directed.petrinet.impl;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 
 import javax.swing.SwingConstants;
 
 import org.processmining.models.graphbased.AttributeMap;
 import org.processmining.models.graphbased.directed.DirectedGraphElement;
+import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.elements.Arc;
@@ -18,10 +21,17 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Transition
 
 public class StochasticNetImpl extends AbstractResetInhibitorNet implements StochasticNet{
 
+	// maintain a set of all nodes for quicker access:
+	private Set<PetrinetNode> nodes;
+	private Set<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>> edges;
+	
+	
 	public StochasticNetImpl(String label){
 		super(true,false);
 		getAttributeMap().put(AttributeMap.PREF_ORIENTATION, SwingConstants.WEST);
 		getAttributeMap().put(AttributeMap.LABEL, label);
+		nodes = new HashSet<PetrinetNode>();
+		edges = new HashSet<PetrinetEdge<? extends PetrinetNode,? extends PetrinetNode>>();
 	}
 	
 	protected StochasticNetImpl getEmptyClone() {
@@ -41,6 +51,7 @@ public class StochasticNetImpl extends AbstractResetInhibitorNet implements Stoc
 	public TimedTransition addImmediateTransition(String label, double weight, int priority) {
 		TimedTransition t = new TimedTransition(label, this, null, weight, priority, DistributionType.IMMEDIATE,null);
 		transitions.add(t);
+		nodes.add(t);
 		graphElementAdded(t);
 		return t;
 	}
@@ -53,6 +64,7 @@ public class StochasticNetImpl extends AbstractResetInhibitorNet implements Stoc
 			double... distributionParameters) {
 		TimedTransition t = new TimedTransition(label, this, null, weight, 0, type, distributionParameters);
 		transitions.add(t);
+		nodes.add(t);
 		graphElementAdded(t);
 		return t;
 	}
@@ -103,5 +115,55 @@ public class StochasticNetImpl extends AbstractResetInhibitorNet implements Stoc
 		}
 		
 		return mapping;
+	}
+	
+//	public synchronized Place addPlace(String label, ExpandableSubNet parent) {
+//		Place p = super.addPlace(label, parent);
+//		nodes.add(p);
+//		return p;
+//	}
+//	public synchronized Transition addTransition(String label, ExpandableSubNet parent) {
+//		Transition t = super.addTransition(label, parent);
+//		nodes.add(t);
+//		return t;
+//	}
+//	public synchronized Transition removeTransition(Transition transition) {
+//		Transition toRemove = super.removeTransition(transition);
+//		nodes.remove(toRemove);
+//		return toRemove;
+//	}
+//	public synchronized Place removePlace(Place place) {
+//		Place toRemove = super.removePlace(place);
+//		nodes.remove(toRemove);
+//		return toRemove;
+//	}
+	@Override
+	public void graphElementAdded(Object element) {
+		if (element instanceof PetrinetNode) {
+			PetrinetNode node = (PetrinetNode) element;
+			nodes.add(node);
+		}
+		if (element instanceof PetrinetEdge<?, ?>) {
+			edges.add((PetrinetEdge<PetrinetNode, PetrinetNode>) element);			
+		}
+		super.graphElementAdded(element);
+	}
+	public void graphElementRemoved(Object element) {
+		if (element instanceof PetrinetNode) {
+			PetrinetNode node = (PetrinetNode) element;
+			nodes.remove(node);
+		}
+		if (element instanceof PetrinetEdge<?, ?>) {
+			edges.remove(element);			
+		}
+		super.graphElementRemoved(element);
+	}
+	
+	public synchronized Set<PetrinetNode> getNodes() {
+		return nodes;
+	}
+	
+	public synchronized Set<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>> getEdges() {
+		return edges;
 	}
 }

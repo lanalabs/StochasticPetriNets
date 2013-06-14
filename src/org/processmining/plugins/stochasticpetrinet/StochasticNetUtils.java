@@ -38,6 +38,7 @@ import org.deckfour.xes.info.impl.XLogInfoImpl;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
+import org.deckfour.xes.model.impl.XTraceImpl;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.plugin.PluginContext;
@@ -54,12 +55,13 @@ import org.processmining.models.graphbased.directed.petrinet.ResetInhibitorNet;
 import org.processmining.models.graphbased.directed.petrinet.ResetNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
+import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.petrinet.impl.PetrinetImpl;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
+import org.processmining.models.semantics.petrinet.impl.EfficientStochasticNetSemanticsImpl;
 import org.processmining.models.semantics.petrinet.impl.PetrinetSemanticsFactory;
-import org.processmining.models.semantics.petrinet.impl.StochasticNetSemanticsImpl;
 import org.processmining.plugins.astar.petrinet.PetrinetReplayerILPRestrictedMoveModel;
 import org.processmining.plugins.astar.petrinet.manifestreplay.CostBasedCompleteManifestParam;
 import org.processmining.plugins.astar.petrinet.manifestreplay.ManifestFactory;
@@ -86,6 +88,15 @@ public class StochasticNetUtils {
 	private static Map<PetrinetGraph, Marking> initialMarkings = new HashMap<PetrinetGraph, Marking>();
 	private static Map<PetrinetGraph, Marking> finalMarkings = new HashMap<PetrinetGraph, Marking>();
 	
+	/**
+	 * indexed array of conversion factors
+	 * [0] = ms
+	 * [1] = s
+	 * [2] = min
+	 * [3] = hours
+	 * [4] = days
+	 * [5] = years
+	 */
 	public static final Double[] UNIT_CONVERSION_FACTORS = new Double[]{1.,1000.,1000.*60,1000.*3600,1000.*3600*24,1000.*3600*24*365};
 	public static final String[] UNIT_NAMES = new String[]{"milliseconds","seconds", "minutes", "hours", "days", "years"};
 	
@@ -210,38 +221,63 @@ public class StochasticNetUtils {
 		}
 		return finalMarking;
 	}
+	public static void cacheFinalMarking(PetrinetGraph net, Marking finalMarking){
+		if (finalMarking != null)
+			finalMarkings.put(net, finalMarking);
+	}
+	public static void cacheInitialMarking(PetrinetGraph net, Marking initialMarking){
+		if (initialMarking != null)
+			initialMarkings.put(net, initialMarking);
+	}
+	
 	/**
 	 * Samples a value from the distribution
 	 * @param distribution
 	 * @param positiveConstraint sample should be bigger than this value (results in truncated distribution)
 	 * @return
 	 */
-	public static double sampleWithConstraint(RealDistribution distribution, Random rand, double positiveConstraint) {
+	public synchronized static double sampleWithConstraint(TimedTransition transition, Random rand, double positiveConstraint) {
+		long now = System.currentTimeMillis();
+		
 		double sample = positiveConstraint;
-		if (Double.isInfinite(positiveConstraint) || positiveConstraint == Double.NEGATIVE_INFINITY){
-			sample = distribution.sample();
-		} else if (distribution instanceof SimpleHistogramDistribution){
-			sample = ((SimpleHistogramDistribution)distribution).sample(positiveConstraint);
-		} else if (distribution instanceof DiracDeltaDistribution){
-			sample = distribution.sample();
-			if (positiveConstraint > sample){
-				sample = positiveConstraint;
-			}
-		} else if (distribution instanceof UniformRealDistribution) {
-			if (distribution.getSupportLowerBound() < positiveConstraint){
-				if (distribution.getSupportUpperBound() < positiveConstraint){
+		String key = transition.getLabel()+"_"+positiveConstraint;
+		RealDistribution distribution = transition.getDistribution();
+		// try to get distribution from cache:
+		if (useCache && distributionCache.containsKey(key)){
+			sample = distributionCache.get(key).sample();
+		} else {
+			if (Double.isInfinite(positiveConstraint) || positiveConstraint == Double.NEGATIVE_INFINITY){
+				sample = distribution.sample();
+			} else if (distribution instanceof SimpleHistogramDistribution){
+				sample = ((SimpleHistogramDistribution)distribution).sample(positiveConstraint);
+			} else if (distribution instanceof DiracDeltaDistribution){
+				sample = distribution.sample();
+				if (positiveConstraint > sample){
 					sample = positiveConstraint;
+				}
+			} else if (distribution instanceof UniformRealDistribution) {
+				if (distribution.getSupportLowerBound() < positiveConstraint){
+					if (distribution.getSupportUpperBound() < positiveConstraint){
+						sample = positiveConstraint;
+					} else {
+						RealDistribution constrainedDist = new UniformRealDistribution(positiveConstraint, distribution.getSupportUpperBound());
+						sample = constrainedDist.sample();
+					}
 				} else {
-					RealDistribution constrainedDist = new UniformRealDistribution(positiveConstraint, distribution.getSupportUpperBound());
-					sample = constrainedDist.sample();
+					sample = distribution.sample();
 				}
 			} else {
-				sample = distribution.sample();
-			}
-		} else {
-			RealDistribution wrapper = TruncatedDistributionFactory.getConstrainedWrapper(distribution,positiveConstraint);
-			sample = wrapper.sample();
-		} 
+				RealDistribution wrapper = TruncatedDistributionFactory.getConstrainedWrapper(distribution,positiveConstraint);
+				if (useCache){
+					// store distribution in cache
+					distributionCache.put(transition.getLabel()+"_"+positiveConstraint, wrapper);
+//					System.out.println("caching distribution for "+key+". caching "+distributionCache.size()+" distributions");
+				}
+				sample = wrapper.sample();
+			} 
+		}
+		long after = System.currentTimeMillis();
+//		System.out.println("sampling with constraint took "+(after-now)+" ms");
 		return sample;
 //		
 //		double sample = -1;
@@ -313,7 +349,7 @@ public class StochasticNetUtils {
 	public static Semantics<Marking, Transition> getSemantics(PetrinetGraph petriNet) {
 		Semantics<Marking, Transition> semantics = null;
 		if (petriNet instanceof StochasticNet){
-			semantics = new StochasticNetSemanticsImpl();
+			semantics = new EfficientStochasticNetSemanticsImpl();
 		} else if (petriNet instanceof ResetInhibitorNet) {
 			semantics = PetrinetSemanticsFactory.regularResetInhibitorNetSemantics(ResetInhibitorNet.class);
 		} else if (petriNet instanceof InhibitorNet) {
@@ -356,6 +392,38 @@ public class StochasticNetUtils {
 	}
 	
 	/**
+	 * This method extracts the portion of the trace that has happened before the timeUntil parameter.
+	 * 
+	 * Assumption: The events in the trace are ordered incrementally by their time!
+	 * 
+	 * @param trace the original trace containing a number of events
+	 * @param timeUntil only events up to this point in time (inclusive) are added to the resulting sub-trace
+	 * @return the sub-trace with events filtered to be less or equal to timeUntil 
+	 */
+	public static XTrace getSubTrace(XTrace trace, long timeUntil) {
+		XTrace subTraceUntilTime = new XTraceImpl(trace.getAttributes());
+		int traceIndex = 0;
+		
+		XEvent event = trace.get(traceIndex++);
+		long lastEventTime = XTimeExtension.instance().extractTimestamp(event).getTime();
+		if (lastEventTime>timeUntil){
+			throw new IllegalArgumentException("The trace starts later than allowed by the timeUntil parameter!");
+		}
+		
+		while (lastEventTime <= timeUntil){
+			subTraceUntilTime.add(event);
+			
+			if (traceIndex < trace.size()){
+				event = trace.get(traceIndex++);
+				lastEventTime = XTimeExtension.instance().extractTimestamp(event).getTime();
+			} else {
+				lastEventTime = Long.MAX_VALUE;
+			}
+		}
+		return subTraceUntilTime;
+	}
+	
+	/**
 	 * Gets the mean duration of all the traces in the log in milliseconds
 	 *  @param log
 	 * @param timeUnitFactor
@@ -383,7 +451,7 @@ public class StochasticNetUtils {
 	 * (favors alignment containing more frequent activities)
 	 * @return
 	 */
-	public static Object replayLog(UIPluginContext context, PetrinetGraph net, XLog log, boolean getManifest, boolean addSmallDeltaCosts) {
+	public static Object replayLog(PluginContext context, PetrinetGraph net, XLog log, boolean getManifest, boolean addSmallDeltaCosts) {
 		TransEvClassMapping transitionEventClassMap = getEvClassMapping(net, log);
 		TransClasses transClasses = new TransClasses(net, new DefTransClassifier());
 		PNManifestReplayerParameter parameters = getParameters(log, transitionEventClassMap, net, StochasticNetUtils.getInitialMarking(context, net), StochasticNetUtils.getFinalMarking(context, net), XLogInfoImpl.STANDARD_CLASSIFIER, transClasses);
@@ -444,7 +512,7 @@ public class StochasticNetUtils {
 		}
 		return sortedEventClasses;
 	}
-	public static Object replayLog(UIPluginContext context, PetrinetGraph net, XLog log, PNManifestReplayerParameter parameters, boolean getManifest) {
+	public static Object replayLog(PluginContext context, PetrinetGraph net, XLog log, PNManifestReplayerParameter parameters, boolean getManifest) {
 
 		/**
 		 * Local variables
@@ -710,5 +778,17 @@ public class StochasticNetUtils {
 			upperBound = Math.max(upperBound, eventTime);
 		}
 		return new Pair<Long,Long>(lowerBound-10, upperBound+10);
+	}
+	
+	
+	private static Map<String, RealDistribution> distributionCache = new HashMap<String, RealDistribution>(); 
+	private static boolean useCache = false;
+	/**
+	 * Enables or disables cache of distributions.
+	 * @param useCache
+	 */
+	public synchronized static void useCache(boolean useCache) {
+		StochasticNetUtils.useCache = useCache;
+		distributionCache.clear();
 	}
 }

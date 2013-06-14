@@ -2,8 +2,6 @@ package org.processmining.plugins.stochasticpetrinet.distribution;
 
 import java.math.BigDecimal;
 
-import org.apache.commons.math3.distribution.NormalDistribution;
-
 /**
  * Very plain boundary reflection kernel estimator.
  * 
@@ -42,7 +40,6 @@ public class GaussianReflectionKernelDistribution extends GaussianKernelDistribu
 		BigDecimal density = new BigDecimal(0);
 		BigDecimal factor = new BigDecimal(1.0);
 		factor = factor.divide(new BigDecimal(sampleValues.length), veryPrecise);
-		NormalDistribution ndist = new NormalDistribution(0,h);
 		for (Long pos : kernelPointsAndWeights.keySet()){
 			double xKernelPos = pos*precision;
 			density = density.add(factor.multiply(new BigDecimal(ndist.density(x-xKernelPos)).multiply(new BigDecimal(kernelPointsAndWeights.get(pos)),veryPrecise),veryPrecise),veryPrecise);

@@ -85,6 +85,10 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 	public double getNumericalMean() {
 		long now = System.currentTimeMillis();
 		if (Double.isNaN(numericalMean)){
+			if (upperBound == Double.MAX_VALUE){
+				// try to get a nicer value:
+				upperBound = engine.eval("q"+method+"(0.99999,"+rName+")").asDouble();
+			}
 			UnivariateIntegrator integrator = new TrapezoidIntegrator(0.01,0.0001,3,64);
 			numericalMean = integrator.integrate(100000, DistributionUtils.getWeightedFunction(this), 0, upperBound);
 				

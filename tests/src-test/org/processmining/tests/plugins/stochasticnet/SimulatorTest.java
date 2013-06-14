@@ -20,7 +20,7 @@ public class SimulatorTest {
 
 	@Test
 	public void testFiringPolicyPreselection_vs_Race() throws Exception {
-		Object[] netAndMarking = TestUtils.loadModel("Race_AB");
+		Object[] netAndMarking = TestUtils.loadModel("Race_AB",true);
 		
 		StochasticNet net = (StochasticNet) netAndMarking[0];
 		Marking marking = (Marking) netAndMarking[1];
@@ -46,7 +46,7 @@ public class SimulatorTest {
 	
 	@Test
 	public void testFiringPolicyAgeMemory_vs_Resampling() throws Exception {
-		Object[] netAndMarking = TestUtils.loadModel("Race_AB_Loop");
+		Object[] netAndMarking = TestUtils.loadModel("Race_AB_Loop", true);
 		
 		StochasticNet net = (StochasticNet) netAndMarking[0];
 		Marking marking = (Marking) netAndMarking[1];
@@ -76,7 +76,7 @@ public class SimulatorTest {
 	
 	@Test
 	public void testFiringPolicyEnablingMemory_vs_Resampling() throws Exception {
-		Object[] netAndMarking = TestUtils.loadModel("Race_A_parallelTo_B_Loop");
+		Object[] netAndMarking = TestUtils.loadModel("Race_A_parallelTo_B_Loop", true);
 		
 		StochasticNet net = (StochasticNet) netAndMarking[0];
 		Marking marking = (Marking) netAndMarking[1];
@@ -107,7 +107,7 @@ public class SimulatorTest {
 	
 	@Test
 	public void testSimulatingComplexModel() throws Exception {
-		Object[] netAndMarking = TestUtils.loadModel("Parallel_Loop_A-F");
+		Object[] netAndMarking = TestUtils.loadModel("Parallel_Loop_A-F",true);
 		
 		StochasticNet net = (StochasticNet) netAndMarking[0];
 		Marking marking = (Marking) netAndMarking[1];

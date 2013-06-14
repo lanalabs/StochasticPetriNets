@@ -27,11 +27,13 @@ import org.deckfour.xes.model.XTrace;
 import org.deckfour.xes.model.impl.XTraceImpl;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
+import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.Plugin;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.connections.petrinets.behavioral.FinalMarkingConnection;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.transitionsystem.TransitionSystem;
@@ -105,9 +107,14 @@ public class PredictionExperimentPlugin {
 	public PredictionExperimentResult predict(final UIPluginContext context, Petrinet model, XLog log){
 		
 		PredictionExperimentConfig config = new PredictionExperimentConfig();
-		config.letUserChooseValues(context);
+		boolean performExperiment = config.letUserChooseValues(context);
+		if (performExperiment){
+			return predictWithConfig(context, model, log, config);	
+		} else {
+			context.getFutureResult(0).cancel(true);
+			return null;
+		}
 		
-		return predictWithConfig(context, model, log, config);
 	}
 
 	/**
@@ -118,7 +125,7 @@ public class PredictionExperimentPlugin {
 	 * @param config
 	 * @return
 	 */
-	public PredictionExperimentResult predictWithConfig(final UIPluginContext context, Petrinet model, XLog log,
+	public PredictionExperimentResult predictWithConfig(final PluginContext context, Petrinet model, XLog log,
 			PredictionExperimentConfig config) {
 		PredictionExperimentResult result = new PredictionExperimentResult();
 		result.setPredictionResults(new LinkedList<List<PredictionData>>());
@@ -129,6 +136,7 @@ public class PredictionExperimentPlugin {
 
 			// mine stochastic Petri Net from training Log (9/10 of original traces)
 			StochasticNet stochasticNet = null;
+			StochasticNet exponentialNet = null;
 			Marking finalPlainMarking = StochasticNetUtils.getFinalMarking(context, model);
 			Marking finalStochasticMarking = null;
 			Marking initialStochasticMarking = null;
@@ -141,26 +149,42 @@ public class PredictionExperimentPlugin {
 					System.out.println("Learning stochastic Petri net from data, as no stochastic Petri net was passed!");
 				}
 				Manifest manifest = (Manifest)StochasticNetUtils.replayLog(context, model, trainingLog, true, true);
-				Object[] netAndMarking = PerformanceEnricherPlugin.transform(context, manifest, new PerformanceEnricherConfig(config.getLearnedDistributionType(),config.getTimeUnitFactor(),config.getExecutionPolicy()));
+				PerformanceEnricherConfig performanceEnricherConfig = new PerformanceEnricherConfig(config.getLearnedDistributionType(),config.getTimeUnitFactor(),config.getExecutionPolicy());
+				Object[] netAndMarking = PerformanceEnricherPlugin.transform(context, manifest, performanceEnricherConfig);
+				performanceEnricherConfig.setType(DistributionType.EXPONENTIAL);
+				Object[] exponentialNetAndMarking = PerformanceEnricherPlugin.transform(context, manifest, performanceEnricherConfig);
 				stochasticNet = (StochasticNet) netAndMarking[0];
+				exponentialNet = (StochasticNet) exponentialNetAndMarking[0];
+				Marking initialExponentialNetMarking = (Marking) exponentialNetAndMarking[1];
+				StochasticNetUtils.cacheInitialMarking(exponentialNet, initialExponentialNetMarking);
 				stochasticNet.getAttributeMap().put(StochasticNetUtils.ITERATION_KEY, kFold);
+				exponentialNet.getAttributeMap().put(StochasticNetUtils.ITERATION_KEY, kFold);
+				
 				initialStochasticMarking = (Marking) netAndMarking[1];
+				StochasticNetUtils.cacheInitialMarking(stochasticNet, initialStochasticMarking);
+				
 				finalStochasticMarking = new Marking();
+				Marking finalExponentialNetMarking = new Marking();
 				for (Place p : stochasticNet.getPlaces()){
 					for (Place markingPlace : finalPlainMarking){
 						if (p.getLabel().equals(markingPlace.getLabel())){
 							finalStochasticMarking.add(p);
+							finalExponentialNetMarking.add(p);
 						}
 					}
 				}
-				context.addConnection(new FinalMarkingConnection(stochasticNet, finalStochasticMarking));
+				StochasticNetUtils.cacheFinalMarking(exponentialNet, finalExponentialNetMarking);
+				StochasticNetUtils.cacheFinalMarking(stochasticNet, finalStochasticMarking);
+				if (context != null){
+					context.addConnection(new FinalMarkingConnection(stochasticNet, finalStochasticMarking));
+				}
 			}
 			
 			TimeTransitionSystemAnnotation[] transitionSystemAnnotations = getTimeTransitionSystemAnnotations(context, trainingLog);
 			
 			double meanDurationMillies = StochasticNetUtils.getMeanDuration(trainingLog);
 			
-			PredictionExperimentResult predictions = predict(context, stochasticNet, transitionSystemAnnotations, predictionLog, config, initialStochasticMarking, meanDurationMillies);
+			PredictionExperimentResult predictions = predict(context, stochasticNet, exponentialNet, transitionSystemAnnotations, predictionLog, config, meanDurationMillies);
 			result.getPredictionResults().addAll(predictions.getPredictionResults());
 			printResultsToCSV(config,result);
 		}
@@ -312,7 +336,7 @@ public class PredictionExperimentPlugin {
 	 * @param trainingLog
 	 * @return
 	 */
-	private TimeTransitionSystemAnnotation[] getTimeTransitionSystemAnnotations(UIPluginContext context,
+	private TimeTransitionSystemAnnotation[] getTimeTransitionSystemAnnotations(PluginContext context,
 			XLog trainingLog) {
 		TimeTransitionSystemAnnotation[] transitionSystemAnnotations = new TimeTransitionSystemAnnotation[TRANSITION_SYSTEM_TYPES];
 		XEventClassifier[] classifiers = new XEventClassifier[]{new XEventNameClassifier(),new XEventResourceClassifier(),new XEventLifeTransClassifier()};
@@ -367,7 +391,7 @@ public class PredictionExperimentPlugin {
 		}
 	}
 
-	private TimeTransitionSystemAnnotation getAnnotatedTransitionSystem(UIPluginContext context, TSMiner miner, TSMinerInput input, TSAnalyzerPlugin analyzer, XLog log) {
+	private TimeTransitionSystemAnnotation getAnnotatedTransitionSystem(PluginContext context, TSMiner miner, TSMinerInput input, TSAnalyzerPlugin analyzer, XLog log) {
 		TSMinerOutput result = miner.mine(input);
 		EventPayloadTransitionSystem ts = result.getTransitionSystem();
 		return analyzer.simple(context, ts, log);	
@@ -399,7 +423,7 @@ public class PredictionExperimentPlugin {
 	 * @param meanDurationMillies mean duration of historical traces seen up till now
 	 * @return Pairs of predicted durations and real durations for each trace in the log and each monitoring iteration defined in {@link PredictionExperimentConfig#getMonitoringIterations()}
 	 */
-	public PredictionExperimentResult predict(UIPluginContext context, StochasticNet model, TimeTransitionSystemAnnotation[] transitionSystemAnnotations, XLog log, PredictionExperimentConfig config, Marking initialMarking, double meanDuration){
+	public PredictionExperimentResult predict(PluginContext context, StochasticNet model, StochasticNet gspnModel, TimeTransitionSystemAnnotation[] transitionSystemAnnotations, XLog log, PredictionExperimentConfig config, double meanDuration){
 		PredictionExperimentResult result = new PredictionExperimentResult();
 		List<List<PredictionData>> predictionsAndRealValues = new ArrayList<List<PredictionData>>();
 		
@@ -433,7 +457,7 @@ public class PredictionExperimentPlugin {
 		int traceId = 0;
 		for (int i = 0; i < workers.length; i++){
 			XLog testLog = StochasticNetUtils.filterTracesBasedOnModulo(log, workers.length, i, true);
-			workers[i] = new PredictionExperimentWorker(context, testLog, config, predictionPeriod, initialMarking, model, meanDuration, transitionSystems, transitionSystemAnnotations, traceId, log.size());
+			workers[i] = new PredictionExperimentWorker(context, testLog, config, predictionPeriod, model, gspnModel, meanDuration, transitionSystems, transitionSystemAnnotations, traceId, log.size());
 			traceId += testLog.size();
 			
 			executor.execute(workers[i]);
@@ -460,46 +484,23 @@ public class PredictionExperimentPlugin {
 		initialTrace.add(log.get(0).get(0));
 		XEvent startEvent = initialTrace.get(0);
 		Long realStartTime = XTimeExtension.instance().extractTimestamp(startEvent).getTime();
-		
-		long meanDuration = (long)predictor.predict(model, initialTrace, new Date(realStartTime), initialMarking, config.getTimeUnitFactor(), false);
+		Pair<Double,Double> meanAndConfidenceInterval = predictor.predict(model, initialTrace, new Date(realStartTime), initialMarking, config.getTimeUnitFactor(), false); 
+		long meanDuration = meanAndConfidenceInterval.getFirst().longValue();
 		meanDuration = meanDuration-realStartTime;
 		return meanDuration;
 	}
 
-	/**
-	 * This method extracts the portion of the trace that has happened before the timeUntil parameter.
-	 * 
-	 * Assumption: The events in the trace are ordered incrementally by their time!
-	 * 
-	 * @param trace the original trace containing a number of events
-	 * @param timeUntil only events up to this point in time (inclusive) are added to the resulting sub-trace
-	 * @return the sub-trace with events filtered to be less or equal to timeUntil 
-	 */
-	private XTrace getSubTrace(XTrace trace, long timeUntil) {
-		XTrace subTraceUntilTime = new XTraceImpl(trace.getAttributes());
-		int traceIndex = 0;
-		long lastEventTime = 0;
-		XEvent event = trace.get(traceIndex++);
-		if (((XAttributeTimestamp)event.getAttributes().get(PNSimulator.TIME_TIMESTAMP)).getValueMillis()>timeUntil){
-			throw new IllegalArgumentException("The trace starts later than allowed by the timeUntil parameter!");
-		}
-		do{
-			subTraceUntilTime.add(event);
-			event = trace.get(traceIndex++);
-			lastEventTime = ((XAttributeTimestamp)event.getAttributes().get(PNSimulator.TIME_TIMESTAMP)).getValueMillis();
-		} while (timeUntil >= lastEventTime && trace.size()>traceIndex);
-		return subTraceUntilTime;
-	}
-	
 	private class PredictionExperimentWorker implements Runnable{
 
 		private XLog log;
-		private UIPluginContext context;
+		private PluginContext context;
 		private PredictionExperimentConfig config;
 		private Double predictionPeriod;
 		private Marking initialMarking;
+		private Marking initialGspnMarking;
 		private TimePredictor predictor;
 		private StochasticNet model;
+		private StochasticNet gspnModel;
 		private Double meanDuration;
 		private EventPayloadTransitionSystem[] transitionSystems;
 		private TimeTransitionSystemAnnotation[] transitionSystemAnnotations;
@@ -510,12 +511,12 @@ public class PredictionExperimentPlugin {
 		
 		
 		
-		public PredictionExperimentWorker(UIPluginContext context, 
+		public PredictionExperimentWorker(PluginContext context, 
 				XLog testLog, 
 				PredictionExperimentConfig config, 
 				Double predictionPeriod, 
-				Marking initialMarking, 
 				StochasticNet model,
+				StochasticNet gspnModel,
 				Double meanDuration,
 				EventPayloadTransitionSystem[] transitionSystems,
 				TimeTransitionSystemAnnotation[] transitionSystemAnnotations,
@@ -525,9 +526,11 @@ public class PredictionExperimentPlugin {
 			this.log = testLog;
 			this.config = config;
 			this.predictionPeriod = predictionPeriod;
-			this.initialMarking = initialMarking;
+			this.initialMarking = StochasticNetUtils.getInitialMarking(context, model);
+			this.initialGspnMarking = StochasticNetUtils.getInitialMarking(context, gspnModel);
 			this.predictor = new TimePredictor();
 			this.model = model;
+			this.gspnModel = gspnModel;
 			this.meanDuration = meanDuration;
 			this.transitionSystems = transitionSystems;
 			this.transitionSystemAnnotations = transitionSystemAnnotations;
@@ -572,13 +575,16 @@ public class PredictionExperimentPlugin {
 						Double realRemainingDuration = (double)(realTerminationTime-currentTime.getTime());
 						if (realRemainingDuration >= 0){
 							s+=".";
-							XTrace subTrace = getSubTrace(trace, currentTime.getTime());
+							XTrace subTrace = StochasticNetUtils.getSubTrace(trace, currentTime.getTime());
 							
 							event = subTrace.get(subTrace.size()-1);
 							Long realLastEventTime = ((XAttributeTimestamp)event.getAttributes().get(PNSimulator.TIME_TIMESTAMP)).getValueMillis();
-									
-							Double predictedValueSimple = Math.max(predictor.predict(model, subTrace, currentTime, initialMarking, config.getTimeUnitFactor(),false), currentTime.getTime());
-							Double predictedValueConstrained = Math.max(predictor.predict(model, subTrace, currentTime, initialMarking, config.getTimeUnitFactor(), true),currentTime.getTime());
+							
+							Pair<Double,Double> simplePredictionAndConfidence = predictor.predict(gspnModel, subTrace, currentTime, initialGspnMarking, config.getTimeUnitFactor(),true);
+							Pair<Double,Double> constrainedPredictionAndConfidence = predictor.predict(model, subTrace, currentTime, initialMarking, config.getTimeUnitFactor(),true);
+							
+							Double predictedValueSimple = (double) Math.max(simplePredictionAndConfidence.getFirst().longValue(), currentTime.getTime());
+							Double predictedValueConstrained = (double) Math.max(constrainedPredictionAndConfidence.getFirst().longValue(),currentTime.getTime());
 							
 							PredictionData predictions = new PredictionData(traceId, new Date(realStartTime), new Date(realTerminationTime), new Date(currentTime.getTime()),predictionTypes);
 							predictions.getPredictionDates()[0] = new Date(Math.max((long)(realStartTime+meanDuration), currentTime.getTime()));

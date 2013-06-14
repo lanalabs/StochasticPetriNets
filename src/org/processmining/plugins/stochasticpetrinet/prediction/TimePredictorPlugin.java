@@ -40,7 +40,7 @@ public class TimePredictorPlugin {
 		JList list = new JList(StochasticNetUtils.UNIT_NAMES);
 		JOptionPane.showMessageDialog(null, list, "Select time unit specified in model:", JOptionPane.PLAIN_MESSAGE);
 		if (list.getSelectedIndex()>= 0){
-			return predictor.predict(model, observedEvents, currentTime, initialMarking, (StochasticNetUtils.UNIT_CONVERSION_FACTORS[list.getSelectedIndex()]), false);	
+			return predictor.predict(model, observedEvents, currentTime, initialMarking, (StochasticNetUtils.UNIT_CONVERSION_FACTORS[list.getSelectedIndex()]), false).getFirst();	
 		} else {
 			context.getFutureResult(0).cancel(true);
 			return null;

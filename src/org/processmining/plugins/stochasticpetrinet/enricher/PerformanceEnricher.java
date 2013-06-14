@@ -29,6 +29,7 @@ import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.contexts.uitopia.UIPluginContext;
+import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.util.ui.widgets.ProMPropertiesPanel;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
@@ -54,7 +55,7 @@ public class PerformanceEnricher {
 	
 	private Map<String, int[]> markingBasedSelections;
 	
-	public Object[] transform(UIPluginContext context, Manifest manifest){
+	public Object[] transform(PluginContext context, Manifest manifest){
 		// ask for preferences:
 		PerformanceEnricherConfig mineConfig = getTypeOfDistributionForNet(context);
 		try {
@@ -68,7 +69,7 @@ public class PerformanceEnricher {
 		return null;
 	}
 	
-	public Object[] transform(UIPluginContext context, Manifest manifest, PerformanceEnricherConfig mineConfig) {
+	public Object[] transform(PluginContext context, Manifest manifest, PerformanceEnricherConfig mineConfig) {
 		XLog log = manifest.getLog();
 		XLogInfo logInfo = XLogInfoImpl.create(log, manifest.getEvClassifier());
 		XEventClasses ec = logInfo.getEventClasses();
@@ -325,7 +326,7 @@ public class PerformanceEnricher {
 		return message;
 	}
 
-	public static PerformanceEnricherConfig getTypeOfDistributionForNet(UIPluginContext context) {
+	public static PerformanceEnricherConfig getTypeOfDistributionForNet(PluginContext context) {
 		ProMPropertiesPanel panel = new ProMPropertiesPanel("Stochastic Net properties:");
 		DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL, DistributionType.LOGNORMAL, DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM};
 		if (StochasticNetUtils.splinesSupported()){
@@ -339,14 +340,18 @@ public class PerformanceEnricher {
 		JComboBox distTypeSelection = panel.addComboBox("Type of distributions", supportedTypes);
 		JComboBox timeUnitSelection = panel.addComboBox("Time unit in model", StochasticNetUtils.UNIT_NAMES);
 		JComboBox executionPolicySelection = panel.addComboBox("Execution policy", StochasticNet.ExecutionPolicy.values());
-		InteractionResult result = context.showConfiguration("Select type of distribution:", panel);
-		if (result.equals(InteractionResult.CANCEL)){
-			context.getFutureResult(0).cancel(true);
-			return null;
+		if (context instanceof UIPluginContext){
+			InteractionResult result = ((UIPluginContext) context).showConfiguration("Select type of distribution:", panel);
+			if (result.equals(InteractionResult.CANCEL)){
+				context.getFutureResult(0).cancel(true);
+				return null;
+			} else {
+				DistributionType distType = (DistributionType) distTypeSelection.getSelectedItem();
+				Double timeUnit = StochasticNetUtils.UNIT_CONVERSION_FACTORS[timeUnitSelection.getSelectedIndex()];
+				return new PerformanceEnricherConfig(distType, timeUnit, (ExecutionPolicy) executionPolicySelection.getSelectedItem());
+			}
 		} else {
-			DistributionType distType = (DistributionType) distTypeSelection.getSelectedItem();
-			Double timeUnit = StochasticNetUtils.UNIT_CONVERSION_FACTORS[timeUnitSelection.getSelectedIndex()];
-			return new PerformanceEnricherConfig(distType, timeUnit, (ExecutionPolicy) executionPolicySelection.getSelectedItem());
+			return null;
 		}
 	}
 

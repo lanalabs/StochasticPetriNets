@@ -18,8 +18,8 @@ import org.deckfour.xes.info.XLogInfoFactory;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
-import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
+import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.Plugin;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
@@ -37,12 +37,12 @@ public class PerformanceEnricherPlugin {
 			help = "Creates a new copy of the net enriched with performance data.")
 
 	@UITopiaVariant(affiliation = "Hasso Plattner Institute", author = "A. Rogge-Solti", email = "andreas.rogge-solti@hpi.uni-potsdam.de", uiLabel = UITopiaVariant.USEPLUGIN)
-	public Object[] transform(UIPluginContext context, Manifest manifest) {
+	public Object[] transform(PluginContext context, Manifest manifest) {
 		PerformanceEnricher collector = new PerformanceEnricher();
 		return collector.transform(context, manifest);
 	}
 	
-	public static Object[] transform(UIPluginContext context, Manifest manifest, PerformanceEnricherConfig mineConfig) {
+	public static Object[] transform(PluginContext context, Manifest manifest, PerformanceEnricherConfig mineConfig) {
 		PerformanceEnricher collector = new PerformanceEnricher();
 		return collector.transform(context, manifest, mineConfig);
 	}
@@ -54,7 +54,7 @@ public class PerformanceEnricherPlugin {
 			userAccessible = true,
 			help = "Creates a new copy of the net enriched with performance data.")
 	@UITopiaVariant(affiliation = "Hasso Plattner Institute", author = "A. Rogge-Solti", email = "andreas.rogge-solti@hpi.uni-potsdam.de", uiLabel = UITopiaVariant.USEPLUGIN)
-	public static Object[] transform(UIPluginContext context, PetrinetGraph net, XLog log) {
+	public static Object[] transform(PluginContext context, PetrinetGraph net, XLog log) {
 		PerformanceEnricher collector = new PerformanceEnricher();
 		Manifest manifest = (Manifest) StochasticNetUtils.replayLog(context, net, log, true, true);
 		return collector.transform(context, manifest);
@@ -67,7 +67,7 @@ public class PerformanceEnricherPlugin {
 			userAccessible = true,
 			help = "Writes the duration performance data into a .csv File.")
 	@UITopiaVariant(affiliation = "Hasso Plattner Institute", author = "A. Rogge-Solti", email = "andreas.rogge-solti@hpi.uni-potsdam.de", uiLabel = UITopiaVariant.USEPLUGIN)
-	public static String transform(UIPluginContext context, XLog log) throws IOException {
+	public static String transform(PluginContext context, XLog log) throws IOException {
 		XLogInfo logInfo = XLogInfoFactory.createLogInfo(log);
 		XEventClasses eventClasses = logInfo.getEventClasses();
 	

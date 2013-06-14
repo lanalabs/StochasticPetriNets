@@ -22,8 +22,12 @@ public class StochasticNetSemanticsImpl extends AbstractResetInhibitorNetSemanti
 	 * Overrides default semantics, as only one of the transitions with highest priority can fire
 	 */
 	public Collection<Transition> getExecutableTransitions() {
-		Collection<Transition> executableTransitions = super.getExecutableTransitions();
-		return getTransitionsOfHighestPriority(executableTransitions);
+		long now = System.nanoTime();
+		Collection<Transition> executableTransitions = getEnabledTransitions();
+		Collection<Transition> transitions = getTransitionsOfHighestPriority(executableTransitions);
+		long later = System.nanoTime();
+//		System.out.println("getExecutableTransitions: "+(later-now)/1000000.+" ms.");
+		return transitions;
 	}
 	/**
 	 * Gets all transitions, that are still enabled, even though some immediate transitions can fire first. 

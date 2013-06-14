@@ -14,29 +14,29 @@ public class SliceSampler {
 	
 	private static Random rand;
 	
-	public SliceSampler(){
-		this(100);
+	private UnivariateFunction function;
+	
+	public SliceSampler(UnivariateFunction function, double xStart, double yStart){
+		this(function, xStart, yStart, 100);
 	}
-	public SliceSampler(int burnIn){
+	public SliceSampler(UnivariateFunction function, double xStart, double yStart, int burnIn){
 		this.burnIn = burnIn;
+		this.function = function;
 		rand = new Random();
+		x = xStart;
+		y = yStart;
+		burnIn();
 	}
 	
 	public void setSeed(long seed){
 		rand.setSeed(seed);
 	}
 	
-	public double sample(UnivariateFunction function, double xStart, double yStart){
-		x = xStart;
-		y = yStart;
-		burnIn(function);
+	public double sample(){
 		return slice(function);
 	}
 	
-	public double[] sample(UnivariateFunction function, double xStart, double yStart, int size){
-		x = xStart;
-		y = yStart;
-		burnIn(function);
+	public double[] sample(int size){
 		double[] values = new double[size];
 		for (int i = 0; i < size; i++){
 			values[i] = slice(function);
@@ -48,7 +48,7 @@ public class SliceSampler {
 	 * Samples a number of times to reach the ergodic state of the markov chain.
 	 * @param function
 	 */
-	private void burnIn(UnivariateFunction function) {
+	private void burnIn() {
 		for (int i = 0; i < burnIn; i++){
 			slice(function);
 		}

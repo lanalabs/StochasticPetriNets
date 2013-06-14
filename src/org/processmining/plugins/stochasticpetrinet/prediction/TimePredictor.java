@@ -6,10 +6,10 @@ import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.Set;
 
+import org.apache.commons.math3.distribution.TDistribution;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.extension.std.XTimeExtension;
-import org.deckfour.xes.model.XAttributeLiteral;
-import org.deckfour.xes.model.XAttributeTimestamp;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.framework.util.Pair;
@@ -19,14 +19,19 @@ import org.processmining.models.semantics.IllegalTransitionException;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
-import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
+import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorTraceLess;
 
 public class TimePredictor {
 //	Map<Place, List<Long>> placeTimes;
 	
+	public static final double CONFIDENCE_INTERVAL = 0.99;
+	public static final double ERROR_BOUND_PERCENT = 3;
+	public static final int MAX_RUNS = Integer.MAX_VALUE;
+	
 	/**
-	 * 
+	 * Does not care about final markings -> simulates net until no transitions are enabled any more...
+	 *  
 	 * @param model the model capturing the stochastic behavior of the net
 	 * @param observedEvents the monitored partial trace (complete, i.e., no visible transition missing) 
 	 * @param currentTime the time of prediction (usually later than the last event's time stamp) 
@@ -34,22 +39,49 @@ public class TimePredictor {
 	 * @param useTime indicator, whether to use the current time as constraint
 	 * @return
 	 */
-	public double predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, double unitFactor, boolean useTime) {
+	public Pair<Double,Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, double unitFactor, boolean useTime) {
 		Semantics<Marking,Transition> semantics = getCurrentState(model, initialMarking, observedEvents);
+		if (semantics.getCurrentState() == null){
+			System.out.println("Debug me!");
+		}
 		Marking currentMarking = semantics.getCurrentState();
-		Long lastEventTime = ((XAttributeTimestamp)observedEvents.get(observedEvents.size()-1).getAttributes().get(PNSimulator.TIME_TIMESTAMP)).getValueMillis();
+		Long lastEventTime = XTimeExtension.instance().extractTimestamp(observedEvents.get(observedEvents.size()-1)).getTime();
 //		System.out.println("Time between last event and current time: "+(currentTime.getTime()-lastEventTime)+"ms");
-		PNSimulator simulator = new PNSimulator();
+		PNSimulatorTraceLess simulator = new PNSimulatorTraceLess();
 		PNSimulatorConfig config = new PNSimulatorConfig(1,unitFactor);
 		
 		DescriptiveStatistics stats = new DescriptiveStatistics();
-		//long now = System.currentTimeMillis(); 
-		for (int i = 1; i < 1000; i++){
-			stats.addValue(simulator.simulateTraceEnd(model, semantics, config, currentMarking, lastEventTime, currentTime.getTime(), i, useTime));
+		//long now = System.currentTimeMillis();
+		
+		StochasticNetUtils.useCache(true);
+		double errorPercent = 100; // percentage in error of 99% confidence band
+		int i = 0;
+		while (errorPercent > ERROR_BOUND_PERCENT && i <MAX_RUNS){
+			i++;
+			stats.addValue((Long)simulator.simulateOneTrace(model, semantics, config, currentMarking, lastEventTime, currentTime.getTime(), i, useTime, null));
 			semantics.setCurrentState(currentMarking);
+			if (i % 100 == 0){
+				// update error:
+				errorPercent = getErrorPercent(stats);
+			}
 		}
+		System.out.println("stopped simulation after "+i+" samples... with error: "+errorPercent+"%.");
+		
+		StochasticNetUtils.useCache(false);
 		//System.out.println("Simulated 1000 traces in "+(System.currentTimeMillis()-now)+"ms ("+(useTime?"constrained":"unconstrained")+")");
-		return stats.getMean();
+		return new Pair<Double,Double>(stats.getMean(),getConfidenceIntervalWidth(stats, 0.99));
+	}
+	
+	private double getErrorPercent(DescriptiveStatistics stats){
+		double mean = stats.getMean();
+		double confidenceIntervalWidth = getConfidenceIntervalWidth(stats, CONFIDENCE_INTERVAL);
+		return (mean/(mean-confidenceIntervalWidth/2.) - 1) * 100;
+	}
+	
+	private double getConfidenceIntervalWidth(DescriptiveStatistics summaryStatistics, double confidence) {
+		TDistribution tDist = new TDistribution(summaryStatistics.getN() - 1);
+		double a = tDist.inverseCumulativeProbability(1-((1-confidence) / 2.));
+		return 2 * a * Math.sqrt(summaryStatistics.getVariance() / summaryStatistics.getN());
 	}
 
 	/**
@@ -65,7 +97,7 @@ public class TimePredictor {
 		semantics.initialize(model.getTransitions(), initialMarking);
 		Set<Marking> visitedMarkings = new HashSet<Marking>();
 		for (XEvent event : observedEvents){
-			String transitionName = ((XAttributeLiteral)event.getAttributes().get(PNSimulator.CONCEPT_NAME)).getValue();
+			String transitionName = XConceptExtension.instance().extractName(event);
 			Long time = XTimeExtension.instance().extractTimestamp(event).getTime();
 			boolean foundTransition = false;
 			// breadth-width search for the event transition in the graph from the current marking

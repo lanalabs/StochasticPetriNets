@@ -11,7 +11,6 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet.Execu
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
-import org.processmining.models.semantics.petrinet.impl.StochasticNetSemanticsImpl;
 import org.processmining.plugins.filter.noise.NoiseLogFilter;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
@@ -131,7 +130,7 @@ public class PerformanceEnricherExperimentPlugin {
 				for (int repetition = 0; repetition < repetitions; repetition++){
 					long seed = repetition;
 					PNSimulatorConfig config = new PNSimulatorConfig(traceSize,UNIT_FACTOR,seed,1,1000,policy);
-					XLog log = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), config, initialMarking);
+					XLog log = simulator.simulate(null, net, StochasticNetUtils.getSemantics(net), config, initialMarking);
 					
 					NoiseLogFilter noiseFilter = new NoiseLogFilter(2*seed);
 					

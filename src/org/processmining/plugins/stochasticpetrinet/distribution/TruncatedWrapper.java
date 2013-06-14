@@ -35,8 +35,13 @@ public class TruncatedWrapper implements RealDistribution{
 		this.constraint = constraint;
 		// rescale the density, such that it integrates to 1:
 		this.scale = 1.0/(1.0-wrappedDist.cumulativeProbability(constraint));
-		// 
-		sampler = new SliceSampler();
+
+		// init slice sampler:
+		double xStart = findPositiveX(getFunction());
+		if (wrappedDist.density(xStart) == 0){
+			throw new IllegalArgumentException("did not find positive values for the wrapped distribution ("+wrappedDist.toString()+") constrained above "+constraint);
+		}
+		sampler = new SliceSampler(getFunction(),xStart, wrappedDist.density(xStart)*0.5);
 	}
 	
 	public double probability(double x) {
@@ -131,17 +136,21 @@ public class TruncatedWrapper implements RealDistribution{
 	 * @throws IllegalArgumentException when constraint is too high, i.e., density is (floating point rounded) zero.
 	 */
 	public double sample() {
-		double xStart = findPositiveX(getFunction());
-		if (wrappedDist.density(xStart) == 0){
-			throw new IllegalArgumentException("did not find positive values for the wrapped distribution ("+wrappedDist.toString()+") constrained above "+constraint);
-		}
-		return sampler.sample(getFunction(), xStart, wrappedDist.density(xStart)*0.5);
+		return sampler.sample();
 	}
 
 	private double findPositiveX(UnivariateFunction function) {
-		double current = 1;
-		while (function.value(current+constraint)==0){
-			current *= -1.5;
+		double current = 0.05;
+		while (function.value(current+constraint)==0 && !Double.isInfinite(current)){
+			// first search between 0-1
+			if (Math.abs(current) < 1){
+				current += 0.1;
+			} else {
+				current *= -1.5;
+			}
+		}
+		if (Double.isInfinite(current)){
+			throw new IllegalArgumentException("Could not locate a positive value of the function "+function);
 		}
 		return current+constraint;
 	}
@@ -151,7 +160,7 @@ public class TruncatedWrapper implements RealDistribution{
 		if (wrappedDist.density(xStart) == 0){
 			throw new IllegalArgumentException("did not find positive values for the wrapped distribution ("+wrappedDist.toString()+") constrained above "+constraint);
 		}
-		double[] values = sampler.sample(getFunction(), xStart, wrappedDist.density(xStart)*0.5,sampleSize);
+		double[] values = sampler.sample(sampleSize);
 		// shuffle and return:
 		List<Double> valuesList = new ArrayList<Double>();
 		for (double val : values){

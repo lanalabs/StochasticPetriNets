@@ -56,6 +56,9 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 	 * smoothing parameter
 	 */
 	protected double h;
+	protected NormalDistribution ndist;
+	
+	
 	
 	public GaussianKernelDistribution(){
 		this(0.1);
@@ -115,6 +118,7 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 		double sd = stats.getStandardDeviation();
 		
 		h = 1.06*Math.min(sd,quantile25to75/1.34)*Math.pow(sampleValues.length, -1/5.);
+		ndist = new NormalDistribution(0,h);
 	}
 
 	public double cumulativeProbability(double x) {
@@ -123,7 +127,6 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 		if (h == 0){
 			System.out.println("Debug me!");
 		}
-		NormalDistribution ndist = new NormalDistribution(0,h);
 		BigDecimal factor = new BigDecimal(1.0);
 		factor = factor.divide(new BigDecimal(sampleValues.length),veryPrecise);
 		for (Long pos : kernelPointsAndWeights.keySet()){
@@ -153,24 +156,25 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 
 	public double density(double x) {
 		
-		BigDecimal density = new BigDecimal(0);
-		BigDecimal factor = new BigDecimal(1.0);
-		factor = factor.divide(new BigDecimal(sampleValues.length), veryPrecise);
-		NormalDistribution ndist = new NormalDistribution(0,h);
-		for (Long pos : kernelPointsAndWeights.keySet()){
-			double xKernelPos = pos*precision;
-			density = density.add(factor.multiply(new BigDecimal(ndist.density(x-xKernelPos)).multiply(new BigDecimal(kernelPointsAndWeights.get(pos)),veryPrecise),veryPrecise),veryPrecise);
-//			density += (1/weightSum) * ndist.density(x-xKernelPos)*kernelPointsAndWeights.get(pos);
-		}
-		return density.doubleValue();
-		
-//		double density = 0;
+//		BigDecimal density = new BigDecimal(0);
+//		BigDecimal factor = new BigDecimal(1.0);
+//		factor = factor.divide(new BigDecimal(sampleValues.length), veryPrecise);
 //		NormalDistribution ndist = new NormalDistribution(0,h);
 //		for (Long pos : kernelPointsAndWeights.keySet()){
 //			double xKernelPos = pos*precision;
-//			density += (1.0/sampleValues.length) * ndist.density(x-xKernelPos)*kernelPointsAndWeights.get(pos);
+//			density = density.add(factor.multiply(new BigDecimal(ndist.density(x-xKernelPos)).multiply(new BigDecimal(kernelPointsAndWeights.get(pos)),veryPrecise),veryPrecise),veryPrecise);
+////			density += (1/weightSum) * ndist.density(x-xKernelPos)*kernelPointsAndWeights.get(pos);
 //		}
-//		return density;
+//		return density.doubleValue();
+		double density = 0;
+		
+		for (Long pos : kernelPointsAndWeights.keySet()){
+			double xKernelPos = pos*precision;
+			density += ndist.density(x-xKernelPos)*kernelPointsAndWeights.get(pos);
+		}
+		// normalize again:
+		density *= (1.0/sampleValues.length);
+		return density;
 	}
 
 	public double getNumericalMean() {
@@ -279,7 +283,7 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 		if (h == 0){
 			return pos*precision;
 		} else {
-			return randomData.nextGaussian(pos*precision, h);
+			return ndist.sample()+pos*precision;
 		}
 	}
 	public double value(double x) {

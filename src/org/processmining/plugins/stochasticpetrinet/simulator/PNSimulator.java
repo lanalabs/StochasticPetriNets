@@ -8,9 +8,7 @@ import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
 import java.util.SortedMap;
-import java.util.SortedSet;
 import java.util.TreeMap;
-import java.util.TreeSet;
 
 import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
@@ -69,6 +67,10 @@ public class PNSimulator {
 	 */
 	long lastFiringTime;
 
+	public PNSimulator(){
+		transitionRemainingTimes = new HashMap<Transition, Long>();
+	}
+	
 	/**
 	 * Asks the user to specify configuration parameters for the simulation.
 	 * {@link PNSimulatorConfig}
@@ -127,7 +129,7 @@ public class PNSimulator {
 				//updatePlaceTimes(initialMarking, traceStart, placeTimes);
 				semantics.initialize(petriNet.getTransitions(), initialMarking);
 				
-				XTrace trace = simulateOneTrace(petriNet, semantics, config, initialMarking, traceStart.getTime(), traceStart.getTime(), i, false, finalMarking);
+				XTrace trace = (XTrace) simulateOneTrace(petriNet, semantics, config, initialMarking, traceStart.getTime(), traceStart.getTime(), i, false, finalMarking);
 				log.add(trace);
 			}
 			if (context != null){
@@ -142,22 +144,21 @@ public class PNSimulator {
 	 * See {@link #simulateTraceEnd(PetrinetGraph, Semantics, PNSimulatorConfig, Marking, Date, int, Map, boolean)} for an implementation that does not 
 	 * generate costly XIDs required for XES log files.
 	 * 
-	 * @param petriNet the model
-	 * @param semantics the semantics 
-	 * @param config the configuration {@link PNSimulatorConfig}
-	 * @param initialMarking the initial Marking
-	 * @param traceStart the date time to start the trace 
-	 * @param constraint the date time that all simulated events should be greater than
-	 * @param i trace id
-	 * @param useTimeConstraint stores whether created events are constrained to be later than traceStart
-	 * @param finalMarking a final marking can be set to terminate the simulation, when it is reached... ignored, if null
+	 * @param petriNet {@link PetrinetGraph} the model
+	 * @param semantics {@link Semantics} the semantics 
+	 * @param config {@link PNSimulatorConfig} the configuration {@link PNSimulatorConfig}
+	 * @param initialMarking {@link Marking} the initial Marking
+	 * @param traceStart long the date time to start the trace 
+	 * @param constraint long the date time that all simulated events should be greater than
+	 * @param i int trace id
+	 * @param useTimeConstraint boolean stores whether created events are constrained to be later than traceStart
+	 * @param finalMarking Marking a final marking can be set to terminate the simulation, when it is reached... ignored, if null
 	 * @return 
 	 */
-	public XTrace simulateOneTrace(PetrinetGraph petriNet, Semantics<Marking, Transition> semantics,
+	public Object simulateOneTrace(PetrinetGraph petriNet, Semantics<Marking, Transition> semantics,
 			PNSimulatorConfig config, Marking initialMarking, long traceStart, long constraint, int i, boolean useTimeConstraint, Marking finalMarking) {
-		XAttributeMap traceAttributes = new XAttributeMapImpl();
-		traceAttributes.put(CONCEPT_NAME, new XAttributeLiteralImpl(CONCEPT_NAME, String.valueOf(i)));
-		XTrace trace = new XTraceImpl(traceAttributes);
+		XTrace trace = createTrace(i);
+		
 		transitionRemainingTimes = new HashMap<Transition, Long>();
 		lastFiringTime = traceStart;
 		
@@ -185,10 +186,7 @@ public class PNSimulator {
 				if (useTimeConstraint && !transitionAndDuration.getFirst().isInvisible() && firingTime < constraint){
 					System.out.println("Debug me! This should not happen (if timed transitions were picked!!)");
 				}
-				if (!transitionAndDuration.getFirst().isInvisible()){
-					XEvent e = createSimulatedEvent(transitionAndDuration.getFirst().getLabel(), firingTime, String.valueOf(i));
-					trace.insertOrdered(e);
-				}
+				insertEvent(i, trace, transitionAndDuration, firingTime);
 				
 				// before proceeding with the next transition, we update the enabled transitions: 
 				transitions = afterwardsEnabledTransitions;
@@ -198,9 +196,27 @@ public class PNSimulator {
 				break;
 			}
 		}
+		return getReturnObject(trace,lastFiringTime);
+	}
+
+	protected Object getReturnObject(XTrace trace, long lastFiringTime2) {
 		return trace;
 	}
 
+	protected XTrace createTrace(int i) {
+		XAttributeMap traceAttributes = new XAttributeMapImpl();
+		traceAttributes.put(CONCEPT_NAME, new XAttributeLiteralImpl(CONCEPT_NAME, String.valueOf(i)));
+		XTrace trace = new XTraceImpl(traceAttributes);
+		return trace;
+	}
+
+	protected void insertEvent(int i, XTrace trace, Pair<Transition, Long> transitionAndDuration, long firingTime) {
+		if (!transitionAndDuration.getFirst().isInvisible()){
+			XEvent e = createSimulatedEvent(transitionAndDuration.getFirst().getLabel(), firingTime, String.valueOf(i));
+			trace.insertOrdered(e);
+		}
+	}
+	
 	public void updateTransitionMemoriesAfterFiring(PNSimulatorConfig config, Collection<Transition> transitionsEnabledInMarking,
 			Pair<Transition, Long> transitionAndDuration, long elapsedTimeInCurrentMarking, Collection<Transition> afterwardsEnabledTransitions, Semantics<Marking,Transition> semantics) {
 		transitionRemainingTimes.remove(transitionAndDuration.getFirst());
@@ -245,53 +261,58 @@ public class PNSimulator {
 		}
 	}
 	
-	/**
- 	 * Same as {@link #simulateOneTrace(PetrinetGraph, Semantics, PNSimulatorConfig, Marking, long, long, int, boolean)}, but without time-consuming XID generation for Events. 
-	 * @param petriNet
-	 * @param semantics
-	 * @param config
-	 * @param initialMarking
-	 * @param traceStart
-	 * @param constraint
-	 * @param i
-	 * @param useTimeConstraint
-	 * @return
-	 */
-	public Long simulateTraceEnd(PetrinetGraph petriNet, Semantics<Marking, Transition> semantics,
-			PNSimulatorConfig config, Marking initialMarking, long traceStart, long constraint, int i, boolean useTimeConstraint) {
-		Collection<Transition> transitions = semantics.getExecutableTransitions();
-		int eventsProduced = 0;
-		SortedSet<Long> transitionTimes = new TreeSet<Long>();
-
-		while (transitions.size() > 0 && eventsProduced++ < config.maxEventsInOneTrace) {
-			try {
-				Pair<Transition, Long> transitionAndDuration = pickTransition(transitions, petriNet, config, traceStart, constraint, useTimeConstraint);
-				long firingTime = lastFiringTime+transitionRemainingTimes.get(transitionAndDuration.getFirst());
-				
-				// fire first transition the list:
-				semantics.executeExecutableTransition(transitionAndDuration.getFirst());
-				
-				Collection<Transition> afterwardsEnabledTransitions = semantics.getExecutableTransitions();
-
-				updateTransitionMemoriesAfterFiring(config, transitions, transitionAndDuration, firingTime-lastFiringTime, afterwardsEnabledTransitions, semantics);
-				
-				// Now, create an event according to the marking and duration of the transition:
-				lastFiringTime = firingTime;
-								
-				if (useTimeConstraint && !transitionAndDuration.getFirst().isInvisible() && firingTime < constraint){
-					System.out.println("Debug me! This should not happen (if timed transitions were picked!!)");
-				}
-				if (!transitionAndDuration.getFirst().isInvisible()){
-					transitionTimes.add(firingTime);
-				}
-				transitions = afterwardsEnabledTransitions;
-			} catch (IllegalTransitionException e) {
-				e.printStackTrace();
-				break;
-			}
-		}
-		return transitionTimes.last();
-	}
+//	/**
+// 	 * Same as {@link #simulateOneTrace(PetrinetGraph, Semantics, PNSimulatorConfig, Marking, long, long, int, boolean)}, but without time-consuming XID generation for Events. 
+//	 * @param petriNet
+//	 * @param semantics
+//	 * @param config
+//	 * @param initialMarking
+//	 * @param traceStart
+//	 * @param constraint
+//	 * @param i
+//	 * @param useTimeConstraint
+//	 * @return
+//	 */
+//	public Long simulateTraceEnd(PetrinetGraph petriNet, Semantics<Marking, Transition> semantics,
+//			PNSimulatorConfig config, Marking initialMarking, long traceStart, long constraint, int i, boolean useTimeConstraint) {
+//		Collection<Transition> transitions = semantics.getExecutableTransitions();
+//		int eventsProduced = 0;
+//		SortedSet<Long> transitionTimes = new TreeSet<Long>();
+//		lastFiringTime = traceStart;
+//
+//		while (transitions.size() > 0 && eventsProduced++ < config.maxEventsInOneTrace) {
+//			try {
+//				Set<Transition> transitionsEnabledBefore = null;
+//				if (useTimeConstraint){
+//					transitionsEnabledBefore = new HashSet<Transition>(transitionRemainingTimes.keySet());
+//				}
+//				Pair<Transition, Long> transitionAndDuration = pickTransition(transitions, petriNet, config, lastFiringTime, constraint, useTimeConstraint);
+//				long firingTime = lastFiringTime+transitionRemainingTimes.get(transitionAndDuration.getFirst());
+//				
+//				// fire first transition the list:
+//				semantics.executeExecutableTransition(transitionAndDuration.getFirst());
+//				
+//				Collection<Transition> afterwardsEnabledTransitions = semantics.getExecutableTransitions();
+//
+//				updateTransitionMemoriesAfterFiring(config, transitions, transitionAndDuration, firingTime-lastFiringTime, afterwardsEnabledTransitions, semantics);
+//				
+//				// Now, create an event according to the marking and duration of the transition:
+//				lastFiringTime = firingTime;
+//								
+//				if (useTimeConstraint && firingTime < constraint && !transitionsEnabledBefore.contains(transitionAndDuration.getFirst()) && !transitionAndDuration.getFirst().isInvisible()){
+//					System.out.println("Debug me! This should not happen (if timed transitions were picked!!)");
+//				}
+//				if (!transitionAndDuration.getFirst().isInvisible()){
+//					transitionTimes.add(firingTime);
+//				}
+//				transitions = afterwardsEnabledTransitions;
+//			} catch (IllegalTransitionException e) {
+//				e.printStackTrace();
+//				break;
+//			}
+//		}
+//		return transitionTimes.last();
+//	}
 	
 
 	private XEvent createSimulatedEvent(String name, long firingTime, String instance) {
@@ -373,7 +394,10 @@ public class PNSimulator {
 						duration = 0;
 						break;
 					default :
-						double sample = StochasticNetUtils.sampleWithConstraint(timedT.getDistribution(), random, positiveConstraint);
+						double sample = StochasticNetUtils.sampleWithConstraint(timedT, random, positiveConstraint);
+						if (sample < positiveConstraint){
+							System.out.println("debug me!");
+						}
 						duration =  (long) (sample * unitFactor);
 				}
 			} else {
@@ -441,10 +465,10 @@ public class PNSimulator {
 						long transitionRemainingTime = getTransitionRemainingTime(transition, config.unitFactor, samplingConstraint);
 						long millis = System.currentTimeMillis()-now;
 						if (millis > 100){
-							System.out.println("sampling took: "+millis+"ms. constraint "+samplingConstraint+", transition: "+transition.getLabel());
-						}
+							System.out.println("sampling took: "+millis+"ms. constraint "+samplingConstraint+", transition: "+transition.getLabel()+" type: "+((TimedTransition)transition).getDistributionType());
+						} 
 						// make sure transition duration is bigger than constraint (sometimes floating point arithmetic might sample values that are overflowing, or just about the constraint.
-						if (transitionRemainingTime+startOfTransition < constraint){
+						if (!transitionRemainingTimes.containsKey(transition) && transitionRemainingTime+startOfTransition < constraint){
 							transitionRemainingTimes.put(transition, (long) (samplingConstraint*config.unitFactor)+1);
 							System.out.println("distribution ("+transition.getLabel()+") with constraint: "+samplingConstraint+", mean: "+((TimedTransition)transition).getDistribution().getNumericalMean()+" (Rounding produced Infinity)!!");
 						}

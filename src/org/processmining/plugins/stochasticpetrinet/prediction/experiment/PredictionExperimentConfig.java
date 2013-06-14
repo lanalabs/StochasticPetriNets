@@ -20,15 +20,15 @@ import com.fluxicon.slickerbox.components.RoundedPanel;
 
 public class PredictionExperimentConfig {
 
-	private int monitoringIterations = 20;
-	private int simulatedTraces = 1000;
-	private double timeUnitFactor = 1000;
+	private int monitoringIterations = 40;
+	private int simulatedTraces = 10000;
+	private double timeUnitFactor = 60000;
 	
 	private boolean learnSPNFromData = true;
-	private DistributionType learnedDistributionType = DistributionType.GAUSSIAN_KERNEL;
-	private ExecutionPolicy executionPolicy = ExecutionPolicy.GLOBAL_PRESELECTION;
+	private DistributionType learnedDistributionType = DistributionType.HISTOGRAM;
+	private ExecutionPolicy executionPolicy = ExecutionPolicy.RACE_ENABLING_MEMORY;
 	
-	private String resultFileName = "predictionResults.csv";
+	private String resultFileName = "predictionResults_gspn.csv";
 	private int workerCount = 4;
 	
 	private static int TEXTWIDTH = 500;
@@ -93,10 +93,10 @@ public class PredictionExperimentConfig {
 			fileNameField = addTextField("File name to store experiment results:",String.valueOf(config.getResultFileName()));
 			learnSPNFromDataBox = addCheckBox("Learn stochastic Net properties from data?", config.getLearnSPNFromData());
 			
-			DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL,DistributionType.EXPONENTIAL,DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM};
+			DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL,DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL, DistributionType.HISTOGRAM};
 			if (StochasticNetUtils.splinesSupported()){
 				supportedTypes = Arrays.copyOf(supportedTypes, supportedTypes.length+1);
-				supportedTypes[supportedTypes.length-2] = DistributionType.LOGSPLINE;
+				supportedTypes[supportedTypes.length-1] = DistributionType.LOGSPLINE;
 			} else {
 				add(new JLabel("To enable spline smoothers, make sure you have a running R installation \n" +
 						"and the native jri-binary is accessible in your java.library.path!"));
@@ -106,7 +106,7 @@ public class PredictionExperimentConfig {
 			learnedDistributionTypeBox.setSelectedIndex(0);
 			
 			learnedExecutionPolicyBox = addComboBox("Assumed execution policy of the SPN:", ExecutionPolicy.values());
-			learnedExecutionPolicyBox.setSelectedIndex(0);
+			learnedExecutionPolicyBox.setSelectedIndex(2);
 			
 			workerCountBox = this.addComboBox("Parallel Workers:", WORKER_COUNTS);
 			workerCountBox.setSelectedIndex(Arrays.binarySearch(WORKER_COUNTS, config.getWorkerCount()));
@@ -174,4 +174,37 @@ public class PredictionExperimentConfig {
 	public int getWorkerCount() {
 		return workerCount ;
 	}
+
+	public void setMonitoringIterations(int monitoringIterations) {
+		this.monitoringIterations = monitoringIterations;
+	}
+
+	public void setSimulatedTraces(int simulatedTraces) {
+		this.simulatedTraces = simulatedTraces;
+	}
+
+	public void setTimeUnitFactor(double timeUnitFactor) {
+		this.timeUnitFactor = timeUnitFactor;
+	}
+
+	public void setLearnSPNFromData(boolean learnSPNFromData) {
+		this.learnSPNFromData = learnSPNFromData;
+	}
+
+	public void setLearnedDistributionType(DistributionType learnedDistributionType) {
+		this.learnedDistributionType = learnedDistributionType;
+	}
+
+	public void setExecutionPolicy(ExecutionPolicy executionPolicy) {
+		this.executionPolicy = executionPolicy;
+	}
+
+	public void setResultFileName(String resultFileName) {
+		this.resultFileName = resultFileName;
+	}
+
+	public void setWorkerCount(int workerCount) {
+		this.workerCount = workerCount;
+	}
+	
 }
