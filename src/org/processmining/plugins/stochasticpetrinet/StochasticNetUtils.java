@@ -259,7 +259,7 @@ public class StochasticNetUtils {
 	 * @param positiveConstraint sample should be bigger than this value (results in truncated distribution)
 	 * @return
 	 */
-	public static double sampleWithConstraint(RealDistribution distribution, String cacheLabel, double positiveConstraint) {
+	public synchronized static double sampleWithConstraint(RealDistribution distribution, String cacheLabel, double positiveConstraint) {
 		double sample;
 		if (Double.isInfinite(positiveConstraint) || positiveConstraint == Double.NEGATIVE_INFINITY){
 			sample = distribution.sample();
