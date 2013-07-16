@@ -231,14 +231,13 @@ public class StochasticNetUtils {
 	}
 	
 	/**
-	 * Samples a value from the distribution
-	 * @param distribution
+	 * Samples a value from the distribution of a timed transition
+	 * @param transition {@link TimedTransition}
 	 * @param positiveConstraint sample should be bigger than this value (results in truncated distribution)
 	 * @return
 	 */
-	public synchronized static double sampleWithConstraint(TimedTransition transition, Random rand, double positiveConstraint) {
-		long now = System.currentTimeMillis();
-		
+	public synchronized static double sampleWithConstraint(TimedTransition transition, double positiveConstraint) {
+//		long now = System.currentTimeMillis();
 		double sample = positiveConstraint;
 		String key = transition.getLabel()+"_"+positiveConstraint;
 		RealDistribution distribution = transition.getDistribution();
@@ -246,64 +245,53 @@ public class StochasticNetUtils {
 		if (useCache && distributionCache.containsKey(key)){
 			sample = distributionCache.get(key).sample();
 		} else {
-			if (Double.isInfinite(positiveConstraint) || positiveConstraint == Double.NEGATIVE_INFINITY){
-				sample = distribution.sample();
-			} else if (distribution instanceof SimpleHistogramDistribution){
-				sample = ((SimpleHistogramDistribution)distribution).sample(positiveConstraint);
-			} else if (distribution instanceof DiracDeltaDistribution){
-				sample = distribution.sample();
-				if (positiveConstraint > sample){
-					sample = positiveConstraint;
-				}
-			} else if (distribution instanceof UniformRealDistribution) {
-				if (distribution.getSupportLowerBound() < positiveConstraint){
-					if (distribution.getSupportUpperBound() < positiveConstraint){
-						sample = positiveConstraint;
-					} else {
-						RealDistribution constrainedDist = new UniformRealDistribution(positiveConstraint, distribution.getSupportUpperBound());
-						sample = constrainedDist.sample();
-					}
-				} else {
-					sample = distribution.sample();
-				}
-			} else {
-				RealDistribution wrapper = TruncatedDistributionFactory.getConstrainedWrapper(distribution,positiveConstraint);
-				if (useCache){
-					// store distribution in cache
-					distributionCache.put(transition.getLabel()+"_"+positiveConstraint, wrapper);
-//					System.out.println("caching distribution for "+key+". caching "+distributionCache.size()+" distributions");
-				}
-				sample = wrapper.sample();
-			} 
+			sample = sampleWithConstraint(distribution, key, positiveConstraint);
 		}
-		long after = System.currentTimeMillis();
+//		long after = System.currentTimeMillis();
 //		System.out.println("sampling with constraint took "+(after-now)+" ms");
 		return sample;
-//		
-//		double sample = -1;
-//		int tries = 0;
-//		while (sample < positiveConstraint){
-//			if (tries++ > MAX_RETRIES){
-////				System.err.println("Maximum sample retries reached! Falling back to manual sampling");
-//				// fall back to sampling via inverse distribution
-//				double threshold = distribution.cumulativeProbability(positiveConstraint);
-//				if (threshold == 1){
-//					// TODO: some other sampling method!
-//				}
-//				double span = 1-threshold;
-//				double nextVal = threshold+rand.nextDouble()*span;
-////				if (nextVal == 1){
-////					// do NOT return Infinity
-////					nextVal = 0.99999999999;
-////				}
-//				return distribution.inverseCumulativeProbability(nextVal);
-//			}
-//			sample = distribution.sample();
-//		}
-//		
-//		return sample;
 	}
 	
+	/**
+	 * Samples a value from the distribution
+	 * @param distribution {@link RealDistribution} sampling distribution
+	 * @param cacheLabel String denoting the key for this distribution to be cached
+	 * @param positiveConstraint sample should be bigger than this value (results in truncated distribution)
+	 * @return
+	 */
+	public static double sampleWithConstraint(RealDistribution distribution, String cacheLabel, double positiveConstraint) {
+		double sample;
+		if (Double.isInfinite(positiveConstraint) || positiveConstraint == Double.NEGATIVE_INFINITY){
+			sample = distribution.sample();
+		} else if (distribution instanceof SimpleHistogramDistribution){
+			sample = ((SimpleHistogramDistribution)distribution).sample(positiveConstraint);
+		} else if (distribution instanceof DiracDeltaDistribution){
+			sample = distribution.sample();
+			if (positiveConstraint > sample){
+				sample = positiveConstraint;
+			}
+		} else if (distribution instanceof UniformRealDistribution) {
+			if (distribution.getSupportLowerBound() < positiveConstraint){
+				if (distribution.getSupportUpperBound() < positiveConstraint){
+					sample = positiveConstraint;
+				} else {
+					RealDistribution constrainedDist = new UniformRealDistribution(positiveConstraint, distribution.getSupportUpperBound());
+					sample = constrainedDist.sample();
+				}
+			} else {
+				sample = distribution.sample();
+			}
+		} else {
+			RealDistribution wrapper = TruncatedDistributionFactory.getConstrainedWrapper(distribution,positiveConstraint);
+			if (useCache){
+				// store distribution in cache
+				distributionCache.put(cacheLabel, wrapper);
+//				System.out.println("caching distribution for "+key+". caching "+distributionCache.size()+" distributions");
+			}
+			sample = wrapper.sample();
+		} 
+		return sample;
+	}
 	/**
 	 * Takes a double[] of weights and selects an item randomly according to a random number generator
 	 * such that each item in the array has a probability of (weight of item / sum of weights);

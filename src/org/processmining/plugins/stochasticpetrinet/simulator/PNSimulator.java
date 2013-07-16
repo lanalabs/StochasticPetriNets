@@ -394,7 +394,7 @@ public class PNSimulator {
 						duration = 0;
 						break;
 					default :
-						double sample = StochasticNetUtils.sampleWithConstraint(timedT, random, positiveConstraint);
+						double sample = StochasticNetUtils.sampleWithConstraint(timedT, positiveConstraint);
 						if (sample < positiveConstraint){
 							System.out.println("debug me!");
 						}
