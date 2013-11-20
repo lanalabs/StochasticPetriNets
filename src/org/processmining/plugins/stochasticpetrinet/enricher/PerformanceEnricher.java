@@ -18,15 +18,11 @@ import javax.swing.JPanel;
 import org.apache.commons.math.stat.descriptive.moment.Mean;
 import org.apache.commons.math.stat.descriptive.moment.StandardDeviation;
 import org.deckfour.uitopia.api.event.TaskListener.InteractionResult;
-import org.deckfour.xes.classification.XEventClasses;
-import org.deckfour.xes.info.XLogInfo;
-import org.deckfour.xes.info.impl.XLogInfoImpl;
 import org.deckfour.xes.model.XAttribute;
 import org.deckfour.xes.model.XAttributeContinuous;
 import org.deckfour.xes.model.XAttributeDiscrete;
 import org.deckfour.xes.model.XAttributeTimestamp;
 import org.deckfour.xes.model.XEvent;
-import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.plugin.PluginContext;
@@ -70,9 +66,7 @@ public class PerformanceEnricher {
 	}
 	
 	public Object[] transform(PluginContext context, Manifest manifest, PerformanceEnricherConfig mineConfig) {
-		XLog log = manifest.getLog();
-		XLogInfo logInfo = XLogInfoImpl.create(log, manifest.getEvClassifier());
-		XEventClasses ec = logInfo.getEventClasses();
+		long startTime = System.currentTimeMillis();
 		
 		PetrinetGraph net = manifest.getNet();
 		
@@ -152,7 +146,8 @@ public class PerformanceEnricher {
 				System.out.println(feedbackMessage);
 			}
 		}
-		System.out.println("finished discovery of GDT_SPN model for "+mineConfig.getPolicy()+" policy.");
+		context.log("finished discovery of GDT_SPN model for "+mineConfig.getPolicy()+" policy.");
+		context.log("Took "+(System.currentTimeMillis()-startTime)/1000.+" sec.");
 		return stochasticNetAndMarking;
 	}
 
@@ -160,49 +155,22 @@ public class PerformanceEnricher {
 		assert(!transitionStats.isEmpty());
 		
 		Collections.sort(transitionStats);
-		
-		double value = getMedian(transitionStats);
-		
-		
-		int quantile = (int) Math.max(5, ((1.0-traceFitness)*50));
-		
-		// Strip outliers:
-		List<Double> removedOutliers = removeOutliers(transitionStats,quantile);
-		
-		for (double obs : removedOutliers){
-			if (Math.abs(value-obs)>EPSILON){
-				return false;
-			}
+		double[] sampleValues = StochasticNetUtils.getAsDoubleArray(transitionStats);
+		double quantile25to75 = Double.MAX_VALUE;
+		if (sampleValues.length>4){
+			quantile25to75 = sampleValues[3*sampleValues.length/4]-sampleValues[sampleValues.length/4];
+		}
+		if (quantile25to75 > EPSILON){
+			return false;
 		}
 		// looks deterministic, now check if censored entries all contain the value:
+		double value = getMedian(transitionStats);
 		for (double cens : censoredStats){
 			if (cens > value+EPSILON){
 				return false;
 			}
 		}
 		return true;
-	}
-
-	/**
-	 * Trims the values in the upper and lower x-quantiles
-	 * @param transitionStats
-	 * @param x percent
-	 * @return
-	 */
-	private List<Double> removeOutliers(List<Double> transitionStats, int x) {
-		int valuesToRemove = x*transitionStats.size()/100;
-		Iterator<Double> iter = transitionStats.iterator();
-		int pos = 0;
-		List<Double> trimmedValues = new LinkedList<Double>(); 
-		while (iter.hasNext()){
-			if (pos > valuesToRemove && pos < transitionStats.size()-valuesToRemove){
-				trimmedValues.add(iter.next());
-			} else {
-				iter.next();
-			}
-			pos++;
-		}
-		return trimmedValues;
 	}
 
 	private double getMedian(List<Double> transitionStats) {

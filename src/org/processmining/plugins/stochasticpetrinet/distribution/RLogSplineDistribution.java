@@ -89,12 +89,14 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 				// try to get a nicer value:
 				upperBound = engine.eval("q"+method+"(0.99999,"+rName+")").asDouble();
 			}
-			UnivariateIntegrator integrator = new TrapezoidIntegrator(0.01,0.0001,3,64);
-			numericalMean = integrator.integrate(100000, DistributionUtils.getWeightedFunction(this), 0, upperBound);
-				
-			System.out.println("Mean calculation ("+numericalMean+") based on integration ("+method+" method) took "+(System.currentTimeMillis()-now)+"ms");
-			if (numericalMean < 0){
-				System.out.println("Debug me!");
+			if (upperBound > 0){
+				UnivariateIntegrator integrator = new TrapezoidIntegrator(0.01,0.0001,3,64);
+				numericalMean = integrator.integrate(100000, DistributionUtils.getWeightedFunction(this), 0, upperBound);
+					
+				System.out.println("Mean calculation ("+numericalMean+") based on integration ("+method+" method) took "+(System.currentTimeMillis()-now)+"ms");
+				if (numericalMean < 0){
+					System.out.println("Debug me!");
+				}
 			}
 		}
 
@@ -135,5 +137,12 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 
 	public boolean isSupportConnected() {
 		return false;
+	}
+	
+	public double sample(){
+		return engine.eval("r"+method+"(1,"+rName+")").asDouble();
+	}
+	public double[] sample(int sampleSize){
+		return engine.eval("r"+method+"("+sampleSize+","+rName+")").asDoubleArray();
 	}
 }

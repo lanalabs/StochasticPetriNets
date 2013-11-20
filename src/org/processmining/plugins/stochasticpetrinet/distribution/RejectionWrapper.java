@@ -1,47 +1,27 @@
 package org.processmining.plugins.stochasticpetrinet.distribution;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.integration.IterativeLegendreGaussIntegrator;
 import org.apache.commons.math3.analysis.integration.SimpsonIntegrator;
 import org.apache.commons.math3.analysis.integration.UnivariateIntegrator;
 import org.apache.commons.math3.distribution.RealDistribution;
-import org.apache.commons.math3.exception.NumberIsTooLargeException;
 import org.apache.commons.math3.exception.OutOfRangeException;
 
-public class TruncatedWrapper implements RealDistribution{
+public class RejectionWrapper implements RealDistribution {
 
-	/** The original distribution  */
 	protected RealDistribution wrappedDist;
-	/** the constraint, such that the distribution is truncated below this constraint */
 	protected double constraint;
-	
-	/** sampler to sample from constrained distribution directly*/
-	protected SliceSampler sampler;
-	/** scaling function, such that the truncated distribution will integrate to 1 */
 	protected double scale;
-	
-	protected double numericalMean = Double.NaN;
-	
-	TruncatedWrapper(RealDistribution dist){
+	protected double numericalMean;
+
+	public RejectionWrapper(RealDistribution dist){
 		this(dist,0);
 	}
-	
-	TruncatedWrapper(RealDistribution dist, double constraint){
+	public RejectionWrapper(RealDistribution dist, double constraint){
 		this.wrappedDist = dist;
 		this.constraint = constraint;
 		// rescale the density, such that it integrates to 1:
 		this.scale = 1.0/(1.0-wrappedDist.cumulativeProbability(constraint));
-
-		// init slice sampler:
-		double xStart = findPositiveX(getFunction());
-		if (wrappedDist.density(xStart) == 0){
-			throw new IllegalArgumentException("did not find positive values for the wrapped distribution ("+wrappedDist.toString()+") constrained above "+constraint);
-		}
-		sampler = new SliceSampler(getFunction(),xStart, wrappedDist.density(xStart)*0.5);
 	}
 	
 	public double probability(double x) {
@@ -60,12 +40,13 @@ public class TruncatedWrapper implements RealDistribution{
 		UnivariateIntegrator integrator = new SimpsonIntegrator();
 		return integrator.integrate(10000, getFunction(), Double.NEGATIVE_INFINITY, x);
 	}
-
-	public double cumulativeProbability(double x0, double x1) throws NumberIsTooLargeException {
+	@Deprecated
+	public double cumulativeProbability(double x0, double x1) {
 		UnivariateIntegrator integrator = new SimpsonIntegrator();
 		return integrator.integrate(10000, getFunction(), x0, x1);
 	}
 
+	
 	public UnivariateFunction getFunction() {
 		UnivariateFunction function = new UnivariateFunction() {
 			public double value(double x) {
@@ -74,7 +55,6 @@ public class TruncatedWrapper implements RealDistribution{
 		};
 		return function;
 	}
-	
 	public UnivariateFunction getWeightedFunction(){
 		UnivariateFunction function = new UnivariateFunction() {
 			public double value(double x) {
@@ -87,6 +67,7 @@ public class TruncatedWrapper implements RealDistribution{
 		};
 		return function;
 	}
+
 
 	public double inverseCumulativeProbability(double p) throws OutOfRangeException {
 		throw new UnsupportedOperationException("inverseCumulativeProbability not implemented!");
@@ -102,11 +83,11 @@ public class TruncatedWrapper implements RealDistribution{
 	}
 
 	public double getNumericalVariance() {
-		throw new UnsupportedOperationException("numericalVariance not implemented!");
+		throw new UnsupportedOperationException("numericalVariance not implemented!");	
 	}
-
+	
 	public double getSupportLowerBound() {
-		return constraint;
+		return constraint > wrappedDist.getSupportLowerBound()?constraint:wrappedDist.getSupportLowerBound();
 	}
 
 	public double getSupportUpperBound() {
@@ -114,7 +95,7 @@ public class TruncatedWrapper implements RealDistribution{
 	}
 
 	public boolean isSupportLowerBoundInclusive() {
-		return true;
+		return false;
 	}
 
 	public boolean isSupportUpperBoundInclusive() {
@@ -122,54 +103,31 @@ public class TruncatedWrapper implements RealDistribution{
 	}
 
 	public boolean isSupportConnected() {
-		return true;
+		return wrappedDist.isSupportConnected();
 	}
 
 	public void reseedRandomGenerator(long seed) {
-		sampler.setSeed(seed);
+		wrappedDist.reseedRandomGenerator(seed);
 	}
 
-	/**
-	 * Slice sampling
-	 * Note that due to floating point arithmetic, too large constraints, i.e. those where the 
-	 * density of the truncated distribution is 0, will not work! 
-	 * @throws IllegalArgumentException when constraint is too high, i.e., density is (floating point rounded) zero.
-	 */
 	public double sample() {
-		return sampler.sample();
-	}
-
-	private double findPositiveX(UnivariateFunction function) {
-		double current = 0.05;
-		while (function.value(current+constraint)==0 && !Double.isInfinite(current)){
-			// first search between 0-1
-			if (Math.abs(current) < 1){
-				current += 0.1;
-			} else {
-				current *= 1.1;
+		boolean foundSample = false;
+		double sample = Double.NaN;
+		while (!foundSample){
+			sample = wrappedDist.sample();
+			if (sample >= constraint){
+				foundSample = true;
 			}
 		}
-		if (Double.isInfinite(current)){
-			throw new IllegalArgumentException("Could not locate a positive value of the function "+function);
-		}
-		return current+constraint;
+		return sample;
 	}
 
 	public double[] sample(int sampleSize) {
-		double xStart = findPositiveX(getFunction());
-		if (wrappedDist.density(xStart) == 0){
-			throw new IllegalArgumentException("did not find positive values for the wrapped distribution ("+wrappedDist.toString()+") constrained above "+constraint);
+		double[] samples = new double[sampleSize];
+		for (int i=0; i < sampleSize; i++){
+			samples[i] = sample();
 		}
-		double[] values = sampler.sample(sampleSize);
-		// shuffle and return:
-		List<Double> valuesList = new ArrayList<Double>();
-		for (double val : values){
-			valuesList.add(val);
-		}
-		Collections.shuffle(valuesList);
-		for (int i = 0; i < values.length; i++){
-			values[i] = valuesList.get(i);
-		}
-		return values;
+		return samples;
 	}
+
 }

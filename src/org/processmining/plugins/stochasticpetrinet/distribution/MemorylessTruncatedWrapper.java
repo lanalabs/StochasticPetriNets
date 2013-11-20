@@ -17,7 +17,9 @@ public class MemorylessTruncatedWrapper extends TruncatedWrapper {
 		super(dist);
 	}
 	public MemorylessTruncatedWrapper(RealDistribution dist, double constraint){
-		super(dist,constraint);
+		super(dist,0);
+		this.constraint = constraint;
+		this.scale = 1;
 	}
 
 	public double density(double x) {

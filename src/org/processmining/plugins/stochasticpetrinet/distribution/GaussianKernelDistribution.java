@@ -114,10 +114,14 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 		if (sampleValues.length>4){
 			quantile25to75 = sampleValues[3*sampleValues.length/4]-sampleValues[sampleValues.length/4];
 		}
+		if (quantile25to75 == 0){
+			quantile25to75 = 1;
+		}
 		DescriptiveStatistics stats = new DescriptiveStatistics(sampleValues);
 		double sd = stats.getStandardDeviation();
 		
 		h = 1.06*Math.min(sd,quantile25to75/1.34)*Math.pow(sampleValues.length, -1/5.);
+		
 		ndist = new NormalDistribution(0,h);
 	}
 

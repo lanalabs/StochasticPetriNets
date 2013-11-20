@@ -25,8 +25,15 @@ public class TruncatedDistributionFactory {
 			} else {
 				return dist;
 			}
+		} else if (dist.cumulativeProbability(constraint) < 0.9){
+			return new RejectionWrapper(dist,constraint);
 		} else {
-			return new TruncatedWrapper(dist,constraint);
+			try{
+				return new TruncatedWrapper(dist,constraint);
+			} catch (IllegalArgumentException e){
+				// fall back:
+				return new DiracDeltaDistribution(constraint);
+			}
 		}
 	}
 }

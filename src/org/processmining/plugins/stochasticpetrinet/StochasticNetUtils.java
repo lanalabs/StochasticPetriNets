@@ -54,6 +54,7 @@ import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
 import org.processmining.models.graphbased.directed.petrinet.ResetInhibitorNet;
 import org.processmining.models.graphbased.directed.petrinet.ResetNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
@@ -778,5 +779,32 @@ public class StochasticNetUtils {
 	public synchronized static void useCache(boolean useCache) {
 		StochasticNetUtils.useCache = useCache;
 		distributionCache.clear();
+	}
+	
+	/**
+	 * 
+	 * @param spn a stochastic Petri net containing all kinds of timed distributions
+	 * @return a stochastic Petri net containing only immediate and normal distributions. 
+	 *         Timed transitions of other distribution shape are replaced by normal approximations.
+	 */
+	public static StochasticNet convertToNormal(StochasticNet spn) {
+		// approximate all timed transitions with normal ones (mean and variance):
+		Iterator<Transition> transitionIter = spn.getTransitions().iterator();
+		while(transitionIter.hasNext()){
+			Transition transition = transitionIter.next();
+			if (transition instanceof TimedTransition){
+				TimedTransition tt = (TimedTransition) transition;
+				if (!tt.getDistributionType().equals(DistributionType.IMMEDIATE) && !tt.getDistributionType().equals(DistributionType.NORMAL)){
+					tt.setDistributionType(DistributionType.NORMAL);
+					double mean = tt.getDistribution().getNumericalMean();
+					double variance = tt.getDistribution().getNumericalVariance();
+					variance = variance <= 0?0.0000001:variance; // ensure numerical stability for deterministic distributions.
+					tt.setDistributionParameters(new double[]{mean,Math.sqrt(variance)});
+					tt.setDistribution(null);
+					tt.initDistribution(0);
+				}
+			}
+		}
+		return spn;
 	}
 }
