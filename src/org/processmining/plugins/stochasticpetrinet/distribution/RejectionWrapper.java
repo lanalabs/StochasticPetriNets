@@ -12,7 +12,7 @@ public class RejectionWrapper implements RealDistribution {
 	protected RealDistribution wrappedDist;
 	protected double constraint;
 	protected double scale;
-	protected double numericalMean;
+	protected double numericalMean = Double.NaN;
 
 	public RejectionWrapper(RealDistribution dist){
 		this(dist,0);
