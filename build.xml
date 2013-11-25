@@ -137,6 +137,7 @@
 							hasPlugins="true"
 							logo="http://www.solti.de/andi/logo.png">
 							<dependency name="PetriNets"/>
+							<dependency name="Log"/>
 							<dependency name="PNetAlignmentAnalysis"/>
 							<dependency name="PNetReplayer"/>
 							<dependency name="TransitionSystems"/>
