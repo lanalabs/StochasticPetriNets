@@ -1,5 +1,7 @@
 package org.processmining.plugins.stochasticpetrinet.enricher;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
@@ -27,6 +29,7 @@ import org.deckfour.xes.model.XTrace;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.util.ui.widgets.ProMPropertiesPanel;
+import org.processmining.framework.util.ui.widgets.ProMTextField;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
@@ -59,7 +62,7 @@ public class PerformanceEnricher {
 				return transform(context, manifest, mineConfig);
 			}
 		} catch (Exception e){
-			context.log(e.getMessage());
+			context.log(e);
 			context.getFutureResult(0).cancel(true);
 		}
 		return null;
@@ -76,6 +79,9 @@ public class PerformanceEnricher {
 		StochasticNet sNet = (StochasticNet) stochasticNetAndMarking[0];
 		
 		performanceCollector.collectDataFromManifest();
+		if (mineConfig.getCorrelationMatrixFile() != null){
+			performanceCollector.outputCorrelationMatrix();
+		}
 		
 		Iterator<Transition> originalTransitions = net.getTransitions().iterator();
 		Iterator<Transition> newTimedTransitions = sNet.getTransitions().iterator();
@@ -308,6 +314,7 @@ public class PerformanceEnricher {
 		JComboBox distTypeSelection = panel.addComboBox("Type of distributions", supportedTypes);
 		JComboBox timeUnitSelection = panel.addComboBox("Time unit in model", StochasticNetUtils.UNIT_NAMES);
 		JComboBox executionPolicySelection = panel.addComboBox("Execution policy", StochasticNet.ExecutionPolicy.values());
+		ProMTextField correlationFileField = panel.addTextField("Correlation Matrix Output", "");
 		if (context instanceof UIPluginContext){
 			InteractionResult result = ((UIPluginContext) context).showConfiguration("Select type of distribution:", panel);
 			if (result.equals(InteractionResult.CANCEL)){
@@ -316,7 +323,21 @@ public class PerformanceEnricher {
 			} else {
 				DistributionType distType = (DistributionType) distTypeSelection.getSelectedItem();
 				Double timeUnit = StochasticNetUtils.UNIT_CONVERSION_FACTORS[timeUnitSelection.getSelectedIndex()];
-				return new PerformanceEnricherConfig(distType, timeUnit, (ExecutionPolicy) executionPolicySelection.getSelectedItem());
+				File correlationFile = null;
+				if (!correlationFileField.getText().trim().isEmpty()){
+					correlationFile = new File (correlationFileField.getText().trim());
+					if (!correlationFile.exists()){
+						boolean succeeded = false;
+						try {
+							succeeded = correlationFile.createNewFile();
+						} catch (IOException e) {}
+						if (!succeeded){
+							JOptionPane.showMessageDialog(panel, "Could not create file <"+correlationFile.getAbsolutePath()+">!\n" +
+									"Enricher will not store transition durations by case.");
+						}
+					}
+				}
+				return new PerformanceEnricherConfig(distType, timeUnit, (ExecutionPolicy) executionPolicySelection.getSelectedItem(), correlationFile);
 			}
 		} else {
 			return null;

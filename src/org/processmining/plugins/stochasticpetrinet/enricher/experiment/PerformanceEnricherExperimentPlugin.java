@@ -142,7 +142,7 @@ public class PerformanceEnricherExperimentPlugin {
 					
 					PerformanceEnricher enricher = new PerformanceEnricher();
 					Manifest manifest = (Manifest) StochasticNetUtils.replayLog(context, plainNet, log, true, true);
-					PerformanceEnricherConfig mineConfig = new PerformanceEnricherConfig(DISTRIBUTION_TYPE, (double) UNIT_FACTOR, policy);
+					PerformanceEnricherConfig mineConfig = new PerformanceEnricherConfig(DISTRIBUTION_TYPE, (double) UNIT_FACTOR, policy, null);
 					Object[] enrichedNet = enricher.transform(context, manifest, mineConfig);
 					StochasticNet learnedNet = (StochasticNet) enrichedNet[0];
 					// Debugging code to view the logspline distribution:

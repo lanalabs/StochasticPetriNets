@@ -4,6 +4,9 @@ import gnu.trove.map.TObjectIntMap;
 import gnu.trove.map.hash.TIntObjectHashMap;
 import gnu.trove.map.hash.TObjectIntHashMap;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -67,6 +70,9 @@ import cern.colt.Arrays;
  */
 
 public class StochasticManifestCollector {
+	
+	public static final String DELIMITER = ";";
+	
 	/** stores firing times for transitions */
 	protected Map<Integer, List<Double>> firingTimes;
 	/** stores all censored sample times, where the transition could not use it's sampled duration, because it lost against another. */
@@ -89,6 +95,12 @@ public class StochasticManifestCollector {
 	// utility: encode the net
 	protected TIntObjectHashMap<short[]> encodedTrans2Pred;
 	protected TIntObjectHashMap<short[]> encodedTrans2Succ;
+	
+	/** 
+	 * indexed by the case id, these arrays contain the durations (time units) of the individual transitions
+	 */
+	private double[][] transitionDurationsPerCase;
+	
 	
 	/** for each visited marking, collect the number of times a transition was picked.
 	* the transitions are indexed by their encoded id used in the parent class's {@link #getTrans2Idx()}
@@ -192,6 +204,10 @@ public class StochasticManifestCollector {
 	public void collectDataFromManifest(){
 		// performance calculation
 		int[] cases = manifest.getCasePointers();
+		
+		// init table for case-based transition times (to look for dependencies and other analysis)
+		transitionDurationsPerCase = new double[cases.length][];
+		
 		for (int i = 0; i < cases.length; i++) {
 			Pair<Long,Long> caseBounds = new Pair<Long, Long>(-1l, -1l);
 			if (cases[i] >= 0) {
@@ -200,6 +216,10 @@ public class StochasticManifestCollector {
 				// reset last firing time
 				long lastFiringTime = Long.MIN_VALUE;
 				ageVariables.clear();
+				
+				// add 
+				transitionDurationsPerCase[i] = new double[idx2Trans.length];
+				java.util.Arrays.fill(transitionDurationsPerCase[i], Double.NaN);
 				
 				// create trace iterator
 				Iterator<XEvent> it = manifest.getLog().get(i).iterator();
@@ -223,7 +243,7 @@ public class StochasticManifestCollector {
 							synchronousAndInvisibleMoves++;
 							time = 0; // assume that invisible transitions are immediate
 						}
-						updateMarking(marking, man[currIdx+1], time);
+						updateMarking(marking, man[currIdx+1], time, i);
 						currIdx += 2;
 						stepsInAlignment++;
 					} else if (man[currIdx] == Manifest.MOVESYNC) {
@@ -237,7 +257,8 @@ public class StochasticManifestCollector {
 							timeSpentInMarking = currEventTime - lastFiringTime;
 						}
 						lastFiringTime = currEventTime;
-						updateMarking(marking, manifest.getEncTransOfManifest(man[currIdx+1]), timeSpentInMarking / config.getUnitFactor());
+						int encTrans = manifest.getEncTransOfManifest(man[currIdx+1]);
+						updateMarking(marking, encTrans, timeSpentInMarking / config.getUnitFactor(), i);
 						currIdx += 2;
 						stepsInAlignment++;
 						synchronousAndInvisibleMoves++;
@@ -265,7 +286,7 @@ public class StochasticManifestCollector {
 		return new Pair<Long, Long>(start, end);
 	}
 
-	private void updateMarking(short[] marking, int encTrans, double timeSpentInMarking) {
+	private void updateMarking(short[] marking, int encTrans, double timeSpentInMarking, int caseId) {
 		if (timeSpentInMarking < 0){
 			System.out.println("Debug me! time should not be < 0!");
 		}
@@ -287,10 +308,12 @@ public class StochasticManifestCollector {
 			if (executionPolicy.equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
 				// add the time spent in the marking to the sole active transition:
 				firingTimes.get(encTrans).add(timeSpentInMarking);
+				transitionDurationsPerCase[caseId][encTrans] = timeSpentInMarking;
 				// don't use transition ages
 			} else if (executionPolicy.equals(ExecutionPolicy.RACE_RESAMPLING)){
 				// add the time spent in the marking to the sole active transition:
 				firingTimes.get(encTrans).add(timeSpentInMarking);
+				transitionDurationsPerCase[caseId][encTrans] = timeSpentInMarking;
 				// add right-censored values for all the other enabled transitions in this marking:
 				if (timeSpentInMarking>0){ 	// ignore vanishing markings of immediate transitions 
 					for (Integer enabledBefore : currentlyEnabled){
@@ -309,6 +332,7 @@ public class StochasticManifestCollector {
 					transitionEnabledTime = ageVariables.remove(encTrans);
 				}
 				firingTimes.get(encTrans).add(timeSpentInMarking+transitionEnabledTime);
+				transitionDurationsPerCase[caseId][encTrans] = timeSpentInMarking+transitionEnabledTime;
 				
 				if (timeSpentInMarking > 0){
 					for (Integer enabled : currentlyEnabled){
@@ -454,5 +478,37 @@ public class StochasticManifestCollector {
 
 	public double getMaxTraceDuration() {
 		return longestTrace;
+	}
+
+	public void outputCorrelationMatrix() {
+		try {
+			BufferedWriter writer = new BufferedWriter(new FileWriter(config.getCorrelationMatrixFile()));
+			writer.write(getTransitionHeaders()+"\n");
+			int casePointer = 0;
+			for (double[] transitionsPerCase : transitionDurationsPerCase){
+				StringBuffer line = new StringBuffer();
+				line.append(casePointer++);
+				for (double d : transitionsPerCase){
+					if (line.length()>0){
+						line.append(DELIMITER);
+					}
+					line.append(d);
+				}
+				writer.write(line.toString()+"\n");
+			}
+			writer.flush();
+			writer.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+	}
+
+	private String getTransitionHeaders() {
+		String header = "CaseId";
+		for (Transition t : idx2Trans){
+			header += DELIMITER + t.getLabel();
+		}
+		return header;
 	}
 }

@@ -65,7 +65,7 @@ public class TimePredictor {
 				errorPercent = getErrorPercent(stats);
 			}
 		}
-		System.out.println("stopped simulation after "+i+" samples... with error: "+errorPercent+"%.");
+//		System.out.println("stopped simulation after "+i+" samples... with error: "+errorPercent+"%.");
 		
 		StochasticNetUtils.useCache(false);
 		//System.out.println("Simulated 1000 traces in "+(System.currentTimeMillis()-now)+"ms ("+(useTime?"constrained":"unconstrained")+")");

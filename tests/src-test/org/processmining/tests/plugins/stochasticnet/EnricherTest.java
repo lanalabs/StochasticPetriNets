@@ -22,7 +22,7 @@ public class EnricherTest {
 
 
 	@Test
-//	@Ignore
+	@Ignore
 	public void testNoisyEvaluation() throws Exception {
 		TestUtils.runExperimentAndSaveOutput(ExperimentType.NOISE_LEVEL_EXPERIMENT, "evaluation");
 	}

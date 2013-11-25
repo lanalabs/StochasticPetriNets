@@ -159,7 +159,7 @@ public class StochasticNetUtils {
 			return initialMarkings.get(petriNet);
 		}
 		try {
-			if (context == null){
+			if (context == null || context.getConnectionManager() == null){
 				throw new ConnectionCannotBeObtained("No plugin context available!", InitialMarkingConnection.class, null);
 			}
 			InitialMarkingConnection imc = context.getConnectionManager().getFirstConnection(InitialMarkingConnection.class, context, petriNet);
@@ -199,7 +199,7 @@ public class StochasticNetUtils {
 			return finalMarkings.get(petriNet);
 		}
 		try {
-			if (context == null){
+			if (context == null || context.getConnectionManager() == null){
 				throw new ConnectionCannotBeObtained("No plugin context available!", FinalMarkingConnection.class, null);
 			}
 			FinalMarkingConnection imc = context.getConnectionManager().getFirstConnection(FinalMarkingConnection.class, context, petriNet);

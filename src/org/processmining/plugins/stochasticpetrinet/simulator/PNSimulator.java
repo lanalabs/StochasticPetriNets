@@ -463,6 +463,10 @@ public class PNSimulator {
 						double samplingConstraint = Math.max(0, (constraint-startOfTransition)/config.unitFactor);
 						long now = System.currentTimeMillis();
 						long transitionRemainingTime = getTransitionRemainingTime(transition, config.unitFactor, samplingConstraint);
+						if (transitionRemainingTime+startOfTransition < constraint){
+							transitionRemainingTime = constraint-startOfTransition;
+							transitionRemainingTimes.put(transition, transitionRemainingTime);
+						}
 						long millis = System.currentTimeMillis()-now;
 						if (millis > 100){
 							System.out.println("sampling took: "+millis+"ms. constraint "+samplingConstraint+", transition: "+transition.getLabel()+" type: "+((TimedTransition)transition).getDistributionType());

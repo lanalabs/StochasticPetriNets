@@ -7,6 +7,9 @@ import java.io.IOException;
 import java.util.Collection;
 import java.util.concurrent.Executor;
 
+import org.deckfour.xes.classification.XEventClassifier;
+import org.deckfour.xes.in.XUniversalParser;
+import org.deckfour.xes.model.XLog;
 import org.processmining.framework.connections.Connection;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.connections.ConnectionManager;
@@ -27,6 +30,7 @@ import org.processmining.framework.providedobjects.ProvidedObjectManager;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.semantics.petrinet.Marking;
+import org.processmining.plugins.log.logfilters.impl.EventLogFilter;
 import org.processmining.plugins.pnml.importing.StochasticNetDeserializer;
 import org.processmining.plugins.pnml.simple.PNMLRoot;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
@@ -82,6 +86,21 @@ public class TestUtils {
 			}
 		}
 		return netAndMarking;
+	}
+	
+	public static XLog filter(XLog log, XEventClassifier classifier, String...selectedObjects){
+		//FinalEventLogFilter filter = new FinalEventLogFilter();
+		EventLogFilter filter = new EventLogFilter();
+		return filter.filterWithClassifier(null, log, classifier, selectedObjects);
+	}
+	
+	public static XLog loadLog(String name) throws Exception {
+		XUniversalParser parser = new XUniversalParser();
+		Collection<XLog> logs = parser.parse(new File("tests/testfiles/"+name));
+		if (logs.size() > 0){
+			return logs.iterator().next();
+		}
+		return null;
 	}
 	
 	public static void saveCSV(String csvContent, String fileName) throws IOException{
