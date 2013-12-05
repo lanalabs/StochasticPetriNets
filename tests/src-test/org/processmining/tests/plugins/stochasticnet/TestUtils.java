@@ -298,5 +298,7 @@ public class TestUtils {
 		public <T extends Connection> T addConnection(T c) {
 			return null;
 		}
+		public void clear() {
+		}
 	}
 }
