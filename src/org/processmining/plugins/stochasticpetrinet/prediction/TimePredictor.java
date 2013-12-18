@@ -95,8 +95,8 @@ public class TimePredictor {
 	private Semantics<Marking,Transition> getCurrentState(StochasticNet model, Marking initialMarking, XTrace observedEvents) {
 		Semantics<Marking, Transition> semantics = StochasticNetUtils.getSemantics(model);
 		semantics.initialize(model.getTransitions(), initialMarking);
-		Set<Marking> visitedMarkings = new HashSet<Marking>();
 		for (XEvent event : observedEvents){
+			Set<Marking> visitedMarkings = new HashSet<Marking>();
 			String transitionName = XConceptExtension.instance().extractName(event);
 			Long time = XTimeExtension.instance().extractTimestamp(event).getTime();
 			boolean foundTransition = false;

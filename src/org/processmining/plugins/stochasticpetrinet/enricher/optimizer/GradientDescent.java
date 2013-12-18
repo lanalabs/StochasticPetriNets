@@ -12,7 +12,7 @@ public class GradientDescent {
 		
 		double lastchange = Double.NaN;
 		int iterations = 0;
-		while (!converged && iterations++ < 100000){
+		while (!converged && iterations++ < 1000000){
 			double[] temp = new double[theta.length];
 			Arrays.fill(temp, 0);
 			
@@ -29,7 +29,7 @@ public class GradientDescent {
 			
 			if (!Double.isNaN(lastchange) && lastchange < change){
 				// we are diverging!
-				learningRate = learningRate/2;
+				learningRate = learningRate/3;
 				System.out.println("Slowing learning rate to: "+learningRate+"...");
 			}
 			if (Double.isNaN(lastchange)){

@@ -8,23 +8,37 @@ import java.util.Map;
 public class MarkingBasedSelectionWeightCostFunction implements CostFunction {
 
 	private Map<Integer, List<String>> markingsInWhichTransitionWasSelected;
+	private Map<Integer, Integer> firingCountOfMarkingsInWhichTransitionWasEnabled;
 	private Map<String, int[]> markingBasedSelectionCounts;
 
 	public MarkingBasedSelectionWeightCostFunction(Map<String, int[]> markingBasedSelections) {
 		this.markingBasedSelectionCounts = markingBasedSelections;
 		this.markingsInWhichTransitionWasSelected = new HashMap<Integer, List<String>>();
+		this.firingCountOfMarkingsInWhichTransitionWasEnabled = new HashMap<Integer, Integer>();
 		for (String markingString : markingBasedSelections.keySet()) {
 			for (int idx = 0; idx < markingBasedSelections.get(markingString).length; idx++){
 				int count = markingBasedSelections.get(markingString)[idx];
 				
+				int markingFiringCount = getSum(markingBasedSelections.get(markingString)); 
+				
 				if (count > 0) {
 					if (!markingsInWhichTransitionWasSelected.containsKey(idx)) {
 						markingsInWhichTransitionWasSelected.put(idx, new ArrayList<String>());
+						firingCountOfMarkingsInWhichTransitionWasEnabled.put(idx, 0);
 					}
 					markingsInWhichTransitionWasSelected.get(idx).add(markingString);
+					firingCountOfMarkingsInWhichTransitionWasEnabled.put(idx, firingCountOfMarkingsInWhichTransitionWasEnabled.get(idx)+markingFiringCount);
 				}
 			}
 		}
+	}
+	
+	public int getSum(int...array){
+		int sum = 0; 
+		for (int number : array){
+			sum += number;
+		}
+		return sum;
 	}
 
 	/**
@@ -62,7 +76,9 @@ public class MarkingBasedSelectionWeightCostFunction implements CostFunction {
 						weightSum += theta[index];
 					}
 					double currentRatio = theta[i]/weightSum;
-					errorSum += currentRatio-toBeRatio;
+					double error = currentRatio-toBeRatio;
+//					errorSum += error * Math.pow((sumOfFiringsInMarking / (double)(firingCountOfMarkingsInWhichTransitionWasEnabled.get(i))),1 ) / Math.pow((transitionIndices.size()),1) ;
+					errorSum += error * Math.pow((sumOfFiringsInMarking / (double)(firingCountOfMarkingsInWhichTransitionWasEnabled.get(i))),1 );
 				}
 			}
 		}
