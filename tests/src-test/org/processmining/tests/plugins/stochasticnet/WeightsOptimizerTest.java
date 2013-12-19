@@ -45,6 +45,49 @@ public class WeightsOptimizerTest {
 		MarkingBasedSelectionWeightCostFunction costFunction = new MarkingBasedSelectionWeightCostFunction(markingBasedSelections);
 		npgd.optimize(theta, costFunction);
 		System.out.println("weights: "+Arrays.toString(theta));
+	}
+	
+	@Test
+	public void testOptimizer2() throws Exception {
+		Map<String, int[]> markingBasedSelections = new HashMap<String, int[]>();
 		
+		int[] selectionsM1 = new int[]{15,7,8};
+		int[] selectionsM2 = new int[]{0,5,10};
+		
+		short[] m1 = new short[]{1,0};
+		short[] m2 = new short[]{0,1};
+		
+		markingBasedSelections.put(Arrays.toString(m1), selectionsM1);
+		markingBasedSelections.put(Arrays.toString(m2), selectionsM2);
+		
+		double[] theta = new double[3];
+		Arrays.fill(theta, 1);
+		
+		NormalizedPositiveGradientDescent npgd = new NormalizedPositiveGradientDescent();
+		MarkingBasedSelectionWeightCostFunction costFunction = new MarkingBasedSelectionWeightCostFunction(markingBasedSelections);
+		npgd.optimize(theta, costFunction);
+		System.out.println("weights: "+Arrays.toString(theta));
+	}
+	
+	@Test
+	public void testOptimizer3() throws Exception {
+		Map<String, int[]> markingBasedSelections = new HashMap<String, int[]>();
+		
+		int[] selectionsM1 = new int[]{1,4};
+		int[] selectionsM2 = new int[]{2,5};
+		
+		short[] m1 = new short[]{1,0};
+		short[] m2 = new short[]{0,1};
+		
+		markingBasedSelections.put(Arrays.toString(m1), selectionsM1);
+		markingBasedSelections.put(Arrays.toString(m2), selectionsM2);
+		
+		double[] theta = new double[2];
+		Arrays.fill(theta, 1);
+		
+		NormalizedPositiveGradientDescent npgd = new NormalizedPositiveGradientDescent();
+		MarkingBasedSelectionWeightCostFunction costFunction = new MarkingBasedSelectionWeightCostFunction(markingBasedSelections);
+		npgd.optimize(theta, costFunction);
+		System.out.println("weights: "+Arrays.toString(theta));
 	}
 }

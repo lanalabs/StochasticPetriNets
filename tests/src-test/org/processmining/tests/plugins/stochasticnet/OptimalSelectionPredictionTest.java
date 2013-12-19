@@ -59,7 +59,7 @@ public class OptimalSelectionPredictionTest {
 
 	private static final int FOLDS_IN_EXPERIMENT = 10;
 	
-	private static final int RANDOM_COUNT = 50;
+	private static final int RANDOM_COUNT = 100;
 	
 	private static int predictionTypes = 2;
 
@@ -160,7 +160,7 @@ public class OptimalSelectionPredictionTest {
 		System.out.println("optimal value: "+ meanAbsoluteErrors.getMin());
 		System.out.println("worst value: "+ meanAbsoluteErrors.getMax());
 		
-		BufferedWriter writer = new BufferedWriter(new FileWriter(new File("result_surgery2_"+k+(optimal?"_optimal":"_random")+".csv")));
+		BufferedWriter writer = new BufferedWriter(new FileWriter(new File("result_surgery3_"+k+(optimal?"_optimal":"_random")+".csv")));
 		writer.write(result);
 		writer.flush();
 		writer.close();
