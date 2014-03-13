@@ -36,6 +36,7 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
+import org.processmining.models.graphbased.directed.petrinet.impl.ToStochasticNet;
 import org.processmining.models.graphbased.directed.transitionsystem.TransitionSystem;
 import org.processmining.models.graphbased.directed.transitionsystem.payload.event.EventPayloadTransitionSystem;
 import org.processmining.models.semantics.Semantics;
@@ -144,6 +145,10 @@ public class PredictionExperimentPlugin {
 				stochasticNet = (StochasticNet) model;
 				initialStochasticMarking = StochasticNetUtils.getInitialMarking(context, stochasticNet);
 				finalStochasticMarking = finalPlainMarking;
+				
+				exponentialNet = (StochasticNet) ToStochasticNet.fromStochasticNet(context, stochasticNet, initialStochasticMarking)[0];
+				exponentialNet = StochasticNetUtils.convertToGSPN(exponentialNet);
+				
 			} else {
 				if (!config.getLearnSPNFromData()){
 					System.out.println("Learning stochastic Petri net from data, as no stochastic Petri net was passed!");
@@ -484,7 +489,7 @@ public class PredictionExperimentPlugin {
 		initialTrace.add(log.get(0).get(0));
 		XEvent startEvent = initialTrace.get(0);
 		Long realStartTime = XTimeExtension.instance().extractTimestamp(startEvent).getTime();
-		Pair<Double,Double> meanAndConfidenceInterval = predictor.predict(model, initialTrace, new Date(realStartTime), initialMarking, config.getTimeUnitFactor(), false); 
+		Pair<Double,Double> meanAndConfidenceInterval = predictor.predict(model, initialTrace, new Date(realStartTime), initialMarking, false); 
 		long meanDuration = meanAndConfidenceInterval.getFirst().longValue();
 		meanDuration = meanDuration-realStartTime;
 		return meanDuration;
@@ -580,8 +585,8 @@ public class PredictionExperimentPlugin {
 							event = subTrace.get(subTrace.size()-1);
 							Long realLastEventTime = ((XAttributeTimestamp)event.getAttributes().get(PNSimulator.TIME_TIMESTAMP)).getValueMillis();
 							
-							Pair<Double,Double> simplePredictionAndConfidence = predictor.predict(gspnModel, subTrace, currentTime, initialGspnMarking, config.getTimeUnitFactor(),true);
-							Pair<Double,Double> constrainedPredictionAndConfidence = predictor.predict(model, subTrace, currentTime, initialMarking, config.getTimeUnitFactor(),true);
+							Pair<Double,Double> simplePredictionAndConfidence = predictor.predict(gspnModel, subTrace, currentTime, initialGspnMarking, true);
+							Pair<Double,Double> constrainedPredictionAndConfidence = predictor.predict(model, subTrace, currentTime, initialMarking, true);
 							
 							Double predictedValueSimple = (double) Math.max(simplePredictionAndConfidence.getFirst().longValue(), currentTime.getTime());
 							Double predictedValueConstrained = (double) Math.max(constrainedPredictionAndConfidence.getFirst().longValue(),currentTime.getTime());

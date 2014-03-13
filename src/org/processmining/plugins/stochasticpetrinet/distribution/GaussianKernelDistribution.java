@@ -3,7 +3,9 @@ package org.processmining.plugins.stochasticpetrinet.distribution;
 
 import java.math.BigDecimal;
 import java.math.MathContext;
-import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
@@ -48,7 +50,7 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 	/**
 	 * All observed values in an array (easier for sampling) 
 	 */
-	protected double[] sampleValues;
+	protected List<Double> sampleValues;
 	
 	protected static MathContext veryPrecise = new MathContext(50); 
 	
@@ -74,25 +76,24 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 	public GaussianKernelDistribution(double precision) {
 		this.precision = precision;
 		this.kernelPointsAndWeights = new TreeMap<Long, Double>();
+		this.sampleValues = new ArrayList<Double>();
 	}
 
 	public void addValues(double[] values){
-		sampleValues = values;
+		sampleValues = new ArrayList<Double>(values.length);
+		for (double d : values){
+			sampleValues.add(d);
+		}
 		updateKernels();
 	}
 	
 	public void addValue(double val){
-		double[] newSampleValues = new double[sampleValues.length+1];
-		for(int i = 0; i < sampleValues.length; i++){
-			newSampleValues[i] = sampleValues[i];
-		}
-		newSampleValues[newSampleValues.length-1] = val;
-		sampleValues = newSampleValues;
+		sampleValues.add(val);
 		updateKernels();
 	}
 	
 	protected void updateKernels(){
-		Arrays.sort(sampleValues);
+		Collections.sort(sampleValues);
 		kernelPointsAndWeights = new TreeMap<Long, Double>();
 		for (double val : sampleValues){
 			Long position = Math.round(val / precision);
@@ -111,20 +112,30 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 	 */
 	public void updateSmoothingParameter() {
 		double quantile25to75 = Double.MAX_VALUE;
-		if (sampleValues.length>4){
-			quantile25to75 = sampleValues[3*sampleValues.length/4]-sampleValues[sampleValues.length/4];
+		if (sampleValues.size()>4){
+			quantile25to75 = sampleValues.get(3*sampleValues.size()/4)-sampleValues.get(sampleValues.size()/4);
 		}
 		if (quantile25to75 == 0){
 			quantile25to75 = 1;
 		}
-		DescriptiveStatistics stats = new DescriptiveStatistics(sampleValues);
+		double[] vals = getDoubleArray(this.sampleValues);
+		DescriptiveStatistics stats = new DescriptiveStatistics(vals);
 		double sd = stats.getStandardDeviation();
-		
-		h = 1.06*Math.min(sd,quantile25to75/1.34)*Math.pow(sampleValues.length, -1/5.);
+		if (sd == 0){
+			sd = 1;
+		}
+		h = 1.06*Math.min(sd,quantile25to75/1.34)*Math.pow(sampleValues.size(), -1/5.);
 		
 		ndist = new NormalDistribution(0,h);
 	}
 
+	protected double[] getDoubleArray(List<Double> values) {
+		double[] returnArray = new double[values.size()];
+		for (int i = 0; i < values.size(); i++){
+			returnArray[i] = values.get(i);
+		}
+		return returnArray;
+	}
 	public double cumulativeProbability(double x) {
 		//double cProb = 0;
 		BigDecimal cProb = new BigDecimal(0);
@@ -132,7 +143,7 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 			System.out.println("Debug me!");
 		}
 		BigDecimal factor = new BigDecimal(1.0);
-		factor = factor.divide(new BigDecimal(sampleValues.length),veryPrecise);
+		factor = factor.divide(new BigDecimal(sampleValues.size()),veryPrecise);
 		for (Long pos : kernelPointsAndWeights.keySet()){
 			double xKernelPos = pos*precision;
 			cProb = cProb.add(factor.multiply(new BigDecimal(ndist.cumulativeProbability(x-xKernelPos)).multiply(new BigDecimal(kernelPointsAndWeights.get(pos))),veryPrecise),veryPrecise);
@@ -177,12 +188,12 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 			density += ndist.density(x-xKernelPos)*kernelPointsAndWeights.get(pos);
 		}
 		// normalize again:
-		density *= (1.0/sampleValues.length);
+		density *= (1.0/sampleValues.size());
 		return density;
 	}
 
 	public double getNumericalMean() {
-		DescriptiveStatistics stats = new DescriptiveStatistics(sampleValues);
+		DescriptiveStatistics stats = new DescriptiveStatistics(getDoubleArray(sampleValues));
 		return stats.getMean();
 	}
 
@@ -282,8 +293,8 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 	 */
 	@Override
 	public double sample() {
-		int nextPos = randomData.nextInt(0, sampleValues.length-1);
-		Long pos = Math.round(sampleValues[nextPos] / precision);
+		int nextPos = randomData.nextInt(0, sampleValues.size()-1);
+		Long pos = Math.round(sampleValues.get(nextPos) / precision);
 		if (h == 0){
 			return pos*precision;
 		} else {
@@ -292,5 +303,15 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 	}
 	public double value(double x) {
 		return density(x);
+	}
+	public List<Double> getValues() {
+		return this.sampleValues;
+	}
+	/**
+	 * The smoothing parameter for the density estimation that depends on the number of nodes and the inter-quartile range
+	 * @return
+	 */
+	public double getH(){
+		return h;
 	}
 }

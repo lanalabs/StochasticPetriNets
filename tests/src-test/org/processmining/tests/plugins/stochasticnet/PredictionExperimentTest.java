@@ -1,9 +1,11 @@
 package org.processmining.tests.plugins.stochasticnet;
 
+
 import org.deckfour.xes.model.XLog;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
@@ -26,7 +28,7 @@ public class PredictionExperimentTest {
 		config.setLearnSPNFromData(true);
 		config.setMonitoringIterations(40);
 		config.setResultFileName("gspn_comparison_result_40_histogram.csv");
-		config.setTimeUnitFactor(StochasticNetUtils.UNIT_CONVERSION_FACTORS[2]);
+		config.setTimeUnitFactor(TimeUnit.MINUTES);
 		config.setWorkerCount(4);
 		
 		// generate some traces

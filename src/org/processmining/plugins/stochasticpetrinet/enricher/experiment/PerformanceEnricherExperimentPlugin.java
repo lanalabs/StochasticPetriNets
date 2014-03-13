@@ -8,6 +8,7 @@ import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
@@ -36,7 +37,7 @@ public class PerformanceEnricherExperimentPlugin {
 	
 	public static final int[] NOISE_LEVELS = new int[]{0,5,10,15,20,25,30,35,40,45,50,55,60,70};
 	
-	public static final DistributionType DISTRIBUTION_TYPE = DistributionType.GAUSSIAN_KERNEL;
+	public static final DistributionType DISTRIBUTION_TYPE = DistributionType.LOGSPLINE;
 	
 	public enum ExperimentType{
 		TRACE_SIZE_EXPERIMENT, NOISE_LEVEL_EXPERIMENT;
@@ -45,12 +46,12 @@ public class PerformanceEnricherExperimentPlugin {
 	/**
 	 * Use minutes as unit in the model
 	 */
-	public static final int UNIT_FACTOR = 60000;
+	public static final TimeUnit UNIT_FACTOR = TimeUnit.MINUTES;
 
 	/**
 	 * Trace size for noise experiment:
 	 */
-	private static final int NOISE_LEVEL_EXPERIMENT_TRACE_SIZE = 200;
+	private static final int NOISE_LEVEL_EXPERIMENT_TRACE_SIZE = 1000;
 	
 	
 	
@@ -106,7 +107,7 @@ public class PerformanceEnricherExperimentPlugin {
 		int traceSize = 0;
 		
 		// Repetitions to average out errors introduced just by sampling from small sets.
-		int repetitions = 100;
+		int repetitions = 5;
 		
 		for (int step : series){
 			switch(type){
@@ -129,7 +130,7 @@ public class PerformanceEnricherExperimentPlugin {
 				
 				for (int repetition = 0; repetition < repetitions; repetition++){
 					long seed = repetition;
-					PNSimulatorConfig config = new PNSimulatorConfig(traceSize,UNIT_FACTOR,seed,1,1000,policy);
+					PNSimulatorConfig config = new PNSimulatorConfig(traceSize,UNIT_FACTOR,seed+repetitions,1,1000,policy);
 					XLog log = simulator.simulate(null, net, StochasticNetUtils.getSemantics(net), config, initialMarking);
 					
 					NoiseLogFilter noiseFilter = new NoiseLogFilter(2*seed);
@@ -142,7 +143,7 @@ public class PerformanceEnricherExperimentPlugin {
 					
 					PerformanceEnricher enricher = new PerformanceEnricher();
 					Manifest manifest = (Manifest) StochasticNetUtils.replayLog(context, plainNet, log, true, true);
-					PerformanceEnricherConfig mineConfig = new PerformanceEnricherConfig(DISTRIBUTION_TYPE, (double) UNIT_FACTOR, policy, null);
+					PerformanceEnricherConfig mineConfig = new PerformanceEnricherConfig(DISTRIBUTION_TYPE, UNIT_FACTOR, policy, null);
 					Object[] enrichedNet = enricher.transform(context, manifest, mineConfig);
 					StochasticNet learnedNet = (StochasticNet) enrichedNet[0];
 					// Debugging code to view the logspline distribution:

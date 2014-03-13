@@ -9,17 +9,21 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URI;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.Map.Entry;
 
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -30,6 +34,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.deckfour.xes.classification.XEventClass;
 import org.deckfour.xes.classification.XEventClasses;
 import org.deckfour.xes.classification.XEventClassifier;
+import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.info.XLogInfo;
@@ -76,6 +81,7 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.TransClasses;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
+import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
 import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.RProvider;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
@@ -85,21 +91,22 @@ import org.rosuda.JRI.Rengine;
 public class StochasticNetUtils {
 	
 	public static final String ITERATION_KEY = "k-fold";
+	public static final String TIME_ATTRIBUTE_KEY = "time:timestamp";
 	
 	private static Map<PetrinetGraph, Marking> initialMarkings = new HashMap<PetrinetGraph, Marking>();
 	private static Map<PetrinetGraph, Marking> finalMarkings = new HashMap<PetrinetGraph, Marking>();
 	
-	/**
-	 * indexed array of conversion factors
-	 * [0] = ms
-	 * [1] = s
-	 * [2] = min
-	 * [3] = hours
-	 * [4] = days
-	 * [5] = years
-	 */
-	public static final Double[] UNIT_CONVERSION_FACTORS = new Double[]{1.,1000.,1000.*60,1000.*3600,1000.*3600*24,1000.*3600*24*365};
-	public static final String[] UNIT_NAMES = new String[]{"milliseconds","seconds", "minutes", "hours", "days", "years"};
+//	/**
+//	 * indexed array of conversion factors
+//	 * [0] = ms
+//	 * [1] = s
+//	 * [2] = min
+//	 * [3] = hours
+//	 * [4] = days
+//	 * [5] = years
+//	 */
+//	public static final Double[] UNIT_CONVERSION_FACTORS = new Double[]{1.,1000.,1000.*60,1000.*3600,1000.*3600*24,1000.*3600*24*365};
+//	public static final String[] UNIT_NAMES = new String[]{"milliseconds","seconds", "minutes", "hours", "days", "years"};
 	
 	public static final String SEPARATOR_STRING = "_ITERATION_";
 	
@@ -474,7 +481,28 @@ public class StochasticNetUtils {
 		return replayLog(context, net, log, parameters, getManifest);
 	}
 	
+	public static SyncReplayResult replayTrace(XLog originalTrace, TransEvClassMapping mapping, Petrinet net, Marking initialMarking, Marking finalMarking, XEventClassifier classifier) throws Exception {
+		TransClasses transClasses = new TransClasses(net, new DefTransClassifier());
+		PNManifestReplayerParameter parameters = getParameters(originalTrace, mapping, net, initialMarking,	finalMarking, classifier, transClasses);
+		PNRepResult repResult =  (PNRepResult) replayLog(null, net, originalTrace, parameters, false);
+		if (repResult.size() > 0){
+			SyncReplayResult result = repResult.first();
+			return result;
+		}
+		throw new IllegalArgumentException("Could not replay trace on Model:\n"+debugTrace(originalTrace.get(0)));
+	}
 	
+	public static String debugTrace(XTrace trace){
+		DateFormat format = new SimpleDateFormat();
+		String s = "";
+		for (XEvent e : trace){
+			if (!s.isEmpty()){
+				s += ", ";
+			}
+			s += XConceptExtension.instance().extractName(e)+"("+format.format(getTraceDate(e))+")";
+		}
+		return s;
+	}
 	
 	private static Map<Integer, Set<XEventClass>> getEventClassCountsInLog(XLog log) {
 		XLogInfo logInfo = XLogInfoImpl.create(log, XLogInfoImpl.STANDARD_CLASSIFIER);
@@ -806,5 +834,57 @@ public class StochasticNetUtils {
 			}
 		}
 		return spn;
+	}
+	
+	/**
+	 * 
+	 * @param spn a stochastic Petri net containing all kinds of timed distributions
+	 * @return a stochastic Petri net containing only immediate and exponential distributions. 
+	 *         Timed transitions of other distribution shape are replaced by exponential approximations.
+	 */
+	public static StochasticNet convertToGSPN(StochasticNet spn) {
+		// approximate all timed transitions with normal ones (mean and variance):
+		Iterator<Transition> transitionIter = spn.getTransitions().iterator();
+		while(transitionIter.hasNext()){
+			Transition transition = transitionIter.next();
+			if (transition instanceof TimedTransition){
+				TimedTransition tt = (TimedTransition) transition;
+				if (!tt.getDistributionType().equals(DistributionType.IMMEDIATE) && !tt.getDistributionType().equals(DistributionType.EXPONENTIAL)){
+					tt.setDistributionType(DistributionType.EXPONENTIAL);
+					double mean = tt.getDistribution().getNumericalMean();
+					tt.setDistributionParameters(new double[]{mean});
+					tt.setDistribution(null);
+					tt.initDistribution(0);
+				}
+			}
+		}
+		return spn;
+	}
+	
+	/**
+	 * Extracts the date of an event
+	 * @param event
+	 * @return
+	 */
+	public static Date getTraceDate(XEvent event) {
+		return XTimeExtension.instance().extractTimestamp(event);
+	}
+	
+	/**
+	 * 
+	 * @param trace
+	 * @return
+	 */
+	public static Date getMinimalDate(XTrace trace) {
+		Date minDate = new GregorianCalendar(10000,1,1).getTime();
+		for (XEvent event : trace){
+			if (event.getAttributes().get(TIME_ATTRIBUTE_KEY) != null){
+				Date date = getTraceDate(event);
+				if (date.before(minDate)){
+					minDate = date;
+				}
+			}
+		}
+		return minDate;
 	}
 }

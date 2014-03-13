@@ -9,7 +9,6 @@ import org.apache.commons.math3.distribution.LogNormalDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.distribution.UniformRealDistribution;
-import org.apache.commons.math3.exception.TooManyEvaluationsException;
 import org.processmining.models.graphbased.directed.AbstractDirectedGraph;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
@@ -159,11 +158,12 @@ public class TimedTransition extends Transition{
 						System.out.println("LogSpline fit not converged! Falling back to Gaussian Kernel density estimation");
 						distributionType = DistributionType.GAUSSIAN_KERNEL;
 						fitGaussianKernels();
-					} catch (TooManyEvaluationsException e){
-						System.out.println("Could not compute the mean of the logspline! Falling back to Gaussian Kernel density estimation");
-						distributionType = DistributionType.GAUSSIAN_KERNEL;
-						fitGaussianKernels();
 					}
+//					catch (TooManyEvaluationsException e){
+//						System.out.println("Could not compute the mean of the logspline! Falling back to Gaussian Kernel density estimation");
+//						distributionType = DistributionType.GAUSSIAN_KERNEL;
+//						fitGaussianKernels();
+//					}
 					break;
 				case UNDEFINED:
 					// do nothing

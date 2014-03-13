@@ -19,6 +19,8 @@ import org.processmining.models.graphbased.AttributeMapOwner;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.graphbased.directed.petrinet.configurable.impl.LayoutUtils;
 import org.processmining.models.graphbased.directed.petrinet.elements.Arc;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
@@ -70,6 +72,20 @@ public class StochasticNetDeserializer {
 		Map<String, Object> objects = new HashMap<String, Object>();
 		
 		Point2D offset = new Point2D.Double(0,0);
+		if (pnmlNet.getToolspecific()!=null && !pnmlNet.getToolspecific().isEmpty()){
+			PNMLToolSpecific toolSpecific = pnmlNet.getToolspecific().get(0);
+			if (toolSpecific.getTool().equals(PNMLToolSpecific.STOCHASTIC_ANNOTATION)){
+				if (toolSpecific.getProperties()!= null){
+					if (toolSpecific.getProperties().containsKey(PNMLToolSpecific.EXECUTION_POLICY)){
+						net.setExecutionPolicy(ExecutionPolicy.fromString(toolSpecific.getProperties().get(PNMLToolSpecific.EXECUTION_POLICY)));
+					}
+					if (toolSpecific.getProperties().containsKey(PNMLToolSpecific.TIME_UNIT)){
+						net.setTimeUnit(TimeUnit.fromString(toolSpecific.getProperties().get(PNMLToolSpecific.TIME_UNIT)));
+					}
+				}
+			}
+		}
+		
 		for (PNMLPage page: pnmlNet.getPage()){
 			Dimension2D size = getSize(page);
 			Point2D position = getPosition(page, offset);

@@ -1,10 +1,13 @@
 package org.processmining.tests.plugins.stochasticnet;
 
 import java.io.File;
+import java.util.List;
 
 import junit.framework.Assert;
 
 import org.junit.Test;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.plugins.pnml.importing.StochasticNetDeserializer;
 import org.processmining.plugins.pnml.simple.PNMLArc;
 import org.processmining.plugins.pnml.simple.PNMLFinalMarkings;
 import org.processmining.plugins.pnml.simple.PNMLMarking;
@@ -152,4 +155,49 @@ public class PNMLImportTest {
 		PNMLFinalMarkings finalMarkings = pnml.getFinalMarkings();
 		Assert.assertEquals("sid-76C19AEE-579C-48E4-8579-E94EAD5EAF52",finalMarkings.getMarkings().get(0).getPlaces().get(0).getIdRef());
 	}
+	
+	@Test
+	public void testTimeUnitImport() throws Exception {
+		Serializer serializer = new Persister();
+		File source = new File("tests/testfiles/simpleNetOneActivity_v0.2.pnml");
+
+		PNMLRoot pnml = serializer.read(PNMLRoot.class, source);
+		List<PNMLNet> nets = pnml.getNet();
+		PNMLNet net = nets.get(0);
+		
+		String netId = net.getId();
+		Assert.assertEquals("testNet", netId);
+		
+		StochasticNetDeserializer deserializer = new StochasticNetDeserializer();
+		Object[] netAndMarking = deserializer.convertToNet(null, pnml, null, false);
+		StochasticNet stochasticNet = (StochasticNet) netAndMarking[0];
+		Assert.assertTrue(StochasticNet.TimeUnit.MINUTES.equals(stochasticNet.getTimeUnit()));
+		Assert.assertTrue(StochasticNet.ExecutionPolicy.RACE_RESAMPLING.equals(stochasticNet.getExecutionPolicy()));
+	}
 }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

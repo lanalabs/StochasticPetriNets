@@ -6,8 +6,10 @@ import org.deckfour.uitopia.api.event.TaskListener.InteractionResult;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.util.ui.widgets.ProMPropertiesPanel;
 import org.processmining.framework.util.ui.widgets.ProMTextField;
+import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
-import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 
 /**
  * A configuration window containing properties for the configuration
@@ -37,9 +39,11 @@ public class PNSimulatorConfigUI {
 		
 		private JComboBox executionPolicySelection;
 
-		public ConfigPanel() {
+		public ConfigPanel(TimeUnit defaultTimeUnit, ExecutionPolicy defaultExecutionPolity) {
 			super("Configure simple simulation settings.");
 			config = new PNSimulatorConfig();
+			config.executionPolicy = defaultExecutionPolity;
+			config.unitFactor = defaultTimeUnit;
 			initGUI();
 		}
 
@@ -53,7 +57,7 @@ public class PNSimulatorConfigUI {
 
 			arrivalRateField = this.addTextField("arrival rate of new instances:", String.valueOf(config.arrivalRate));
 
-			timeUnitSelection = this.addComboBox("select time unit for time-axis:", StochasticNetUtils.UNIT_NAMES);
+			timeUnitSelection = this.addComboBox("select time unit for time-axis:", TimeUnit.values());
 //			timeUnitSelection.setSelectedIndex(Arrays.binarySearch(StochasticNetUtils.UNIT_CONVERSION_FACTORS,
 //					config.unitFactor));
 			timeUnitSelection.setSelectedItem(config.unitFactor);
@@ -71,13 +75,29 @@ public class PNSimulatorConfigUI {
 			config.numberOfTraces = Integer.valueOf(numberOfTracesField.getText());
 			config.maxEventsInOneTrace = Integer.valueOf(maxEventsInOneTraceField.getText());
 			config.arrivalRate = Double.valueOf(arrivalRateField.getText());
-			config.unitFactor = StochasticNetUtils.UNIT_CONVERSION_FACTORS[timeUnitSelection.getSelectedIndex()];
+			config.unitFactor = (TimeUnit) timeUnitSelection.getSelectedItem();
 			config.executionPolicy = (ExecutionPolicy) executionPolicySelection.getSelectedItem();
 		}
 	}
 
+	private TimeUnit defaultTimeUnit = TimeUnit.MINUTES;
+	private ExecutionPolicy defaultExecutionPolity = ExecutionPolicy.RACE_ENABLING_MEMORY;
+	
+	public PNSimulatorConfigUI(PetrinetGraph petriNet) {
+		if (petriNet instanceof StochasticNet){
+			TimeUnit timeUnit = ((StochasticNet) petriNet).getTimeUnit();
+			ExecutionPolicy policy = ((StochasticNet) petriNet).getExecutionPolicy();
+			if (timeUnit != null){
+				defaultTimeUnit = timeUnit;
+			}
+			if (policy != null){
+				defaultExecutionPolity = policy;
+			}
+		}
+	}
+
 	public PNSimulatorConfig getConfig(UIPluginContext context) {
-		ConfigPanel panel = new ConfigPanel();
+		ConfigPanel panel = new ConfigPanel(defaultTimeUnit, defaultExecutionPolity);
 		InteractionResult result = context.showConfiguration("Simple Simulation Parameters", panel);
 		switch (result) {
 			case CANCEL :

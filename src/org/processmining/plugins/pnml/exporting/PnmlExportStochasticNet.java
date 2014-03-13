@@ -1,6 +1,7 @@
 package org.processmining.plugins.pnml.exporting;
 
 import java.io.File;
+import java.io.Writer;
 
 import org.processmining.contexts.uitopia.annotations.UIExportPlugin;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
@@ -24,27 +25,45 @@ public class PnmlExportStochasticNet {
 	@PluginVariant(variantLabel = "PNML export (Stochastic Petri net)", requiredParameterLabels = { 0, 1 })
 	public void exportPetriNetToPNMLFile(PluginContext context, Petrinet net, File file) throws Exception {
 		if (net instanceof StochasticNet){
-			StochasticNetToPNMLConverter converter = new StochasticNetToPNMLConverter();
-			Marking marking;
-			try {
-				marking = context.tryToFindOrConstructFirstObject(Marking.class, InitialMarkingConnection.class,
-						InitialMarkingConnection.MARKING, net);
-			} catch (ConnectionCannotBeObtained e) {
-				// use empty marking
-				marking = new Marking();
-			}
-			GraphLayoutConnection layout;
-			try {
-				layout = context.getConnectionManager().getFirstConnection(GraphLayoutConnection.class, context, net);
-			} catch (ConnectionCannotBeObtained e) {
-				layout = new GraphLayoutConnection(net);
-			}
-			
-			PNMLRoot root = converter.convertNet((StochasticNet) net, marking, layout);
 			Serializer serializer = new Persister();
-			serializer.write(root, file);
+			serializer.write(convertToPNML(context, net), file);
 		} else {
 			throw new IllegalArgumentException("Only stochastic Petri nets supported!");
 		}
+	}
+	
+	public void exportPetriNetToPNMLFile(PluginContext context, Petrinet net, Writer writer) throws Exception {
+		if (net instanceof StochasticNet){
+			Serializer serializer = new Persister();
+			serializer.write(convertToPNML(context, net), writer);
+		} else {
+			throw new IllegalArgumentException("Only stochastic Petri nets supported!");
+		}
+	}
+
+	private PNMLRoot convertToPNML(PluginContext context, Petrinet net) {
+		StochasticNetToPNMLConverter converter = new StochasticNetToPNMLConverter();
+		Marking marking = new Marking();
+		try {
+			if (context!=null){
+				marking = context.tryToFindOrConstructFirstObject(Marking.class, InitialMarkingConnection.class,
+						InitialMarkingConnection.MARKING, net);
+			}
+		} catch (ConnectionCannotBeObtained e) {
+			// don't care - stick with empty marking
+		}
+		GraphLayoutConnection layout;
+		try {
+			if (context != null){
+				layout = context.getConnectionManager().getFirstConnection(GraphLayoutConnection.class, context, net);
+			} else {
+				throw new ConnectionCannotBeObtained("No context available.", GraphLayoutConnection.class);
+			}
+		} catch (ConnectionCannotBeObtained e) {
+			layout = new GraphLayoutConnection(net);
+		}
+		
+		PNMLRoot root = converter.convertNet((StochasticNet) net, marking, layout);
+		return root;
 	}
 }

@@ -1,5 +1,6 @@
 package org.processmining.models.graphbased.directed.petrinet;
 
+import org.apache.commons.math.distribution.NormalDistribution;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 
 /**
@@ -54,8 +55,11 @@ public interface StochasticNet extends ResetNet, Petrinet{
 	 *
 	 */
 	public enum ExecutionPolicy{
-		GLOBAL_PRESELECTION, RACE_RESAMPLING, RACE_ENABLING_MEMORY, RACE_AGE_MEMORY;
+		GLOBAL_PRESELECTION("global preselection"), RACE_RESAMPLING("race (resampling)"), 
+		RACE_ENABLING_MEMORY("race (enabling memory)"), RACE_AGE_MEMORY("race (age memory)");
 
+		private String name;
+		
 		public String shortName() {
 			switch (this){
 				case GLOBAL_PRESELECTION:
@@ -69,14 +73,109 @@ public interface StochasticNet extends ResetNet, Petrinet{
 			}
 			return null;
 		}
+		ExecutionPolicy(String name){
+			this.name = name;
+		}
+		public String toString(){
+			return name;
+		}
+		public static ExecutionPolicy fromString(String value){
+			for (ExecutionPolicy ep : ExecutionPolicy.values()){
+				if (ep.toString().equalsIgnoreCase(value)){
+					return ep;
+				}
+			}
+			return RACE_ENABLING_MEMORY;
+		}
 	}
 	
+	/**
+	 * Enumeration specifying in which time unit the parameters of the net are given.
+	 * 
+	 * For example, if a timed transition in a {@link StochasticNet} has a duration distribution of 
+	 * {@link NormalDistribution}(10,2), this tells us, if it takes usually 10 seconds, or 10 hours to complete.
+	 */
+	public enum TimeUnit{
+		NANOSECONDS("nanoseconds"), MICROSECONDS("microseconds"), MILLISECONDS("milliseconds"), 
+		SECONDS("seconds"), MINUTES("minutes"), HOURS("hours"), 
+		DAYS("days"), WEEKS("weeks"), YEARS("years"), UNSPECIFIED("unspecified");
+		
+		private String stringValue;
+
+		TimeUnit(String string){
+			this.stringValue = string;
+		}
+		
+		public String toString() {
+			return stringValue;
+		}
+
+		public static TimeUnit fromString(String s){
+			for (TimeUnit tu : TimeUnit.values()){
+				if (tu.toString().equalsIgnoreCase(s)){
+					return tu;
+				}
+			}
+			return UNSPECIFIED;
+		}
+		/**
+		 * Returns the conversion factor  
+		 * @return
+		 */
+		public double getUnitFactorToMillis(){
+			switch(this){
+				case NANOSECONDS:
+					return 1./1000000; // 1 / (1000 * 1000) ms is a nanosecond 
+				case MICROSECONDS:
+					return 1./1000; // 1/1000 ms is a microsecond
+				case MILLISECONDS:
+					return 1; // nothing to convert
+				case SECONDS:
+					return 1000; // 1000 ms is a second
+				case MINUTES:
+					return 60000; // 1000 * 60 ms is a minute
+				case HOURS:
+					return 3600000; // 1000 * 60 * 60 ms is an hour
+				case DAYS:
+					return 86400000; // 1000 * 60 * 60 * 24 ms is a day
+				case WEEKS:
+					return 604800000; // 1000 * 60 * 60 * 24 * 7 ms is a week
+				case YEARS:
+					return 31536000000.; // 1000 * 60 * 60 * 24 * 7 * 365 ms is a day  
+				default:
+					return 1; // unspecified case = milliseconds
+			}
+		}
+	}
+	
+	/**
+	 * Returns the execution policy (see {@link ExecutionPolicy}) of the net.
+	 * @return {@link ExecutionPolicy}
+	 */
+	public ExecutionPolicy getExecutionPolicy();
+	/**
+	 * Sets the execution policy of the net.
+	 * @param policy {@link ExecutionPolicy}
+	 */
+	public void setExecutionPolicy(ExecutionPolicy policy);
+	
+	/**
+	 * The time unit used in the stochastic net
+	 * @return {@link TimeUnit}
+	 */
+	public TimeUnit getTimeUnit();
+	/**
+	 * Sets the time unit of the net
+	 * @param timeUnit {@link TimeUnit}
+	 */
+	public void setTimeUnit(TimeUnit timeUnit);
+
 	// immediate transitions
-	TimedTransition addImmediateTransition(String label);
-	TimedTransition addImmediateTransition(String label, double weight);
-	TimedTransition addImmediateTransition(String label, double weight, int priority);
+	public TimedTransition addImmediateTransition(String label);
+	public TimedTransition addImmediateTransition(String label, double weight);
+	public TimedTransition addImmediateTransition(String label, double weight, int priority);
 	
 	// timed transitions
-	TimedTransition addTimedTransition(String label, DistributionType type, double... distributionParameters);
-	TimedTransition addTimedTransition(String label, double weight, DistributionType type, double... distributionParameters);
+	public TimedTransition addTimedTransition(String label, DistributionType type, double... distributionParameters);
+	public TimedTransition addTimedTransition(String label, double weight, DistributionType type, double... distributionParameters);
 }

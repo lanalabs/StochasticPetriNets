@@ -9,8 +9,9 @@ import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Map.Entry;
+import java.util.Random;
 import java.util.Set;
+import java.util.Map.Entry;
 
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
@@ -34,6 +35,7 @@ import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.petrinet.impl.ToStochasticNet;
@@ -48,11 +50,22 @@ public class PerformanceEnricher {
 
 	public static final double EPSILON = 0.00001;
 	
+	/**
+	 * Allow up to 5 percent of noise, before judging a transition as non-deterministic time 
+	 */
+	public static final double THRESHOLD_FOR_DETERMINISTIC_VALUES = 0.05;
+	
 	private static int failCount = 0;
 	
 	private StochasticManifestCollector performanceCollector;
 	
 	private Map<String, int[]> markingBasedSelections;
+	
+	private Random random;
+	
+	public PerformanceEnricher(){
+		this.random = new Random();
+	}
 	
 	public Object[] transform(PluginContext context, Manifest manifest){
 		// ask for preferences:
@@ -73,10 +86,12 @@ public class PerformanceEnricher {
 		
 		PetrinetGraph net = manifest.getNet();
 		
-		performanceCollector = new StochasticManifestCollector((ManifestEvClassPattern) manifest, mineConfig.getPolicy(), mineConfig);
+		performanceCollector = new StochasticManifestCollector((ManifestEvClassPattern) manifest, mineConfig);
 		
 		Object[] stochasticNetAndMarking = ToStochasticNet.fromPetriNetExternal(context, net, manifest.getInitMarking());
 		StochasticNet sNet = (StochasticNet) stochasticNetAndMarking[0];
+		sNet.setExecutionPolicy(mineConfig.getPolicy());
+		sNet.setTimeUnit(mineConfig.getTimeUnit());
 		
 		performanceCollector.collectDataFromManifest();
 		if (mineConfig.getCorrelationMatrixFile() != null){
@@ -152,8 +167,13 @@ public class PerformanceEnricher {
 				System.out.println(feedbackMessage);
 			}
 		}
-		context.log("finished discovery of GDT_SPN model for "+mineConfig.getPolicy()+" policy.");
-		context.log("Took "+(System.currentTimeMillis()-startTime)/1000.+" sec.");
+		if (context != null){
+			context.log("finished discovery of GDT_SPN model for "+mineConfig.getPolicy()+" policy.");
+			context.log("Took "+(System.currentTimeMillis()-startTime)/1000.+" sec.");
+		} else {
+			System.out.println("finished discovery of GDT_SPN model for "+mineConfig.getPolicy()+" policy.");
+			System.out.println("Took "+(System.currentTimeMillis()-startTime)/1000.+" sec.");
+		}
 		return stochasticNetAndMarking;
 	}
 
@@ -171,10 +191,14 @@ public class PerformanceEnricher {
 		}
 		// looks deterministic, now check if censored entries all contain the value:
 		double value = getMedian(transitionStats);
+		int count = 0;
 		for (double cens : censoredStats){
 			if (cens > value+EPSILON){
-				return false;
+				count++;
 			}
+		}
+		if (count/(double)censoredStats.size() > THRESHOLD_FOR_DETERMINISTIC_VALUES){
+			return false;
 		}
 		return true;
 	}
@@ -199,11 +223,16 @@ public class PerformanceEnricher {
 		String message = "";
 		newTimedTransition.setPriority(0);
 		
+		if (newTimedTransition.getLabel().equalsIgnoreCase("D")){
+//			typeToMine = DistributionType.GAUSSIAN_KERNEL;
+			censoredStats = new LinkedList<Double>();
+		}
+		
 		// special cases:
 		if (transitionStats.isEmpty()){
 			// we have no sample values! assume uniform over all positive values:
 			double lowerLimit = 0;
-			double upperLimit = 20;
+			double upperLimit = 200;
 		    if(!censoredStats.isEmpty()){
 		    	// we know some lower limit for the transition:  
 		    	lowerLimit = Collections.min(censoredStats);
@@ -271,11 +300,23 @@ public class PerformanceEnricher {
 //						// log-spline fitting needs more data -> fall back to Gaussian kernel
 //						newTimedTransition.setDistributionType(DistributionType.GAUSSIAN_KERNEL);
 //					}
+					//preprocess transitionStats
+					List<Double> perturbedStats = new LinkedList<Double>();
+					for (Double d : transitionStats){
+						double delta = -10;
+						while (delta < -3){
+							delta = random.nextGaussian();	
+						}
+						perturbedStats.add(d+(delta+3)/100);
+					}
 					if (censoredStats.size() > 0 && transitionStats.size()>10){
+						if (censoredStats.size() > transitionStats.size()){
+							censoredStats = censoredStats.subList(0, transitionStats.size()-1);
+						}
 						try{
 							// try using better approximation capable to deal with right censored data
 							RCensoredLogSplineDistribution censoredDistribution = new RCensoredLogSplineDistribution(maxTraceLength);
-							censoredDistribution.initWithValues(StochasticNetUtils.getAsDoubleArray(transitionStats), StochasticNetUtils.getAsDoubleArray(censoredStats));
+							censoredDistribution.initWithValues(StochasticNetUtils.getAsDoubleArray(perturbedStats), StochasticNetUtils.getAsDoubleArray(censoredStats));
 							newTimedTransition.setDistribution(censoredDistribution);
 							double newMean = censoredDistribution.getNumericalMean();
 							if(Double.isInfinite(newMean) || newMean > 100){
@@ -288,10 +329,10 @@ public class PerformanceEnricher {
 									"Falling back to log-spline estimation for transition "+newTimedTransition.getLabel()+" based on the observed values. (creating bias)\n";
 						}
 					} 
-					newTimedTransition.setDistributionParameters(values);
+					newTimedTransition.setDistributionParameters(StochasticNetUtils.getAsDoubleArray(perturbedStats));
 					break;
 				case DETERMINISTIC:
-					newTimedTransition.setDistributionParameters(new double[]{meanValue});
+					newTimedTransition.setDistributionParameters(new double[]{getMedian(transitionStats)});
 					break;
 				default:
 					// other distributions not supported yet...
@@ -312,7 +353,7 @@ public class PerformanceEnricher {
 			panel.add(StochasticNetUtils.linkify("See also the documentation PDF", "https://svn.win.tue.nl/repos/prom/Documentation/Package_StochasticPetriNets.pdf", "PDF-Documentation of the StochasticPetriNets plugin"));
 		}
 		JComboBox distTypeSelection = panel.addComboBox("Type of distributions", supportedTypes);
-		JComboBox timeUnitSelection = panel.addComboBox("Time unit in model", StochasticNetUtils.UNIT_NAMES);
+		JComboBox timeUnitSelection = panel.addComboBox("Time unit in model", TimeUnit.values());
 		JComboBox executionPolicySelection = panel.addComboBox("Execution policy", StochasticNet.ExecutionPolicy.values());
 		ProMTextField correlationFileField = panel.addTextField("Correlation Matrix Output", "");
 		if (context instanceof UIPluginContext){
@@ -322,7 +363,7 @@ public class PerformanceEnricher {
 				return null;
 			} else {
 				DistributionType distType = (DistributionType) distTypeSelection.getSelectedItem();
-				Double timeUnit = StochasticNetUtils.UNIT_CONVERSION_FACTORS[timeUnitSelection.getSelectedIndex()];
+				TimeUnit timeUnit = (TimeUnit) timeUnitSelection.getSelectedItem();
 				File correlationFile = null;
 				if (!correlationFileField.getText().trim().isEmpty()){
 					correlationFile = new File (correlationFileField.getText().trim());
@@ -345,10 +386,14 @@ public class PerformanceEnricher {
 	}
 
 	private boolean containsOnlyZeros(List<Double> transitionStats) {
+		int count = 0;
 		for (Double d : transitionStats){
 			if (!Double.isNaN(d) && Math.abs(d) > EPSILON){
-				return false;
+				count++;
 			}
+		}
+		if (count /(double)transitionStats.size() > THRESHOLD_FOR_DETERMINISTIC_VALUES){
+			return false;
 		}
 		return true;
 	}

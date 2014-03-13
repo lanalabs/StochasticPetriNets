@@ -25,6 +25,8 @@ public class StochasticNetImpl extends AbstractResetInhibitorNet implements Stoc
 	private Set<PetrinetNode> nodes;
 	private Set<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>> edges;
 	
+	private ExecutionPolicy executionPolicy;
+	private TimeUnit timeUnit;
 	
 	public StochasticNetImpl(String label){
 		super(true,false);
@@ -165,5 +167,21 @@ public class StochasticNetImpl extends AbstractResetInhibitorNet implements Stoc
 	
 	public synchronized Set<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>> getEdges() {
 		return edges;
+	}
+
+	public ExecutionPolicy getExecutionPolicy() {
+		return executionPolicy;
+	}
+
+	public void setExecutionPolicy(ExecutionPolicy executionPolicy) {
+		this.executionPolicy = executionPolicy;
+	}
+
+	public TimeUnit getTimeUnit() {
+		return timeUnit;
+	}
+
+	public void setTimeUnit(TimeUnit timeUnit) {
+		this.timeUnit = timeUnit;
 	}
 }

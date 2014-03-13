@@ -49,6 +49,7 @@ public class RCensoredLogSplineDistribution extends RLogSplineDistribution {
 	 * @param censoredValues
 	 */
 	public void initWithValues(double[] observedValues, double[] censoredValues) throws NonConvergenceException{
+		this.values = observedValues;
 		REXP rObsValues = new REXP(observedValues);
 		REXP rCensoredValues = new REXP(censoredValues);
 		engine.assign(getObservedValuesString(), rObsValues);
@@ -56,7 +57,7 @@ public class RCensoredLogSplineDistribution extends RLogSplineDistribution {
 		try {
 			int knots = -1;
 			if (observedValues.length > 500){
-				knots = Math.max(5, Math.min(15, 5+(int)Math.log(observedValues.length)));
+				knots = Math.max(5, Math.min(12, 5+(int)Math.log(observedValues.length)));
 			}
 			REXP expr = engine.eval(rName+" <- "+method+"(uncensored="+getObservedValuesString()+",right="+getRightCensoredValuesString()+", "+(knots>1?"nknots="+knots+",":"")+" lbound=0, ubound="+((int)upperBound+1)+")");
 			int tries = 0;

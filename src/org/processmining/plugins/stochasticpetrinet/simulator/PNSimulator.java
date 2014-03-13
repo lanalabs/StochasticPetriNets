@@ -28,6 +28,7 @@ import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.IllegalTransitionException;
@@ -80,7 +81,7 @@ public class PNSimulator {
 	 * @return
 	 */
 	public XLog simulate(UIPluginContext context, PetrinetGraph petriNet, Semantics<Marking, Transition> semantics) {
-		PNSimulatorConfigUI ui = new PNSimulatorConfigUI();
+		PNSimulatorConfigUI ui = new PNSimulatorConfigUI(petriNet);
 		return simulate(context, petriNet, semantics, ui.getConfig(context), StochasticNetUtils.getInitialMarking(context, petriNet));
 	}
 
@@ -381,7 +382,7 @@ public class PNSimulator {
 	 * @param positiveConstraint a constraint that might restrict sample values (left-truncates the distribution) 
 	 * @return long milliseconds that the transition has to wait until it will fire. 
 	 */
-	private long getTransitionRemainingTime(Transition t, double unitFactor, double positiveConstraint) {
+	private long getTransitionRemainingTime(Transition t, TimeUnit unitFactor, double positiveConstraint) {
 		// only sample for transitions, that have no memory of their previous enabled periods (stored in the transition clocks)
 		if (transitionRemainingTimes.containsKey(t)){
 			return transitionRemainingTimes.get(t);
@@ -398,11 +399,11 @@ public class PNSimulator {
 						if (sample < positiveConstraint){
 							System.out.println("debug me!");
 						}
-						duration =  (long) (sample * unitFactor);
+						duration =  (long) (sample * unitFactor.getUnitFactorToMillis());
 				}
 			} else {
 				// untimed net, just progress one unit in time.
-				duration = (long) unitFactor;
+				duration = (long) unitFactor.getUnitFactorToMillis();
 			}
 			transitionRemainingTimes.put(t,duration);
 			return duration;
@@ -460,7 +461,7 @@ public class PNSimulator {
 				for (Transition transition :transitions){
 					if (usePositiveTimeContraint){
 						// calculate minimum transition time that is necessary for transition to be satisfying the constraint (resulting in time bigger than traceStart)
-						double samplingConstraint = Math.max(0, (constraint-startOfTransition)/config.unitFactor);
+						double samplingConstraint = Math.max(0, (constraint-startOfTransition)/config.unitFactor.getUnitFactorToMillis());
 						long now = System.currentTimeMillis();
 						long transitionRemainingTime = getTransitionRemainingTime(transition, config.unitFactor, samplingConstraint);
 						if (transitionRemainingTime+startOfTransition < constraint){
@@ -473,7 +474,7 @@ public class PNSimulator {
 						} 
 						// make sure transition duration is bigger than constraint (sometimes floating point arithmetic might sample values that are overflowing, or just about the constraint.
 						if (!transitionRemainingTimes.containsKey(transition) && transitionRemainingTime+startOfTransition < constraint){
-							transitionRemainingTimes.put(transition, (long) (samplingConstraint*config.unitFactor)+1);
+							transitionRemainingTimes.put(transition, (long) (samplingConstraint*config.unitFactor.getUnitFactorToMillis())+1);
 							System.out.println("distribution ("+transition.getLabel()+") with constraint: "+samplingConstraint+", mean: "+((TimedTransition)transition).getDistribution().getNumericalMean()+" (Rounding produced Infinity)!!");
 						}
 						times.put(transitionRemainingTime, transition);
@@ -534,8 +535,8 @@ public class PNSimulator {
 		return t;
 	}
 
-	private Date getNextArrivalDate(Date lastTime, double unitFactor) {
-		return new Date(lastTime.getTime() + (long) (arrivalDistribution.sample() * unitFactor));
+	private Date getNextArrivalDate(Date lastTime, TimeUnit unitFactor) {
+		return new Date(lastTime.getTime() + (long) (arrivalDistribution.sample() * unitFactor.getUnitFactorToMillis()));
 	}
 
 }

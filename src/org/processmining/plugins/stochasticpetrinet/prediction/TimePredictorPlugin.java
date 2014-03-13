@@ -2,9 +2,6 @@ package org.processmining.plugins.stochasticpetrinet.prediction;
 
 import java.util.Date;
 
-import javax.swing.JList;
-import javax.swing.JOptionPane;
-
 import org.deckfour.xes.model.XTrace;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
@@ -37,14 +34,6 @@ public class TimePredictorPlugin {
 	public Double predict(final UIPluginContext context, StochasticNet model, XTrace observedEvents, Date currentTime){
 		Marking initialMarking = StochasticNetUtils.getInitialMarking(context, model);
 		TimePredictor predictor = new TimePredictor();
-		JList list = new JList(StochasticNetUtils.UNIT_NAMES);
-		JOptionPane.showMessageDialog(null, list, "Select time unit specified in model:", JOptionPane.PLAIN_MESSAGE);
-		if (list.getSelectedIndex()>= 0){
-			return predictor.predict(model, observedEvents, currentTime, initialMarking, (StochasticNetUtils.UNIT_CONVERSION_FACTORS[list.getSelectedIndex()]), false).getFirst();	
-		} else {
-			context.getFutureResult(0).cancel(true);
-			return null;
-		}
-		
+		return predictor.predict(model, observedEvents, currentTime, initialMarking, false).getFirst();	
 	}
 }

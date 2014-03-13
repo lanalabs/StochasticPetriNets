@@ -1,7 +1,5 @@
 package org.processmining.plugins.stochasticpetrinet.distribution;
 
-import org.apache.commons.math3.analysis.integration.TrapezoidIntegrator;
-import org.apache.commons.math3.analysis.integration.UnivariateIntegrator;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
 import org.rosuda.JRI.REXP;
 import org.rosuda.JRI.Rengine;
@@ -29,6 +27,8 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 
 	protected double numericalMean = Double.NaN;
 	
+	protected double[] values;
+	
 	public RLogSplineDistribution(){
 		this ("my_spline"+counter++);
 	}
@@ -48,9 +48,11 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 	
 	public void addValues(double... values) throws NonConvergenceException{
 		try{
+			this.values = values;
 			REXP rValues = new REXP(values);
 			engine.assign(getValsString(), rValues);
-			REXP exp = engine.eval(rName+" <- logspline("+getValsString()+")");
+			int knots = Math.max(5, Math.min(12, 5+(int)Math.log(values.length)));
+			REXP exp = engine.eval(rName+" <- logspline("+getValsString()+",lbound=0,ubound="+upperBound+",maxknots="+knots+")");
 			if (exp == null){
 				// failed to converge!
 				throw new NonConvergenceException("Logspline fit to "+values.length+" did not converge (maybe the values are too close to each other...)");
@@ -84,23 +86,33 @@ public class RLogSplineDistribution extends AbstractRealDistribution{
 	 */
 	public double getNumericalMean() {
 		long now = System.currentTimeMillis();
-		if (Double.isNaN(numericalMean)){
-			if (upperBound == Double.MAX_VALUE){
-				// try to get a nicer value:
-				upperBound = engine.eval("q"+method+"(0.99999,"+rName+")").asDouble();
-			}
-			if (upperBound > 0){
-				UnivariateIntegrator integrator = new TrapezoidIntegrator(0.01,0.0001,3,64);
-				numericalMean = integrator.integrate(100000, DistributionUtils.getWeightedFunction(this), 0, upperBound);
-					
-				System.out.println("Mean calculation ("+numericalMean+") based on integration ("+method+" method) took "+(System.currentTimeMillis()-now)+"ms");
-				if (numericalMean < 0){
-					System.out.println("Debug me!");
-				}
-			}
-		}
-
-		if (Double.isNaN(numericalMean)){
+//		try{
+//			if (Double.isNaN(numericalMean)){
+//				double max = Double.MIN_VALUE;
+//				for (double value : values){
+//					max = Math.max(max, value);
+//				}
+//				upperBound = 2*max+10;
+//	//			if (upperBound == max+2){
+//	//				// try to get a nicer value:
+//	//				upperBound = engine.eval("q"+method+"(0.99999,"+rName+")").asDouble();
+//	//			}
+//				if (upperBound > 0){
+//					UnivariateIntegrator integrator = new TrapezoidIntegrator(0.01,0.001,2,64);
+//					numericalMean = integrator.integrate(100000, DistributionUtils.getWeightedFunction(this), 0, upperBound);
+//						
+//					System.out.println("Mean calculation ("+numericalMean+") based on integration ("+method+" method) took "+(System.currentTimeMillis()-now)+"ms");
+//					if (numericalMean < 0 || numericalMean > upperBound){
+//						System.out.println("Debug me!");
+//					}
+//				}
+//			}
+//		} catch (TooManyEvaluationsException tme){
+//			// integration failed...
+//		} catch (MaxCountExceededException mce){
+//			
+//		}
+		if (Double.isNaN(numericalMean) || Double.isInfinite(numericalMean)){
 			// work around to find the mean by drawing a 10000 size sample and getting it's mean:
 			now = System.currentTimeMillis();
 			int N = 10000; // a sample mean of 10000 samples has a 

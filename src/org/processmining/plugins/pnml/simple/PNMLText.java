@@ -6,7 +6,7 @@ import org.simpleframework.xml.Root;
 @Root
 public class PNMLText {
 	
-	@Element(name="text")
+	@Element(name="text", required=false)
 	private String text;
 
 	public PNMLText(){

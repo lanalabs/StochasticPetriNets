@@ -21,7 +21,7 @@ public class MeanCorrectedReflectionKernelDistribution extends GaussianReflectio
 	
 	protected void updateKernels() {
 		super.updateKernels();
-		DescriptiveStatistics stats = new DescriptiveStatistics(sampleValues);
+		DescriptiveStatistics stats = new DescriptiveStatistics(getDoubleArray(sampleValues));
 		meanValue = stats.getMean();
 		correctKernelWeights();
 	}

@@ -14,6 +14,7 @@ import org.processmining.framework.util.ui.widgets.ProMPropertiesPanel;
 import org.processmining.framework.util.ui.widgets.ProMTextField;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 
 import com.fluxicon.slickerbox.components.RoundedPanel;
@@ -22,7 +23,7 @@ public class PredictionExperimentConfig {
 
 	private int monitoringIterations = 40;
 	private int simulatedTraces = 10000;
-	private double timeUnitFactor = 60000;
+	private TimeUnit timeUnitFactor = TimeUnit.MINUTES;
 	
 	private boolean learnSPNFromData = true;
 	private DistributionType learnedDistributionType = DistributionType.HISTOGRAM;
@@ -87,8 +88,8 @@ public class PredictionExperimentConfig {
 			simulatedTracesField = addTextField("Number of simulated traces:",String.valueOf(config.getSimulatedTraces()));
 			monitoringIterationsField = addTextField("Number of Monitoring iterations:", String.valueOf(config.getMonitoringIterations()));
 			
-			unitFactorBox = this.addComboBox("Time unit stored in the stochastic model:", StochasticNetUtils.UNIT_NAMES);
-			unitFactorBox.setSelectedIndex(Arrays.binarySearch(StochasticNetUtils.UNIT_CONVERSION_FACTORS, config.getTimeUnitFactor()));
+			unitFactorBox = this.addComboBox("Time unit stored in the stochastic model:", TimeUnit.values());
+			unitFactorBox.setSelectedItem(config.getTimeUnitFactor());
 			
 			fileNameField = addTextField("File name to store experiment results:",String.valueOf(config.getResultFileName()));
 			learnSPNFromDataBox = addCheckBox("Learn stochastic Net properties from data?", config.getLearnSPNFromData());
@@ -128,8 +129,8 @@ public class PredictionExperimentConfig {
 		public ExecutionPolicy getExecutionPolicy(){
 			return (ExecutionPolicy) learnedExecutionPolicyBox.getSelectedItem();
 		}
-		public double getTimeUnitFactor(){
-			return StochasticNetUtils.UNIT_CONVERSION_FACTORS[unitFactorBox.getSelectedIndex()];
+		public TimeUnit getTimeUnitFactor(){
+			return (TimeUnit) unitFactorBox.getSelectedItem();
 		}
 
 		public int getWorkerCount() {
@@ -167,7 +168,7 @@ public class PredictionExperimentConfig {
 	public ExecutionPolicy getExecutionPolicy(){
 		return executionPolicy;
 	}
-	public double getTimeUnitFactor() {
+	public TimeUnit getTimeUnitFactor() {
 		return timeUnitFactor;
 	}
 
@@ -183,7 +184,7 @@ public class PredictionExperimentConfig {
 		this.simulatedTraces = simulatedTraces;
 	}
 
-	public void setTimeUnitFactor(double timeUnitFactor) {
+	public void setTimeUnitFactor(TimeUnit timeUnitFactor) {
 		this.timeUnitFactor = timeUnitFactor;
 	}
 

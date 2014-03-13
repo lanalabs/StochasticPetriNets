@@ -24,7 +24,9 @@ public class EnricherTest {
 	@Test
 	@Ignore
 	public void testNoisyEvaluation() throws Exception {
-		TestUtils.runExperimentAndSaveOutput(ExperimentType.NOISE_LEVEL_EXPERIMENT, "evaluation");
+		for (int i = 0; i < 20; i++){
+			TestUtils.runExperimentAndSaveOutput(ExperimentType.NOISE_LEVEL_EXPERIMENT, "evaluation");
+		}
 	}
 	
 	/**

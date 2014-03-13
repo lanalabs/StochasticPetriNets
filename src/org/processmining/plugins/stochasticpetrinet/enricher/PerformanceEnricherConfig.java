@@ -4,6 +4,7 @@ import java.io.File;
 
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 
 /**
  * Configuration to be used for the net to be mined.
@@ -13,14 +14,14 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet.Execu
 public class PerformanceEnricherConfig {
 	
 	private DistributionType type;
-	private Double unitFactor;
+	private TimeUnit timeUnit;
 	private ExecutionPolicy policy;
 	
 	private File correlationMatrixFile;
 	
-	public PerformanceEnricherConfig(DistributionType distType, Double timeUnit, ExecutionPolicy executionPolicy, File correlationMatrixFile) {
+	public PerformanceEnricherConfig(DistributionType distType, TimeUnit timeUnit, ExecutionPolicy executionPolicy, File correlationMatrixFile) {
 		this.type = distType;
-		this.unitFactor = timeUnit;
+		this.timeUnit = timeUnit;
 		this.policy = executionPolicy;
 		this.correlationMatrixFile = correlationMatrixFile;
 	}
@@ -34,11 +35,11 @@ public class PerformanceEnricherConfig {
 	}
 
 	public Double getUnitFactor() {
-		return unitFactor;
+		return timeUnit.getUnitFactorToMillis();
 	}
 
-	public void setUnitFactor(Double unitFactor) {
-		this.unitFactor = unitFactor;
+	public void setUnitFactor(TimeUnit timeUnit) {
+		this.timeUnit = timeUnit;
 	}
 
 	public ExecutionPolicy getPolicy() {
@@ -55,5 +56,9 @@ public class PerformanceEnricherConfig {
 
 	public void setCorrelationMatrixFile(File correlationMatrixFile) {
 		this.correlationMatrixFile = correlationMatrixFile;
+	}
+
+	public TimeUnit getTimeUnit() {
+		return this.timeUnit;
 	}
 }

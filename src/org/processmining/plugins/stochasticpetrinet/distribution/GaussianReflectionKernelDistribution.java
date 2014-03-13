@@ -39,7 +39,7 @@ public class GaussianReflectionKernelDistribution extends GaussianKernelDistribu
 		} 
 		BigDecimal density = new BigDecimal(0);
 		BigDecimal factor = new BigDecimal(1.0);
-		factor = factor.divide(new BigDecimal(sampleValues.length), veryPrecise);
+		factor = factor.divide(new BigDecimal(sampleValues.size()), veryPrecise);
 		for (Long pos : kernelPointsAndWeights.keySet()){
 			double xKernelPos = pos*precision;
 			density = density.add(factor.multiply(new BigDecimal(ndist.density(x-xKernelPos)).multiply(new BigDecimal(kernelPointsAndWeights.get(pos)),veryPrecise),veryPrecise),veryPrecise);

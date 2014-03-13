@@ -2,8 +2,6 @@ package org.processmining.plugins.stochasticpetrinet.enricher.optimizer;
 
 import java.util.Map;
 
-import org.processmining.plugins.stochasticpetrinet.enricher.CollectorCounter;
-
 
 public class WeightsOptimizer {
 
@@ -13,7 +11,7 @@ public class WeightsOptimizer {
 	/**
 	 * 
 	 * @param weights initial weights
-	 * @param performanceCounter {@link CollectorCounter} containing collected transition counts for each marking after replay
+	 * @param markingBasedSelections a map of selection integers for markings (markings are string-encoded)
 	 */
 	public WeightsOptimizer(double[] weights, Map<String, int[]> markingBasedSelections) {
 		this.weights =  weights;

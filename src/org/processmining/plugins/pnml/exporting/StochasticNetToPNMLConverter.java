@@ -40,6 +40,16 @@ public class StochasticNetToPNMLConverter {
 		// add a page:
 		pnmlNet.setType(PNMLNet.PT_NET_CLASS);
 		pnmlNet.setId(net.getLabel());
+		List<PNMLToolSpecific> toolTopSpecs = new ArrayList<PNMLToolSpecific>();
+		PNMLToolSpecific toolTopSpec = new PNMLToolSpecific();
+		toolTopSpec.setTool(PNMLToolSpecific.STOCHASTIC_ANNOTATION);
+		toolTopSpec.setVersion(PNMLToolSpecific.STOCHASTIC_ANNOTATION_VERSION);
+		toolTopSpec.setProperties(new HashMap<String, String>());
+		toolTopSpec.getProperties().put(PNMLToolSpecific.EXECUTION_POLICY, net.getExecutionPolicy().toString());
+		toolTopSpec.getProperties().put(PNMLToolSpecific.TIME_UNIT, net.getTimeUnit().toString());
+		toolTopSpecs.add(toolTopSpec);
+		pnmlNet.setToolspecific(toolTopSpecs);
+		
 		List<PNMLPage> pnmlPages = new ArrayList<PNMLPage>();
 		PNMLPage pnmlPage = new PNMLPage();
 		pnmlPage.setId("p1");
@@ -152,10 +162,14 @@ public class StochasticNetToPNMLConverter {
 		Dimension size = layout.getSize(a);
 		size.width = (int) (size.width/PNMLParameter.getScaleForViewInProM());
 		size.height = (int) (size.height/PNMLParameter.getScaleForViewInProM());
-		Point2D position = layout.getPosition(a);
-		graphics.setPosition(new ArrayList<PNMLPoint>());
-		graphics.getPosition().add(new PNMLPoint((int)(position.getX()/PNMLParameter.getScaleForViewInProM()+size.getWidth()/2.0), (int)(position.getY()/PNMLParameter.getScaleForViewInProM()+size.getHeight()/2.0)));
-		graphics.setDimension(new PNMLPoint(size.width, size.height));
+		if (layout.getPosition(a)!= null){
+			Point2D position = layout.getPosition(a);
+			graphics.setPosition(new ArrayList<PNMLPoint>());
+			graphics.getPosition().add(new PNMLPoint((int)(position.getX()/PNMLParameter.getScaleForViewInProM()+size.getWidth()/2.0), (int)(position.getY()/PNMLParameter.getScaleForViewInProM()+size.getHeight()/2.0)));
+		}
+		if (size != null){
+			graphics.setDimension(new PNMLPoint(size.width, size.height));
+		}
 		return graphics;
 	}
 	private PNMLGraphics getArcGraphics(List<Point2D> edgePoints) {

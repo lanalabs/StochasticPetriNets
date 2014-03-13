@@ -11,6 +11,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.StochasticNetSemanticsImpl;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
@@ -27,10 +28,10 @@ public class SimulatorTest {
 		
 		PNSimulator simulator = new PNSimulator();
 		// do a simulation with global preselection:
-		PNSimulatorConfig config = new PNSimulatorConfig(1000,1000,0,1,1000,ExecutionPolicy.GLOBAL_PRESELECTION);
+		PNSimulatorConfig config = new PNSimulatorConfig(1000,TimeUnit.MINUTES,0,1,1000,ExecutionPolicy.GLOBAL_PRESELECTION);
 		XLog logPreselection = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), config, marking);
 		
-		PNSimulatorConfig configRace = new PNSimulatorConfig(1000,1000,0,1,1000,ExecutionPolicy.RACE_ENABLING_MEMORY);
+		PNSimulatorConfig configRace = new PNSimulatorConfig(1000,TimeUnit.MINUTES,0,1,1000,ExecutionPolicy.RACE_ENABLING_MEMORY);
 		XLog logRace = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), configRace, marking);
 		Map<String, Integer> counts = getEventCounts(logPreselection, "A","B");
 		System.out.println("------- running testFiringPolicyPreselection_vs_Race() --------");
@@ -53,12 +54,12 @@ public class SimulatorTest {
 		
 		PNSimulator simulator = new PNSimulator();
 		// do a simulation with global preselection:
-		PNSimulatorConfig configAgeMemory = new PNSimulatorConfig(1,1000,0,1,1000,ExecutionPolicy.RACE_AGE_MEMORY);
+		PNSimulatorConfig configAgeMemory = new PNSimulatorConfig(1,TimeUnit.MINUTES,0,1,1000,ExecutionPolicy.RACE_AGE_MEMORY);
 		XLog logAgeMemory = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), configAgeMemory, marking);
-		PNSimulatorConfig configEnablingMemory = new PNSimulatorConfig(1,1000,0,1,1000,ExecutionPolicy.RACE_ENABLING_MEMORY);
+		PNSimulatorConfig configEnablingMemory = new PNSimulatorConfig(1,TimeUnit.MINUTES,0,1,1000,ExecutionPolicy.RACE_ENABLING_MEMORY);
 		XLog logEnablingMemory = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), configEnablingMemory, marking);
 		
-		PNSimulatorConfig configResampling = new PNSimulatorConfig(1,1000,0,1,1000,ExecutionPolicy.RACE_RESAMPLING);
+		PNSimulatorConfig configResampling = new PNSimulatorConfig(1,TimeUnit.MINUTES,0,1,1000,ExecutionPolicy.RACE_RESAMPLING);
 		XLog logResampling = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), configResampling, marking);
 		Map<String, Integer> countsAge = getEventCounts(logAgeMemory, "A","B");
 		Map<String, Integer> countsEnabling = getEventCounts(logEnablingMemory, "A","B");
@@ -83,11 +84,11 @@ public class SimulatorTest {
 		
 		PNSimulator simulator = new PNSimulator();
 		// do a simulation with global preselection:
-		PNSimulatorConfig configAgeMemory = new PNSimulatorConfig(1,1000,0,1,1000,ExecutionPolicy.RACE_AGE_MEMORY);
+		PNSimulatorConfig configAgeMemory = new PNSimulatorConfig(1,TimeUnit.MINUTES,0,1,1000,ExecutionPolicy.RACE_AGE_MEMORY);
 		XLog logAgeMemory = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), configAgeMemory, marking);
-		PNSimulatorConfig configEnablingMemory = new PNSimulatorConfig(1,1000,0,1,1000,ExecutionPolicy.RACE_ENABLING_MEMORY);
+		PNSimulatorConfig configEnablingMemory = new PNSimulatorConfig(1,TimeUnit.MINUTES,0,1,1000,ExecutionPolicy.RACE_ENABLING_MEMORY);
 		XLog logEnablingMemory = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), configEnablingMemory, marking);
-		PNSimulatorConfig configResampling = new PNSimulatorConfig(1,1000,0,1,1000,ExecutionPolicy.RACE_RESAMPLING);
+		PNSimulatorConfig configResampling = new PNSimulatorConfig(1,TimeUnit.MINUTES,0,1,1000,ExecutionPolicy.RACE_RESAMPLING);
 		XLog logResampling = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), configResampling, marking);
 		
 		Map<String, Integer> countsAge = getEventCounts(logAgeMemory, "A","B");
@@ -117,7 +118,7 @@ public class SimulatorTest {
 		int traces = 1000;
 		
 		// do a simulation with global preselection:
-		PNSimulatorConfig config = new PNSimulatorConfig(traces,1000,0,1,1000,ExecutionPolicy.RACE_ENABLING_MEMORY);
+		PNSimulatorConfig config = new PNSimulatorConfig(traces,TimeUnit.MINUTES,0,1,1000,ExecutionPolicy.RACE_ENABLING_MEMORY);
 		XLog log = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), config, marking);
 		
 		Assert.assertNotNull(log);

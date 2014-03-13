@@ -61,6 +61,8 @@ public class PerformanceEnricherExperimentResult {
 						if (Double.isNaN(trueMean) || Double.isNaN(learnedMean)){
 							System.out.println("Debug me!");
 						}
+//						double absoluteError = Math.abs(learnedMean-trueMean);
+//						result.firstMomentDifferences.addValue(absoluteError);
 						double relativeAbsoluteError = Math.abs(100*(learnedMean-trueMean)/trueMean);
 						if (! Double.isInfinite(relativeAbsoluteError) && ! Double.isNaN(relativeAbsoluteError)){
 							result.firstMomentDifferences.addValue(relativeAbsoluteError);
@@ -71,7 +73,8 @@ public class PerformanceEnricherExperimentResult {
 							System.out.println("Debug me!");
 						}
 					} else if (tt.getDistributionType().equals(DistributionType.IMMEDIATE) && ttLearned.getDistributionType().equals(DistributionType.IMMEDIATE)){
-//						result.firstMomentDifferences.addValue(0);
+						// should not happen, because only timed transitions at this point!
+						result.firstMomentDifferences.addValue(0);
 					} else {
 						result.firstMomentDifferences.addValue(100);
 					}

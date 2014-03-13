@@ -14,6 +14,7 @@ import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
@@ -49,8 +50,6 @@ public class PredictionPerformanceTest {
 	public void testPerformance(){
 		Map<DistributionType,Map<Integer, List<Double>>> predictionDurations = new HashMap<StochasticNet.DistributionType, Map<Integer,List<Double>>>();
 		
-		double unitFactorMinutes = StochasticNetUtils.UNIT_CONVERSION_FACTORS[2];
-		
 		GeneratorConfig config = new GeneratorConfig();
 		config.setContainsLoops(false);
 		config.setDegreeOfParallelism(20);
@@ -63,7 +62,7 @@ public class PredictionPerformanceTest {
 			for (int modelSize : MODEL_SIZES){
 				DescriptiveStatistics stats = new DescriptiveStatistics();
 				for (int rep = 0; rep < REPETITIONS; rep++){
-					long durationOfPrediction = getPredictionDuration(unitFactorMinutes, config, type,
+					long durationOfPrediction = getPredictionDuration(TimeUnit.MINUTES, config, type,
 							predictionDurationsForType, generator, modelSize);
 					stats.addValue(durationOfPrediction);
 					String time = (durationOfPrediction > 1000)?String.format("%.02f", durationOfPrediction/1000.)+"s":(durationOfPrediction)+" ms"; 
@@ -101,7 +100,7 @@ public class PredictionPerformanceTest {
 		System.out.println(result);
 	}
 
-	public long getPredictionDuration(double unitFactorMinutes, GeneratorConfig config, DistributionType type,
+	public long getPredictionDuration(TimeUnit timeUnit, GeneratorConfig config, DistributionType type,
 			Map<Integer, List<Double>> predictionDurationsForType, Generator generator, int modelSize) {
 		if (!predictionDurationsForType.containsKey(modelSize)){
 			predictionDurationsForType.put(modelSize, new LinkedList<Double>());
@@ -125,7 +124,7 @@ public class PredictionPerformanceTest {
 		
 		// generate a sample trace:
 		PNSimulator simulator = new PNSimulator();
-		PNSimulatorConfig simConfig = new PNSimulatorConfig(1, unitFactorMinutes);
+		PNSimulatorConfig simConfig = new PNSimulatorConfig(1, timeUnit);
 		StochasticNetSemantics semantics = new EfficientStochasticNetSemanticsImpl();
 		semantics.initialize(net.getTransitions(), initialMarking);
 		long traceStart = 0;
@@ -144,7 +143,7 @@ public class PredictionPerformanceTest {
 		TimePredictor predictor = new TimePredictor();
 		// start performance analysis:
 		long beforePrediction = System.currentTimeMillis();
-		Pair<Double,Double> predictedDurationAndConfidence = predictor.predict(net, observedSubTrace, new Date(monitoringTime), initialMarking, unitFactorMinutes, true);
+		Pair<Double,Double> predictedDurationAndConfidence = predictor.predict(net, observedSubTrace, new Date(monitoringTime), initialMarking, true);
 		double confidenceBandLower = predictedDurationAndConfidence.getFirst()-predictedDurationAndConfidence.getSecond()/2;
 		double confidenceBandHigher = predictedDurationAndConfidence.getFirst()+predictedDurationAndConfidence.getSecond()/2;
 		System.out.println("predicted "+predictedDurationAndConfidence.getFirst()+" +- "+predictedDurationAndConfidence.getSecond()/2+" around "+((confidenceBandHigher/predictedDurationAndConfidence.getFirst()-1.)*100)+" % of error..");

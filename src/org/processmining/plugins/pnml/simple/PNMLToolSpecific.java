@@ -10,7 +10,10 @@ import org.simpleframework.xml.Root;
 public class PNMLToolSpecific {
 	
 	public static final String STOCHASTIC_ANNOTATION = "StochasticPetriNet";
-	public static final String STOCHASTIC_ANNOTATION_VERSION = "0.1";
+	public static final String STOCHASTIC_ANNOTATION_VERSION = "0.2";
+	
+	public static final String TIME_UNIT = "timeUnit";
+	public static final String EXECUTION_POLICY = "executionPolicy";
 	public static final String PRIORITY = "priority";
 	public static final String WEIGHT = "weight";
 	public static final String DISTRIBUTION_TYPE = "distributionType";

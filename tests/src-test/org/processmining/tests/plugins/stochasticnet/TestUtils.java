@@ -59,7 +59,7 @@ public class TestUtils {
 
 		PerformanceEnricherExperimentResult result = enrichmentPlugin.performExperiment(null, net, initialMarking,
 				experimentType);
-		TestUtils.saveCSV(result.getResultsCSV(experimentType), fileName + "_" + experimentType + ".csv");
+		TestUtils.saveCSV(result.getResultsCSV(experimentType), fileName + "_" + experimentType + "_"+System.currentTimeMillis()+".csv");
 	}
 	/**
 	 * 

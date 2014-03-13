@@ -1,6 +1,7 @@
 package org.processmining.plugins.stochasticpetrinet.simulator;
 
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 
 /**
  * Configuration parameters for the simple simulation of (stochastic) Petri Nets.
@@ -30,11 +31,11 @@ public class PNSimulatorConfig {
 	String logName;
 	
 	/**
-	 * Conversion factor to milliseconds in the log
+	 * {@link TimeUnit} conversion factor to milliseconds in the log
 	 * E.g., if the model times are specified in <b>minutes</b>, the sampled values (e.g., 5) 
 	 * must be multiplied by this factor (e.g., 60*1000) 
 	 */
-	double unitFactor;
+	TimeUnit unitFactor;
 	
 	/**
 	 * If the stochastic Petri net is not restricted to memoryless transitions, i.e., negative exponential ones, 
@@ -54,21 +55,21 @@ public class PNSimulatorConfig {
 		this(1000);
 	}
 	public PNSimulatorConfig(int numberOfTraces){
-		this(numberOfTraces,1000);
+		this(numberOfTraces, TimeUnit.MINUTES);
 	}
-	public PNSimulatorConfig(int numberOfTraces, double unitFactor){
+	public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor){
 		this(numberOfTraces,unitFactor,1);
 	}
-	public PNSimulatorConfig(int numberOfTraces, double unitFactor, long seed){
+	public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor, long seed){
 		this(numberOfTraces,unitFactor, seed, 1);
 	}
-	public PNSimulatorConfig(int numberOfTraces, double unitFactor, long seed, double arrivalRate){
+	public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate){
 		this(numberOfTraces,unitFactor, seed, arrivalRate, 10000);
 	}
-	public PNSimulatorConfig(int numberOfTraces, double unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace){
+	public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace){
 		this(numberOfTraces,unitFactor, seed, arrivalRate, maxEventsInOneTrace, ExecutionPolicy.RACE_ENABLING_MEMORY);
 	}
-	public PNSimulatorConfig(int numberOfTraces, double unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace, ExecutionPolicy policy){
+	public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace, ExecutionPolicy policy){
 		this(numberOfTraces,unitFactor, seed, arrivalRate, maxEventsInOneTrace, policy, "Log"+counter++);
 	}
 	/**
@@ -81,7 +82,7 @@ public class PNSimulatorConfig {
 	 * @param policy the {@link ExecutionPolicy} of the network, i.e., how to select the next transition (preselection/race), and how to deal with transitions that lose a race. 
 	 * @param logName the name of the generated log.
 	 */
-	public PNSimulatorConfig(int numberOfTraces, double unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace, ExecutionPolicy policy, String logName){
+	public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace, ExecutionPolicy policy, String logName){
 		this.seed = seed;
 		this.numberOfTraces = numberOfTraces;
 		this.arrivalRate = arrivalRate;

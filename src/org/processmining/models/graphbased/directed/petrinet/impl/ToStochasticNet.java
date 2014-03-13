@@ -8,6 +8,9 @@ import org.processmining.framework.plugin.annotations.PluginVariant;
 import org.processmining.models.connections.petrinets.behavioral.InitialMarkingConnection;
 import org.processmining.models.graphbased.directed.DirectedGraphElement;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
+import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
 
 public class ToStochasticNet {
@@ -30,6 +33,31 @@ public class ToStochasticNet {
 		Map<DirectedGraphElement, DirectedGraphElement> mapping = newNet.cloneFrom(net);
 
 		Marking newMarking = ToResetInhibitorNet.cloneMarking(marking, mapping);
+		
+		if (context != null){
+			context.addConnection(new InitialMarkingConnection(newNet, newMarking));
+		}
+		
+
+		return new Object[] { newNet, newMarking };
+	}
+	public static Object[] fromStochasticNet(PluginContext context, StochasticNet net, Marking marking){
+		StochasticNetImpl newNet = new StochasticNetImpl(net.getLabel());
+		Map<DirectedGraphElement, DirectedGraphElement> mapping = newNet.cloneFrom(net);
+
+		Marking newMarking = ToResetInhibitorNet.cloneMarking(marking, mapping);
+		
+		for (Transition t : net.getTransitions()){
+			if (t instanceof TimedTransition){
+				TimedTransition tt = (TimedTransition) t;
+				TimedTransition target = (TimedTransition) mapping.get(t);
+				target.setDistributionType(tt.getDistributionType());
+				target.setDistributionParameters((tt.getDistributionParameters()!=null?tt.getDistributionParameters().clone():null));
+				target.setPriority(tt.getPriority());
+				target.setWeight(tt.getWeight());
+				target.initDistribution(0);
+			}
+		}
 		
 		if (context != null){
 			context.addConnection(new InitialMarkingConnection(newNet, newMarking));

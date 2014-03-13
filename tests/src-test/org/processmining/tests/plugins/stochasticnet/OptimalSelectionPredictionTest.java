@@ -41,6 +41,7 @@ import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
@@ -81,7 +82,7 @@ public class OptimalSelectionPredictionTest {
 		List<List<Integer>> possibilities = fillPossibilities(n,k,0);
 		System.out.println("n ("+n+") choose k ("+k+"):");
 		System.out.println(possibilities);
-		Assert.assertEquals(MathUtils.binomialCoefficient(n, k), (long)possibilities.size());
+		Assert.assertEquals(MathUtils.binomialCoefficient(n, k), possibilities.size());
 	}
 	
 	public void runAllCombinations() throws Exception{
@@ -294,7 +295,7 @@ public class OptimalSelectionPredictionTest {
 		config.setLearnSPNFromData(true);
 		config.setMonitoringIterations(40);
 		config.setResultFileName("gspn_comparison_result_40_histogram.csv");
-		config.setTimeUnitFactor(StochasticNetUtils.UNIT_CONVERSION_FACTORS[3]); // hours
+		config.setTimeUnitFactor(TimeUnit.HOURS);
 		config.setWorkerCount(1);
 		
 		PredictionExperimentResult result = predictWithConfig(TestUtils.getDummyConsoleProgressContext(), net, optimallyfilteredLog, config);
@@ -312,9 +313,9 @@ public class OptimalSelectionPredictionTest {
 				
 				if (predictionDate != null){
 					long predictionError = predictionDate.getTime()-predictions.getCaseEndDate().getTime();
-					meanErrorStats.addValue(predictionError / config.getTimeUnitFactor());	
-					meanAbsoluteErrorStats.addValue(Math.abs(predictionError) / config.getTimeUnitFactor());
-					squareErrorStats.addValue(Math.pow(predictionError/config.getTimeUnitFactor(),2));
+					meanErrorStats.addValue(predictionError / config.getTimeUnitFactor().getUnitFactorToMillis());	
+					meanAbsoluteErrorStats.addValue(Math.abs(predictionError) / config.getTimeUnitFactor().getUnitFactorToMillis());
+					squareErrorStats.addValue(Math.pow(predictionError/config.getTimeUnitFactor().getUnitFactorToMillis(),2));
 					
 				} else {
 					errorCount++;
@@ -348,7 +349,7 @@ public class OptimalSelectionPredictionTest {
 			Marking initialStochasticMarking = null;
 			
 				Manifest manifest = (Manifest)StochasticNetUtils.replayLog(context, model, trainingLog, true, true);
-				PerformanceEnricherConfig performanceEnricherConfig = new PerformanceEnricherConfig(config.getLearnedDistributionType(),config.getTimeUnitFactor(),config.getExecutionPolicy(), null);
+				PerformanceEnricherConfig performanceEnricherConfig = new PerformanceEnricherConfig(config.getLearnedDistributionType(), config.getTimeUnitFactor(),config.getExecutionPolicy(), null);
 				Object[] netAndMarking = PerformanceEnricherPlugin.transform(context, manifest, performanceEnricherConfig);
 				performanceEnricherConfig.setType(DistributionType.EXPONENTIAL);
 				Object[] exponentialNetAndMarking = PerformanceEnricherPlugin.transform(context, manifest, performanceEnricherConfig);
@@ -502,7 +503,7 @@ public class OptimalSelectionPredictionTest {
 							
 							event = subTrace.get(subTrace.size()-1);
 					
-							Pair<Double,Double> constrainedPredictionAndConfidence = predictor.predict(model, subTrace, currentTime, initialMarking, config.getTimeUnitFactor(),true);
+							Pair<Double,Double> constrainedPredictionAndConfidence = predictor.predict(model, subTrace, currentTime, initialMarking, true);
 							
 							Double predictedValueConstrained = (double) Math.max(constrainedPredictionAndConfidence.getFirst().longValue(),currentTime.getTime());
 							

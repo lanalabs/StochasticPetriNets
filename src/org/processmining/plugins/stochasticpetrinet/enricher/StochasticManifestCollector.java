@@ -23,15 +23,19 @@ import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
 import org.processmining.models.graphbased.directed.petrinet.elements.Arc;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.ResetArc;
+import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.manifestanalysis.visualization.performance.PerfCounter;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.manifestreplayresult.ManifestEvClassPattern;
+import org.processmining.plugins.stochasticpetrinet.analyzer.CaseStatistics;
 import org.processmining.plugins.stochasticpetrinet.distribution.RCensoredLogSplineDistribution;
 import org.processmining.plugins.stochasticpetrinet.enricher.optimizer.GradientDescent;
 import org.processmining.plugins.stochasticpetrinet.enricher.optimizer.MarkingBasedSelectionWeightCostFunction;
@@ -80,6 +84,9 @@ public class StochasticManifestCollector {
 	
 	/** Stores the age of a transition in model time units since the last sampling period */ 
 	protected Map<Integer, Double> ageVariables;
+	
+	/** Collect for each trace the log-likelihood according to a given probabilistic model. */
+	private Map<Integer, CaseStatistics> logLikelihoodPerTrace;
 	
 	protected ManifestEvClassPattern manifest;
 	
@@ -134,15 +141,16 @@ public class StochasticManifestCollector {
 	 */
 	private DescriptiveStatistics fitnessStatistic;
 	
-	public StochasticManifestCollector(ManifestEvClassPattern manifest, ExecutionPolicy executionPolicy, PerformanceEnricherConfig config){
+	public StochasticManifestCollector(ManifestEvClassPattern manifest, PerformanceEnricherConfig config){
 		this.manifest = manifest;
-		this.executionPolicy  = executionPolicy;
+		this.executionPolicy  = config.getPolicy();
 		this.config = config;
 		currentlyEnabled = new HashSet<Integer>();
 		ageVariables = new HashMap<Integer, Double>();
 		firingTimes = new HashMap<Integer, List<Double>>();
 		censoredTimes = new HashMap<Integer, List<Double>>();
 		markingBasedSelections = new HashMap<String, int[]>();
+		this.logLikelihoodPerTrace = new HashMap<Integer, CaseStatistics>();
 		fitnessStatistic = new DescriptiveStatistics();
 		
 		// init transitions
@@ -287,6 +295,10 @@ public class StochasticManifestCollector {
 	}
 
 	private void updateMarking(short[] marking, int encTrans, double timeSpentInMarking, int caseId) {
+		
+		// find competing transitions:
+		short[] markingBefore = marking.clone();
+		
 		if (timeSpentInMarking < 0){
 			System.out.println("Debug me! time should not be < 0!");
 		}
@@ -307,13 +319,11 @@ public class StochasticManifestCollector {
 			// we know that (0, or more) time passed! update transition ages of enabled transitions, if applicable
 			if (executionPolicy.equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
 				// add the time spent in the marking to the sole active transition:
-				firingTimes.get(encTrans).add(timeSpentInMarking);
-				transitionDurationsPerCase[caseId][encTrans] = timeSpentInMarking;
 				// don't use transition ages
 			} else if (executionPolicy.equals(ExecutionPolicy.RACE_RESAMPLING)){
 				// add the time spent in the marking to the sole active transition:
-				firingTimes.get(encTrans).add(timeSpentInMarking);
-				transitionDurationsPerCase[caseId][encTrans] = timeSpentInMarking;
+//				firingTimes.get(encTrans).add(timeSpentInMarking);
+//				transitionDurationsPerCase[caseId][encTrans] = timeSpentInMarking;
 				// add right-censored values for all the other enabled transitions in this marking:
 				if (timeSpentInMarking>0){ 	// ignore vanishing markings of immediate transitions 
 					for (Integer enabledBefore : currentlyEnabled){
@@ -331,9 +341,6 @@ public class StochasticManifestCollector {
 				if (ageVariables.containsKey(encTrans)){
 					transitionEnabledTime = ageVariables.remove(encTrans);
 				}
-				firingTimes.get(encTrans).add(timeSpentInMarking+transitionEnabledTime);
-				transitionDurationsPerCase[caseId][encTrans] = timeSpentInMarking+transitionEnabledTime;
-				
 				if (timeSpentInMarking > 0){
 					for (Integer enabled : currentlyEnabled){
 						// update other enabled transition ages:
@@ -354,10 +361,56 @@ public class StochasticManifestCollector {
 						}
 					}
 				}
+				timeSpentInMarking += transitionEnabledTime;
+//				firingTimes.get(encTrans).add(timeSpentInMarking+transitionEnabledTime);
+//				transitionDurationsPerCase[caseId][encTrans] = timeSpentInMarking+transitionEnabledTime;
+			}
+			firingTimes.get(encTrans).add(timeSpentInMarking);
+			transitionDurationsPerCase[caseId][encTrans] = timeSpentInMarking;
+			
+			if (manifest.getNet() instanceof StochasticNet){
+				// get distribution:
+				TimedTransition timedTransition = null;
+				for (Transition t : manifest.getNet().getTransitions()){
+					if (getEncOfTrans(t)==encTrans){
+						if (t instanceof TimedTransition){
+							timedTransition = (TimedTransition) t;
+						}
+					}
+				}
+				if (timedTransition != null && !timedTransition.isInvisible()){
+					if (!logLikelihoodPerTrace.containsKey(caseId)){
+						logLikelihoodPerTrace.put(caseId, new CaseStatistics(caseId));
+					}
+					CaseStatistics caseStats = logLikelihoodPerTrace.get(caseId);
+					double density = 1;
+					if (timedTransition.getDistributionType().equals(DistributionType.IMMEDIATE)){
+						Set<Integer> conflictingTransitions = getConflictingTransitions(markingBefore, encTrans);
+						double chanceToChooseTransitionOfConflictingTransitions = getChanceToChooseTransition(encTrans, conflictingTransitions);
+						if (chanceToChooseTransitionOfConflictingTransitions < 1){
+							caseStats.makeChoice(chanceToChooseTransitionOfConflictingTransitions);
+						}
+					} else {
+						density = timedTransition.getDistribution().density(timeSpentInMarking);
+						double currentLogLikelihoodValue = caseStats.getLogLikelihood() + Math.log(density);
+						caseStats.setLogLikelihood(currentLogLikelihoodValue);
+//						logLikelihoodPerTrace.put(caseId, caseStats);
+					}
+					caseStats.addDuration(timedTransition.getLabel(), timeSpentInMarking, density);
+				}
 			}
 		}
 	}
 		
+	private double getChanceToChooseTransition(int encTrans, Set<Integer> conflictingTransitions) {
+		double weight = ((TimedTransition)idx2Trans[encTrans]).getWeight();
+		double otherWeights = 0;
+		for (Integer transitionId : conflictingTransitions){
+			otherWeights += ((TimedTransition)idx2Trans[transitionId]).getWeight();
+		}
+		return weight / (weight + otherWeights);
+	}
+
 	private void fireTransitionInMarking(short[] marking, int encTrans) {
 		addMarkingTransitionCounter(marking, encTrans);
 		// update marking
@@ -448,6 +501,32 @@ public class StochasticManifestCollector {
 		}
 		return enabledTransitions;
 	}
+	
+	/**
+	 * The conflicting transitions are those that are enabled in the marking, and share predecessors (inputs) 
+	 * with the current transition that is about to fire.
+	 * @param marking short[] indicating which places have (a) token(s). 
+	 * @param transition the transition that is about to fire.
+	 * @return Set of conflicting transitions
+	 */
+	private Set<Integer> getConflictingTransitions(short[] marking, int transition){
+		Set<Integer> conflictingTransitions = new HashSet<Integer>();
+		short[] predecessorsOfTransition = encodedTrans2Pred.get(transition);
+		Set<Integer> enabledTransitions = getConcurrentlyEnabledTransitions(marking);
+		for (int tId : enabledTransitions){
+			boolean conflicting = false;
+			if (tId != transition){ // ignore own transition
+				short[] predecessorsOfOtherTransition = encodedTrans2Pred.get(tId);
+				for (int i = 0; i < predecessorsOfTransition.length; i++){
+					conflicting = conflicting || (predecessorsOfTransition[i] > 0 && predecessorsOfOtherTransition[i] > 0); 
+				}
+				if (conflicting){
+					conflictingTransitions.add(tId);
+				}
+			}
+		}
+		return conflictingTransitions;
+	}
 
 	public double getMeanTraceFitness(){
 		return fitnessStatistic.getMean();
@@ -501,7 +580,18 @@ public class StochasticManifestCollector {
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
-		
+	}
+	
+	/**
+	 * Only applicable, if the replay was done on a {@link StochasticNet} model.
+	 * @param caseId the position of the trace in the log to be analyzed.
+	 * @return {@link CaseStatistics} including the log-likelihood of the case
+	 */
+	public CaseStatistics getCaseStatistics(int caseId){
+		if (logLikelihoodPerTrace.containsKey(caseId)){
+			return logLikelihoodPerTrace.get(caseId);
+		}
+		return null;
 	}
 
 	private String getTransitionHeaders() {

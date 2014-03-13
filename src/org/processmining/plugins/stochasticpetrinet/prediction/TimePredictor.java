@@ -31,15 +31,15 @@ public class TimePredictor {
 	
 	/**
 	 * Does not care about final markings -> simulates net until no transitions are enabled any more...
-	 *  
-	 * @param model the model capturing the stochastic behavior of the net
+	 * Time
+	 * @param {@link StochasticNet} model the model capturing the stochastic behavior of the net
 	 * @param observedEvents the monitored partial trace (complete, i.e., no visible transition missing) 
 	 * @param currentTime the time of prediction (usually later than the last event's time stamp) 
 	 * @param initialMarking initial marking of the net
 	 * @param useTime indicator, whether to use the current time as constraint
 	 * @return
 	 */
-	public Pair<Double,Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, double unitFactor, boolean useTime) {
+	public Pair<Double,Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, boolean useTime) {
 		Semantics<Marking,Transition> semantics = getCurrentState(model, initialMarking, observedEvents);
 		if (semantics.getCurrentState() == null){
 			System.out.println("Debug me!");
@@ -48,7 +48,7 @@ public class TimePredictor {
 		Long lastEventTime = XTimeExtension.instance().extractTimestamp(observedEvents.get(observedEvents.size()-1)).getTime();
 //		System.out.println("Time between last event and current time: "+(currentTime.getTime()-lastEventTime)+"ms");
 		PNSimulatorTraceLess simulator = new PNSimulatorTraceLess();
-		PNSimulatorConfig config = new PNSimulatorConfig(1,unitFactor);
+		PNSimulatorConfig config = new PNSimulatorConfig(1,model.getTimeUnit());
 		
 		DescriptiveStatistics stats = new DescriptiveStatistics();
 		//long now = System.currentTimeMillis();
