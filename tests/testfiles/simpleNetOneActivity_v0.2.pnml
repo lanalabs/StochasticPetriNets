@@ -1,0 +1,66 @@
+<pnml xmlns="http://www.pnml.org/version-2009/grammar/pnml">
+   <net type="http://www.pnml.org/version-2009/grammar/ptnet" id="testNet">
+      <toolspecific tool="StochasticPetriNet" version="0.2">
+         <property key="timeUnit">minutes</property>
+         <property key="executionPolicy">race (resampling)</property>
+      </toolspecific>
+      <page id="p1">
+         <transition id="n0">
+            <graphics>
+               <dimension x="25.0" y="20.0"/>
+            </graphics>
+            <toolspecific tool="StochasticPetriNet" version="0.2">
+               <property key="distributionType">IMMEDIATE</property>
+               <property key="weight">1.0</property>
+               <property key="distributionParameters"></property>
+               <property key="priority">0</property>
+            </toolspecific>
+            <name>
+               <text>startEvent</text>
+            </name>
+         </transition>
+         <transition id="n1">
+            <graphics>
+               <dimension x="25.0" y="20.0"/>
+            </graphics>
+            <toolspecific tool="StochasticPetriNet" version="0.2">
+               <property key="distributionType">NORMAL</property>
+               <property key="weight">1.0</property>
+               <property key="distributionParameters">10.0;2.0</property>
+               <property key="priority">0</property>
+            </toolspecific>
+            <name>
+               <text>A</text>
+            </name>
+         </transition>
+         <place id="n2">
+            <graphics>
+               <dimension x="12.0" y="12.0"/>
+            </graphics>
+            <name>
+               <text>start</text>
+            </name>
+         </place>
+         <place id="n3">
+            <graphics>
+               <dimension x="12.0" y="12.0"/>
+            </graphics>
+            <name>
+               <text>between</text>
+            </name>
+         </place>
+         <place id="n4">
+            <graphics>
+               <dimension x="12.0" y="12.0"/>
+            </graphics>
+            <name>
+               <text>end</text>
+            </name>
+         </place>
+         <arc id="a0" source="n0" target="n3"/>
+         <arc id="a1" source="n1" target="n4"/>
+         <arc id="a2" source="n2" target="n0"/>
+         <arc id="a3" source="n3" target="n1"/>
+      </page>
+   </net>
+</pnml>
