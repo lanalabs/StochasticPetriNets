@@ -36,6 +36,7 @@ import org.processmining.plugins.manifestanalysis.visualization.performance.Perf
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.manifestreplayresult.ManifestEvClassPattern;
 import org.processmining.plugins.stochasticpetrinet.analyzer.CaseStatistics;
+import org.processmining.plugins.stochasticpetrinet.analyzer.CaseStatistics.ReplayStep;
 import org.processmining.plugins.stochasticpetrinet.distribution.RCensoredLogSplineDistribution;
 import org.processmining.plugins.stochasticpetrinet.enricher.optimizer.GradientDescent;
 import org.processmining.plugins.stochasticpetrinet.enricher.optimizer.MarkingBasedSelectionWeightCostFunction;
@@ -85,8 +86,22 @@ public class StochasticManifestCollector {
 	/** Stores the age of a transition in model time units since the last sampling period */ 
 	protected Map<Integer, Double> ageVariables;
 	
-	/** Collect for each trace the log-likelihood according to a given probabilistic model. */
-	private Map<Integer, CaseStatistics> logLikelihoodPerTrace;
+	/** Collect for each trace the log-likelihood and other statistics according to a given probabilistic model. */
+	private Map<Integer, CaseStatistics> caseStatisticsPerTrace;
+	
+	
+	/*******************************************************
+	 * Attention: this helper (producerOfToken) assumes 1-boundedness!
+	 *  
+	 * assigns to each marked place the timed transition that created the token.
+	 * Imagine a net where each timed transition has a color and paints tokens 
+	 * that it creates with that color.
+	 * We can use this color to identify the last timed transition (of which the timing 
+	 * behavior depends and create a dependency graph just like a Bayesian network.
+	 * 
+	 * Does not store immediate transitions.
+	 *******************************************************/
+	Map<Integer, Set<TimedTransition>> producerOfToken;
 	
 	protected ManifestEvClassPattern manifest;
 	
@@ -145,20 +160,20 @@ public class StochasticManifestCollector {
 		this.manifest = manifest;
 		this.executionPolicy  = config.getPolicy();
 		this.config = config;
-		currentlyEnabled = new HashSet<Integer>();
-		ageVariables = new HashMap<Integer, Double>();
-		firingTimes = new HashMap<Integer, List<Double>>();
-		censoredTimes = new HashMap<Integer, List<Double>>();
-		markingBasedSelections = new HashMap<String, int[]>();
-		this.logLikelihoodPerTrace = new HashMap<Integer, CaseStatistics>();
-		fitnessStatistic = new DescriptiveStatistics();
+		this.currentlyEnabled = new HashSet<Integer>();
+		this.ageVariables = new HashMap<Integer, Double>();
+		this.firingTimes = new HashMap<Integer, List<Double>>();
+		this.censoredTimes = new HashMap<Integer, List<Double>>();
+		this.markingBasedSelections = new HashMap<String, int[]>();
+		this.caseStatisticsPerTrace = new HashMap<Integer, CaseStatistics>();
+		this.fitnessStatistic = new DescriptiveStatistics();
 		
 		// init transitions
 		PetrinetGraph net = manifest.getNet();
 		List<Transition> transitions = new ArrayList<Transition>(net.getTransitions());
 		int transSize = transitions.size();
-		idx2Trans = transitions.toArray(new Transition[transSize]);
-		trans2Idx = new TObjectIntHashMap<Transition>(transSize);
+		this.idx2Trans = transitions.toArray(new Transition[transSize]);
+		this.trans2Idx = new TObjectIntHashMap<Transition>(transSize);
 		for (int i = 0; i < idx2Trans.length; i++) {
 			trans2Idx.put(idx2Trans[i], i);
 			
@@ -170,8 +185,8 @@ public class StochasticManifestCollector {
 		// init places
 		List<Place> places = new ArrayList<Place>(net.getPlaces());
 		int placeSize = places.size();
-		idx2Place = places.toArray(new Place[placeSize]);
-		place2Idx = new TObjectIntHashMap<Place>(placeSize);
+		this.idx2Place = places.toArray(new Place[placeSize]);
+		this.place2Idx = new TObjectIntHashMap<Place>(placeSize);
 		for (int i = 0; i < idx2Place.length; i++) {
 			place2Idx.put(idx2Place[i], i);
 		}
@@ -217,7 +232,10 @@ public class StochasticManifestCollector {
 		transitionDurationsPerCase = new double[cases.length][];
 		
 		for (int i = 0; i < cases.length; i++) {
+			producerOfToken = new HashMap<Integer, Set<TimedTransition>>();
+			
 			Pair<Long,Long> caseBounds = new Pair<Long, Long>(-1l, -1l);
+			
 			if (cases[i] >= 0) {
 				// create initial marking
 				short[] marking = constructEncInitMarking(manifest.getInitMarking());
@@ -280,6 +298,26 @@ public class StochasticManifestCollector {
 					censoredTimes.get(transitionId).add(ageVariables.get(transitionId));
 				}
 				ageVariables.clear();
+				
+				
+				// backward pass through all steps to connect dependency structure:
+				if (caseStatisticsPerTrace.containsKey(i)){
+					CaseStatistics cs = caseStatisticsPerTrace.get(i);
+					for (int step = cs.getReplaySteps().size()-1; step >= 0; step--){
+						ReplayStep replayStep = cs.getReplaySteps().get(step);
+						Set<TimedTransition> precedingTransitions = new HashSet<TimedTransition>();
+						precedingTransitions.addAll(replayStep.parents);
+						int parentPosition = step-1;
+						while (parentPosition >= 0 && precedingTransitions.size() > 0){
+							ReplayStep previousStep = cs.getReplaySteps().get(parentPosition);
+							if (precedingTransitions.contains(previousStep.transition)){
+								previousStep.children.add(replayStep.transition);
+								precedingTransitions.remove(replayStep.transition);
+							}
+							parentPosition--;
+						}
+					}
+				}
 			}
 		}
 	}
@@ -302,9 +340,9 @@ public class StochasticManifestCollector {
 		if (timeSpentInMarking < 0){
 			System.out.println("Debug me! time should not be < 0!");
 		}
-		
+		Set<TimedTransition> predecessorTimedTransitions = new HashSet<TimedTransition>();
 		currentlyEnabled = getConcurrentlyEnabledTransitions(marking);
-		fireTransitionInMarking(marking, encTrans);
+		fireTransitionInMarking(marking, encTrans, predecessorTimedTransitions);
 		Set<Integer> afterwardsEnabled = getConcurrentlyEnabledTransitions(marking);
 		
 		// collect conflicting transitions that get disabled by this transition firing
@@ -379,10 +417,10 @@ public class StochasticManifestCollector {
 					}
 				}
 				if (timedTransition != null && !timedTransition.isInvisible()){
-					if (!logLikelihoodPerTrace.containsKey(caseId)){
-						logLikelihoodPerTrace.put(caseId, new CaseStatistics(caseId));
+					if (!caseStatisticsPerTrace.containsKey(caseId)){
+						caseStatisticsPerTrace.put(caseId, new CaseStatistics(caseId));
 					}
-					CaseStatistics caseStats = logLikelihoodPerTrace.get(caseId);
+					CaseStatistics caseStats = caseStatisticsPerTrace.get(caseId);
 					double density = 1;
 					if (timedTransition.getDistributionType().equals(DistributionType.IMMEDIATE)){
 						Set<Integer> conflictingTransitions = getConflictingTransitions(markingBefore, encTrans);
@@ -396,7 +434,7 @@ public class StochasticManifestCollector {
 						caseStats.setLogLikelihood(currentLogLikelihoodValue);
 //						logLikelihoodPerTrace.put(caseId, caseStats);
 					}
-					caseStats.addDuration(timedTransition.getLabel(), timeSpentInMarking, density);
+					caseStats.addDuration(timedTransition, timeSpentInMarking, density, predecessorTimedTransitions);
 				}
 			}
 		}
@@ -411,7 +449,7 @@ public class StochasticManifestCollector {
 		return weight / (weight + otherWeights);
 	}
 
-	private void fireTransitionInMarking(short[] marking, int encTrans) {
+	private void fireTransitionInMarking(short[] marking, int encTrans, Set<TimedTransition> predecessorTimedTransitions) {
 		addMarkingTransitionCounter(marking, encTrans);
 		// update marking
 		short[] pred = encodedTrans2Pred.get(encTrans);
@@ -420,6 +458,9 @@ public class StochasticManifestCollector {
 			for (int place = 0; place < pred.length; place++) {
 				if (pred[place] != 0) {
 					marking[place] -= pred[place];
+					if (producerOfToken.containsKey(place)){
+						predecessorTimedTransitions.addAll(producerOfToken.remove(place));
+					}
 				}
 			}
 		}
@@ -427,7 +468,20 @@ public class StochasticManifestCollector {
 		if (succ != null) {
 			// increase the value
 			for (int place=0; place < succ.length; place++){
-				marking[place] += succ[place];
+				if (succ[place] != 0){
+					marking[place] += succ[place];
+					if (idx2Trans[encTrans] instanceof TimedTransition){
+						TimedTransition tt = (TimedTransition) idx2Trans[encTrans];
+						if (!tt.getDistributionType().equals(DistributionType.IMMEDIATE)){
+							Set<TimedTransition> producingTransitions = new HashSet<TimedTransition>();
+							producingTransitions.add(tt);
+							producerOfToken.put(place, producingTransitions);	
+						} else {
+							// pass on all predecessors to following marking
+							producerOfToken.put(place, predecessorTimedTransitions);
+						}
+					}
+				}
 			}
 		}
 	}
@@ -588,8 +642,8 @@ public class StochasticManifestCollector {
 	 * @return {@link CaseStatistics} including the log-likelihood of the case
 	 */
 	public CaseStatistics getCaseStatistics(int caseId){
-		if (logLikelihoodPerTrace.containsKey(caseId)){
-			return logLikelihoodPerTrace.get(caseId);
+		if (caseStatisticsPerTrace.containsKey(caseId)){
+			return caseStatisticsPerTrace.get(caseId);
 		}
 		return null;
 	}
