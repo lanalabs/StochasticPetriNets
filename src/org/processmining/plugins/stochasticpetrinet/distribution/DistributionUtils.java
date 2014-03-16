@@ -1,6 +1,11 @@
 package org.processmining.plugins.stochasticpetrinet.distribution;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.complex.Complex;
 import org.apache.commons.math3.distribution.RealDistribution;
 
 public class DistributionUtils {
@@ -18,5 +23,32 @@ public class DistributionUtils {
 			}
 		};
 		return function;
+	}
+	
+	/**
+	 * Useful after operations in Fourier space.
+	 * 
+	 * @param complexValues
+	 * @return extracts the real part of the complex numbers
+	 */
+	public static double[] getRealPart(Complex[] complexValues){
+		double[] realPart = new double[complexValues.length];
+		for (int i = 0; i < realPart.length; i++){
+			realPart[i] = complexValues[i].getReal();
+		}
+		return realPart;
+	}
+	
+	public static double[] shuffle(double[] values) {
+		// shuffle and return:
+		List<Double> valuesList = new ArrayList<Double>();
+		for (double val : values){
+			valuesList.add(val);
+		}
+		Collections.shuffle(valuesList);
+		for (int i = 0; i < values.length; i++){
+			values[i] = valuesList.get(i);
+		}
+		return values;
 	}
 }

@@ -210,11 +210,13 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 	}
 
 	public double getSupportLowerBound() {
-		return Double.NEGATIVE_INFINITY;
+//		return Double.NEGATIVE_INFINITY;
+		return getReasonableLowerBound();
 	}
 
 	public double getSupportUpperBound() {
-		return Double.POSITIVE_INFINITY;
+		return getReasonableUpperBound();
+//		return Double.POSITIVE_INFINITY;
 	}
 
 //	/**
@@ -313,5 +315,12 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 	 */
 	public double getH(){
 		return h;
+	}
+	
+	public double getReasonableUpperBound(){
+		return sampleValues.get(sampleValues.size()-1).doubleValue()+10*h;
+	}
+	public double getReasonableLowerBound(){
+		return sampleValues.get(0).doubleValue()-10*h;
 	}
 }

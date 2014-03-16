@@ -3,6 +3,7 @@ package org.processmining.plugins.stochasticpetrinet.distribution;
 import java.util.Random;
 
 import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.distribution.RealDistribution;
 
 public class SliceSampler {
 
@@ -16,6 +17,20 @@ public class SliceSampler {
 	
 	private UnivariateFunction function;
 	
+	public SliceSampler(RealDistribution distribution, double xStart, double yStart){
+		this(getFunction(distribution), xStart, yStart);
+		
+	}
+	
+	private static UnivariateFunction getFunction(final RealDistribution distribution) {
+		UnivariateFunction function = new UnivariateFunction() {
+			public double value(double x) {
+				return distribution.density(x);
+			}
+		};
+		return function;
+	}
+
 	public SliceSampler(UnivariateFunction function, double xStart, double yStart){
 		this(function, xStart, yStart, 100);
 	}

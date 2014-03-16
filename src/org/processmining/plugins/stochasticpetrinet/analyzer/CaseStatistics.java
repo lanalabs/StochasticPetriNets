@@ -2,12 +2,9 @@ package org.processmining.plugins.stochasticpetrinet.analyzer;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
-import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.plugins.stochasticpetrinet.enricher.StochasticManifestCollector;
 
 /**
@@ -39,10 +36,13 @@ public class CaseStatistics {
 		choices = new ArrayList<Double>();
 		logLikelihood = 0.0;
 	}
-	
-	public void addDuration(TimedTransition transition, double duration, double density, Set<TimedTransition> predecessorTimedTransitions){
-		this.replaySteps.add(new ReplayStep(transition, duration, density, predecessorTimedTransitions));
+	public void addReplayStep(ReplayStep step){
+		this.replaySteps.add(step);
 	}
+	
+//	public void addDuration(TimedTransition transition, double duration, double density, Set<ReplayStep> predecessorTimedTransitions){
+//		this.replaySteps.add(new ReplayStep(transition, duration, density, predecessorTimedTransitions));
+//	}
 	
 	public void makeChoice(Double probability){
 		assert(probability >= 0 && probability <= 1);
@@ -87,35 +87,5 @@ public class CaseStatistics {
 		builder.append(Arrays.toString(choices.toArray())).append(separator);
 		builder.append(Arrays.toString(replaySteps.toArray())).append(separator);
 		return builder.toString();
-	}
-	
-	/**
-	 * A Replay Step with the duration and 
-	 * probabilistic information like density p(A=a | Model) 
-	 * according to the probabilistic Model used in replay. 
-	 * 
-	 * @author Andreas Rogge-Solti
-	 *
-	 */
-	public class ReplayStep{
-		public TimedTransition transition;
-		public Double duration;
-		public Double density;
-		
-		public Set<TimedTransition> parents;
-		public Set<TimedTransition> children;
-		
-		public ReplayStep(TimedTransition transition, double duration, double density, Set<TimedTransition> predecessorTimedTransitions) {
-			this.transition = transition;
-			this.duration = duration;
-			this.density = density;
-			this.parents = new HashSet<TimedTransition>();
-			this.parents.addAll(predecessorTimedTransitions);
-			this.children = new HashSet<TimedTransition>();
-		}
-
-		public String toString(){
-			return "{"+transition.getLabel()+", dur: "+duration+", dens: "+density+"}";
-		}
 	}
 }

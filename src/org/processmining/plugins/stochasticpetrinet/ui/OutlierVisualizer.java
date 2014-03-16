@@ -46,7 +46,7 @@ import org.processmining.plugins.stochasticpetrinet.analyzer.CaseStatistics;
 import org.processmining.plugins.stochasticpetrinet.analyzer.CaseStatisticsAnalyzer;
 import org.processmining.plugins.stochasticpetrinet.analyzer.CaseStatisticsConnection;
 import org.processmining.plugins.stochasticpetrinet.analyzer.CaseStatisticsList;
-import org.processmining.plugins.stochasticpetrinet.analyzer.CaseStatistics.ReplayStep;
+import org.processmining.plugins.stochasticpetrinet.analyzer.ReplayStep;
 
 public class OutlierVisualizer implements ActionListener{
 	
@@ -158,13 +158,13 @@ public class OutlierVisualizer implements ActionListener{
 	private void updateMap(int selectedIndex) {
 		ViewSpecificAttributeMap map = new ViewSpecificAttributeMap();
 		
-		List<TimedTransition> outlierTransitions = new ArrayList<TimedTransition>();
-		List<TimedTransition> regularTransitions = new ArrayList<TimedTransition>();
+		List<ReplayStep> outlierSteps = new ArrayList<ReplayStep>();
+		List<ReplayStep> regularSteps = new ArrayList<ReplayStep>();
 		selectedCaseStatistics = null;
 		if (selectedIndex >= 0){
 			selectedCaseStatistics = analyzer.getCaseStatistics().get(selectedIndex);
-			outlierTransitions = analyzer.getIndividualOutlierTransitions(selectedCaseStatistics);
-			regularTransitions = analyzer.getRegularTransitions(selectedCaseStatistics);
+			outlierSteps = analyzer.getIndividualOutlierSteps(selectedCaseStatistics);
+			regularSteps = analyzer.getRegularSteps(selectedCaseStatistics);
 		}
 		Marking m = analyzer.getInitialMarking(); 
 		
@@ -178,13 +178,19 @@ public class OutlierVisualizer implements ActionListener{
 		for (Transition t : analyzer.getStochasticNet().getTransitions()){
 			if (t instanceof TimedTransition){
 				TimedTransition tt = (TimedTransition)t;
-				if (outlierTransitions.contains(tt)){
-					map.putViewSpecific(t, AttributeMap.FILLCOLOR, Color.ORANGE);
-				} else if (regularTransitions.contains(tt)){
-					map.putViewSpecific(t, AttributeMap.FILLCOLOR, Color.GREEN);
+				ReplayStep step = getReplayStepForTransition(tt);
+				
+				if (outlierSteps.contains(step)){
+					if (analyzer.isOutlierLikelyToBeAnError(step)){
+						map.putViewSpecific(t, AttributeMap.FILLCOLOR, Color.RED);
+					} else {
+						map.putViewSpecific(t, AttributeMap.FILLCOLOR, Color.ORANGE);
+					}
+				} else if (regularSteps.contains(step)) {
+					map.putViewSpecific(t, AttributeMap.FILLCOLOR, Color.GREEN);	
 				}
 				map.putViewSpecific(t, AttributeMap.LABEL, t.getLabel()+" ("+tt.getWeight()+")");
-				ReplayStep step = getReplayStepForTransition(tt);
+				
 				String distributionParameters = Arrays.toString(tt.getDistributionParameters());
 				distributionParameters = distributionParameters.substring(0, Math.min(50,distributionParameters.length()-1))+"...";
 				map.putViewSpecific(t, AttributeMap.TOOLTIP, "<html>"+t.getLabel()+"\n<br>" +

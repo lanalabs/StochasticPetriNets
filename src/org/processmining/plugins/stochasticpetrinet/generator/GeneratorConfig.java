@@ -1,6 +1,8 @@
 package org.processmining.plugins.stochasticpetrinet.generator;
 
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 
 /**
  * Configuration settings for the stochastic Petri net generator {@link Generator}.
@@ -21,11 +23,25 @@ public class GeneratorConfig {
 	 * Stores whether loops should be added to the net as well.
 	 */
 	private boolean containsLoops;
-	
+
+	/**
+	 * desired degree of sequences in percent
+	 * range: 0-100
+	 * real percentage values will be computed based on other degrees
+	 * such that these degrees are rather weights. 
+	 */
 	private int degreeOfParallelism;
 	
+	/**
+	 * desired degree of sequences in percent
+	 * range: 0-100
+	 */
 	private int degreeOfSequences;
 	
+	/**
+	 * degree of exclusive choices in percent
+	 * range: 0-100
+	 */
 	private int degreeOfExclusiveChoices;
 	
 	private int degreeOfLoops;
@@ -33,6 +49,16 @@ public class GeneratorConfig {
 	private DistributionType distributionType;
 	
 	private String name;
+
+	private TimeUnit timeUnit;
+
+	private ExecutionPolicy executionPolicy;
+	
+	/** specifies whether immediate transitions should be visible and are recorded in the log */
+	private boolean immedateTransitionsInvisible;
+	
+	/** A start transition that signals the start of a process (useful for measuring the duration of the first real activity */
+	private boolean createDedicatedImmediateStartTransition;
 	
 	public GeneratorConfig(){
 		transitionSize = DEFAULT_TRANSITION_SIZE;
@@ -43,6 +69,10 @@ public class GeneratorConfig {
 		degreeOfExclusiveChoices = 1;
 		degreeOfLoops = 0;
 		distributionType = DistributionType.NORMAL;
+		timeUnit = TimeUnit.MINUTES;
+		executionPolicy = ExecutionPolicy.RACE_ENABLING_MEMORY;
+		immedateTransitionsInvisible = true;
+		createDedicatedImmediateStartTransition = false;
 	}
 
 	public int getTransitionSize() {
@@ -106,6 +136,38 @@ public class GeneratorConfig {
 
 	public void setDistributionType(DistributionType distributionType) {
 		this.distributionType = distributionType;
+	}
+
+	public TimeUnit getTimeUnit() {
+		return timeUnit;
+	}
+	
+	public void setTimeUnit(TimeUnit timeUnit) {
+		this.timeUnit = timeUnit;
+	}
+
+	public ExecutionPolicy getExecutionPolicy() {
+		return executionPolicy;
+	}
+
+	public void setExecutionPolicy(ExecutionPolicy executionPolicy) {
+		this.executionPolicy = executionPolicy;
+	}
+
+	public boolean isImmedateTransitionsInvisible() {
+		return immedateTransitionsInvisible;
+	}
+
+	public void setImmedateTransitionsInvisible(boolean immedateTransitionsInvisible) {
+		this.immedateTransitionsInvisible = immedateTransitionsInvisible;
+	}
+
+	public boolean isCreateDedicatedImmediateStartTransition() {
+		return createDedicatedImmediateStartTransition;
+	}
+
+	public void setCreateDedicatedImmediateStartTransition(boolean createDedicatedImmediateStartTransition) {
+		this.createDedicatedImmediateStartTransition = createDedicatedImmediateStartTransition;
 	}
 	
 }

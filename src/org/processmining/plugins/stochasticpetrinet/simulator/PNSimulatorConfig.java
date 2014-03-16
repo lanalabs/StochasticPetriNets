@@ -1,5 +1,6 @@
 package org.processmining.plugins.stochasticpetrinet.simulator;
 
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 
@@ -50,6 +51,9 @@ public class PNSimulatorConfig {
 	private static int counter = 1;
 	
 	
+	public PNSimulatorConfig(int numberOfTraces, StochasticNet net){
+		this(numberOfTraces,net.getTimeUnit(),1,1,10000,net.getExecutionPolicy());
+	}
 	
 	public PNSimulatorConfig(){
 		this(1000);

@@ -36,7 +36,7 @@ import org.processmining.plugins.manifestanalysis.visualization.performance.Perf
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.manifestreplayresult.ManifestEvClassPattern;
 import org.processmining.plugins.stochasticpetrinet.analyzer.CaseStatistics;
-import org.processmining.plugins.stochasticpetrinet.analyzer.CaseStatistics.ReplayStep;
+import org.processmining.plugins.stochasticpetrinet.analyzer.ReplayStep;
 import org.processmining.plugins.stochasticpetrinet.distribution.RCensoredLogSplineDistribution;
 import org.processmining.plugins.stochasticpetrinet.enricher.optimizer.GradientDescent;
 import org.processmining.plugins.stochasticpetrinet.enricher.optimizer.MarkingBasedSelectionWeightCostFunction;
@@ -93,15 +93,15 @@ public class StochasticManifestCollector {
 	/*******************************************************
 	 * Attention: this helper (producerOfToken) assumes 1-boundedness!
 	 *  
-	 * assigns to each marked place the timed transition that created the token.
+	 * assigns to each marked place the replay step that created the token.
 	 * Imagine a net where each timed transition has a color and paints tokens 
 	 * that it creates with that color.
-	 * We can use this color to identify the last timed transition (of which the timing 
+	 * We can use this color to identify the last step and its timed transition (of which the timing 
 	 * behavior depends and create a dependency graph just like a Bayesian network.
 	 * 
 	 * Does not store immediate transitions.
 	 *******************************************************/
-	Map<Integer, Set<TimedTransition>> producerOfToken;
+	Map<Integer, Set<ReplayStep>> producerOfToken;
 	
 	protected ManifestEvClassPattern manifest;
 	
@@ -232,7 +232,7 @@ public class StochasticManifestCollector {
 		transitionDurationsPerCase = new double[cases.length][];
 		
 		for (int i = 0; i < cases.length; i++) {
-			producerOfToken = new HashMap<Integer, Set<TimedTransition>>();
+			producerOfToken = new HashMap<Integer, Set<ReplayStep>>();
 			
 			Pair<Long,Long> caseBounds = new Pair<Long, Long>(-1l, -1l);
 			
@@ -303,16 +303,17 @@ public class StochasticManifestCollector {
 				// backward pass through all steps to connect dependency structure:
 				if (caseStatisticsPerTrace.containsKey(i)){
 					CaseStatistics cs = caseStatisticsPerTrace.get(i);
+					cs.setCaseDuration(traceDurationInUnits);
 					for (int step = cs.getReplaySteps().size()-1; step >= 0; step--){
 						ReplayStep replayStep = cs.getReplaySteps().get(step);
-						Set<TimedTransition> precedingTransitions = new HashSet<TimedTransition>();
-						precedingTransitions.addAll(replayStep.parents);
+						Set<ReplayStep> precedingReplaySteps = new HashSet<ReplayStep>();
+						precedingReplaySteps.addAll(replayStep.parents);
 						int parentPosition = step-1;
-						while (parentPosition >= 0 && precedingTransitions.size() > 0){
+						while (parentPosition >= 0 && precedingReplaySteps.size() > 0){
 							ReplayStep previousStep = cs.getReplaySteps().get(parentPosition);
-							if (precedingTransitions.contains(previousStep.transition)){
-								previousStep.children.add(replayStep.transition);
-								precedingTransitions.remove(replayStep.transition);
+							if (precedingReplaySteps.contains(previousStep)){
+								previousStep.children.add(replayStep);
+								precedingReplaySteps.remove(previousStep);
 							}
 							parentPosition--;
 						}
@@ -340,9 +341,10 @@ public class StochasticManifestCollector {
 		if (timeSpentInMarking < 0){
 			System.out.println("Debug me! time should not be < 0!");
 		}
-		Set<TimedTransition> predecessorTimedTransitions = new HashSet<TimedTransition>();
+		Set<ReplayStep> predecessorTimedTransitions = new HashSet<ReplayStep>();
 		currentlyEnabled = getConcurrentlyEnabledTransitions(marking);
-		fireTransitionInMarking(marking, encTrans, predecessorTimedTransitions);
+		ReplayStep currentStep = new ReplayStep(null, timeSpentInMarking, 0.0, predecessorTimedTransitions);
+		fireTransitionInMarking(marking, encTrans, predecessorTimedTransitions, currentStep);
 		Set<Integer> afterwardsEnabled = getConcurrentlyEnabledTransitions(marking);
 		
 		// collect conflicting transitions that get disabled by this transition firing
@@ -434,7 +436,12 @@ public class StochasticManifestCollector {
 						caseStats.setLogLikelihood(currentLogLikelihoodValue);
 //						logLikelihoodPerTrace.put(caseId, caseStats);
 					}
-					caseStats.addDuration(timedTransition, timeSpentInMarking, density, predecessorTimedTransitions);
+					if (density == 0){
+						System.out.println("debug me!");
+					}
+					currentStep.density = density;
+					currentStep.transition = timedTransition;
+					caseStats.addReplayStep(currentStep);
 				}
 			}
 		}
@@ -449,7 +456,7 @@ public class StochasticManifestCollector {
 		return weight / (weight + otherWeights);
 	}
 
-	private void fireTransitionInMarking(short[] marking, int encTrans, Set<TimedTransition> predecessorTimedTransitions) {
+	private void fireTransitionInMarking(short[] marking, int encTrans, Set<ReplayStep> predecessorTimedTransitions, ReplayStep thisStep) {
 		addMarkingTransitionCounter(marking, encTrans);
 		// update marking
 		short[] pred = encodedTrans2Pred.get(encTrans);
@@ -473,9 +480,9 @@ public class StochasticManifestCollector {
 					if (idx2Trans[encTrans] instanceof TimedTransition){
 						TimedTransition tt = (TimedTransition) idx2Trans[encTrans];
 						if (!tt.getDistributionType().equals(DistributionType.IMMEDIATE)){
-							Set<TimedTransition> producingTransitions = new HashSet<TimedTransition>();
-							producingTransitions.add(tt);
-							producerOfToken.put(place, producingTransitions);	
+							Set<ReplayStep> producingSteps = new HashSet<ReplayStep>();
+							producingSteps.add(thisStep);
+							producerOfToken.put(place, producingSteps);	
 						} else {
 							// pass on all predecessors to following marking
 							producerOfToken.put(place, predecessorTimedTransitions);

@@ -100,6 +100,10 @@ public class PNSimulator {
 		if (context != null){
 			finalMarking = StochasticNetUtils.getFinalMarking(context, petriNet);
 		}
+		if (initialMarking == null || initialMarking.isEmpty()){
+			context.log("No initial marking found! Trying to use a default one...");
+			StochasticNetUtils.getDefaultInitialMarking(petriNet);
+		}
 		if (config != null) {
 			arrivalDistribution = new ExponentialDistribution(config.arrivalRate);
 			transitionRemainingTimes = new HashMap<Transition, Long>();

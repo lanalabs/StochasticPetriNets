@@ -28,8 +28,7 @@ public class Generator {
 
 	private int pId = 1; // place counter
 	private int tId = 1; // transition counter
-	private int aId = 1; // arc counter
-
+	
 	private enum Structure {
 		SEQUENCE,XOR,AND,LOOP;
 	}
@@ -44,35 +43,53 @@ public class Generator {
 	private void resetCounters() {
 		 pId = 1; 
 		 tId = 1;
-		 aId = 1;
 	}
 
 	/**
-	 * 
-	 * @param config
+	 * @param config {@link GeneratorConfig}
 	 * @return Object[] consisting of the stochastic net [index 0], the initial marking [index 1] and the final marking [index 2]
 	 */
 	public Object[] generateStochasticNet(GeneratorConfig config) {
+		resetCounters();
 		StochasticNet net = new StochasticNetImpl(config.getName());
 		// add basic structure: place -> transition -> place
+		
+		net.setExecutionPolicy(config.getExecutionPolicy());
+		net.setTimeUnit(config.getTimeUnit());
 		
 		Marking initialMarking = new Marking();
 		Marking finalMarking = new Marking();
 		
-		Place pStart = net.addPlace("pStart");
-		initialMarking.add(pStart);
+		
+		
+		Place p1 = net.addPlace("pStart");
+		if (!config.isCreateDedicatedImmediateStartTransition()){
+			initialMarking.add(p1);
+		}
 		
 		Place pEnd = net.addPlace("pEnd");
 		finalMarking.add(pEnd);
 		
 		Transition t = net.addTimedTransition(nextTransitionName(), config.getDistributionType(), getRandomParameters(config.getDistributionType()));
 		
-		net.addArc(pStart, t);
+		net.addArc(p1, t);
 		net.addArc(t, pEnd);
 		
-		while (net.getTransitions().size() < config.getTransitionSize()){
+		int counter = 1;
+		while (counter++ < config.getTransitionSize()){
 			addRandomStructure(net, config);
 		}
+		
+		if (config.isCreateDedicatedImmediateStartTransition()){
+			Place pStart = net.addPlace("pInit");
+			initialMarking.add(pStart);
+			Transition tStart = net.addTimedTransition("tStart", DistributionType.IMMEDIATE);
+			tStart.setInvisible(false);
+		
+			net.addArc(pStart, tStart);
+			net.addArc(tStart,p1);
+		}
+		
 		return new Object[]{net,initialMarking, finalMarking};
 	}
 
@@ -116,8 +133,10 @@ public class Generator {
 				// add immediate choice transitions:
 				double weightUp = random.nextDouble()*0.8+0.2; // (uniform between 0.2-0.8)
 				TimedTransition up = net.addImmediateTransition(nextTransitionName(), weightUp);
+				up.setInvisible(config.isImmedateTransitionsInvisible());
 				Place upPlace = net.addPlace(nextPlaceName());
 				TimedTransition down = net.addImmediateTransition(nextTransitionName(), 1-weightUp);
+				down.setInvisible(config.isImmedateTransitionsInvisible());
 				Place downPlace = net.addPlace(nextPlaceName());
 				// connect everything:
 				net.addArc(inPlace, up);
@@ -134,7 +153,9 @@ public class Generator {
 				net.removeArc(t, outPlace);
 				// add split and join:
 				TimedTransition split = net.addImmediateTransition(nextTransitionName()+"_split");
+				split.setInvisible(config.isImmedateTransitionsInvisible());
 				TimedTransition join = net.addImmediateTransition(nextTransitionName()+"_join");
+				join.setInvisible(config.isImmedateTransitionsInvisible());
 				// add corresponding places
 				Place pUpper1 = net.addPlace(nextPlaceName());
 				Place pUpper2 = net.addPlace(nextPlaceName());
@@ -160,7 +181,9 @@ public class Generator {
 				// add leaving branch and returning branch:
 				double weightLeave = random.nextDouble()*0.5+0.4; // (uniform between 0.5-0.9)
 				Transition tLeave = net.addImmediateTransition(nextTransitionName()+"_leaveLoop", weightLeave);
+				tLeave.setInvisible(config.isImmedateTransitionsInvisible());
 				Transition tStay = net.addImmediateTransition(nextTransitionName()+"_stayInLoop", 1-weightLeave);
+				tStay.setInvisible(config.isImmedateTransitionsInvisible());
 				
 				Place pDecide = net.addPlace(nextPlaceName());
 				Place pLoopBack = net.addPlace(nextPlaceName());
@@ -248,8 +271,8 @@ public class Generator {
 			case DETERMINISTIC:
 				return new double[]{0.01+(random.nextDouble()*10)};
 			case NORMAL:
-				double mean = random.nextDouble()*10+1;
-				double sd = mean*(0.1+random.nextDouble()*0.3);
+				double mean = random.nextDouble()*10+1; // uniform 1-11
+				double sd = (mean/10)*(random.nextDouble()+0.01); // uniform 
 				return new double[]{mean,sd};
 			case LOGNORMAL:
 				double logMean = Math.log(random.nextDouble()*10+1);

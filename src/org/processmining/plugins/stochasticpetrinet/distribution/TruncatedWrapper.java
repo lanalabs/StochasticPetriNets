@@ -1,9 +1,5 @@
 package org.processmining.plugins.stochasticpetrinet.distribution;
 
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.analysis.integration.IterativeLegendreGaussIntegrator;
 import org.apache.commons.math3.analysis.integration.SimpsonIntegrator;
@@ -12,7 +8,7 @@ import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.exception.NumberIsTooLargeException;
 import org.apache.commons.math3.exception.OutOfRangeException;
 
-public class TruncatedWrapper implements RealDistribution{
+public class TruncatedWrapper implements RealDistribution, UnivariateFunction{
 
 	/** The original distribution  */
 	protected RealDistribution wrappedDist;
@@ -37,11 +33,11 @@ public class TruncatedWrapper implements RealDistribution{
 		this.scale = 1.0/(1.0-wrappedDist.cumulativeProbability(constraint));
 
 		// init slice sampler:
-		double xStart = findPositiveX(getFunction());
+		double xStart = findPositiveX(this);
 		if (wrappedDist.density(xStart) == 0){
 			throw new IllegalArgumentException("did not find positive values for the wrapped distribution ("+wrappedDist.toString()+") constrained above "+constraint);
 		}
-		sampler = new SliceSampler(getFunction(),xStart, wrappedDist.density(xStart)*0.5);
+		sampler = new SliceSampler((UnivariateFunction)this,xStart, wrappedDist.density(xStart)*0.5);
 	}
 	
 	public double probability(double x) {
@@ -58,21 +54,12 @@ public class TruncatedWrapper implements RealDistribution{
 
 	public double cumulativeProbability(double x) {
 		UnivariateIntegrator integrator = new SimpsonIntegrator();
-		return integrator.integrate(10000, getFunction(), Double.NEGATIVE_INFINITY, x);
+		return integrator.integrate(10000, this, Double.NEGATIVE_INFINITY, x);
 	}
 
 	public double cumulativeProbability(double x0, double x1) throws NumberIsTooLargeException {
 		UnivariateIntegrator integrator = new SimpsonIntegrator();
-		return integrator.integrate(10000, getFunction(), x0, x1);
-	}
-
-	public UnivariateFunction getFunction() {
-		UnivariateFunction function = new UnivariateFunction() {
-			public double value(double x) {
-				return density(x);
-			}
-		};
-		return function;
+		return integrator.integrate(10000, this, x0, x1);
 	}
 	
 	public UnivariateFunction getWeightedFunction(){
@@ -156,20 +143,18 @@ public class TruncatedWrapper implements RealDistribution{
 	}
 
 	public double[] sample(int sampleSize) {
-		double xStart = findPositiveX(getFunction());
+		double xStart = findPositiveX(this);
 		if (wrappedDist.density(xStart) == 0){
 			throw new IllegalArgumentException("did not find positive values for the wrapped distribution ("+wrappedDist.toString()+") constrained above "+constraint);
 		}
 		double[] values = sampler.sample(sampleSize);
-		// shuffle and return:
-		List<Double> valuesList = new ArrayList<Double>();
-		for (double val : values){
-			valuesList.add(val);
-		}
-		Collections.shuffle(valuesList);
-		for (int i = 0; i < values.length; i++){
-			values[i] = valuesList.get(i);
-		}
-		return values;
+		
+		return DistributionUtils.shuffle(values);
+	}
+
+	
+	
+	public double value(double x){
+		return density(x);
 	}
 }

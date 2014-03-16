@@ -10,7 +10,7 @@ public class LikelihoodAnalyzerPlugin {
 
 	@Plugin(name = "Compute Likelihoods", 
 			parameterLabels = { "Event Log", "Stochastic Petri Net"}, 
-			returnLabels = { "List of Log-Likelihoods" }, 
+			returnLabels = { CaseStatisticsList.PARAMETER_LABEL }, 
 			returnTypes = { CaseStatisticsList.class }, 
 			userAccessible = true,
 			help = "Returns a list of log-likelihood values for all the traces in the log.")

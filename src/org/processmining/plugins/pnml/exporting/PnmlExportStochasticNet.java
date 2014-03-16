@@ -14,6 +14,7 @@ import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.pnml.simple.PNMLRoot;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
 
@@ -48,6 +49,8 @@ public class PnmlExportStochasticNet {
 			if (context!=null){
 				marking = context.tryToFindOrConstructFirstObject(Marking.class, InitialMarkingConnection.class,
 						InitialMarkingConnection.MARKING, net);
+			} else {
+				marking = StochasticNetUtils.getInitialMarking(null, net);
 			}
 		} catch (ConnectionCannotBeObtained e) {
 			// don't care - stick with empty marking

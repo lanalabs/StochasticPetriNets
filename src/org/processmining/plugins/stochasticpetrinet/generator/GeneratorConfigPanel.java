@@ -32,6 +32,7 @@ public class GeneratorConfigPanel {
 		private NiceSlider degreeOfLoopsSlider;
 		
 		private JCheckBox containsLoops;
+		private JCheckBox addInitTransition;
 		
 		@SuppressWarnings("rawtypes")
 		private JComboBox distributionTypeComboBox;
@@ -62,6 +63,8 @@ public class GeneratorConfigPanel {
 					}
 				}
 			});
+			addInitTransition = this.addCheckBox("dedicated immediate init transition?", config.isCreateDedicatedImmediateStartTransition());
+			
 			degreeOfLoopsSlider = SlickerFactory.instance().createNiceIntegerSlider("loops", 0, 100, 0, Orientation.HORIZONTAL);
 			degreeOfLoopsSlider.setEnabled(containsLoops.isSelected());
 			this.add(degreeOfLoopsSlider);
@@ -78,6 +81,7 @@ public class GeneratorConfigPanel {
 			config.setName(nameField.getText());
 			config.setTransitionSize(Integer.valueOf(numberOfTransitionsField.getText()));
 			config.setContainsLoops(containsLoops.isSelected());
+			config.setCreateDedicatedImmediateStartTransition(addInitTransition.isSelected());
 			config.setDegreeOfParallelism(degreeOfParalellismSlider.getSlider().getValue());
 			config.setDegreeOfExclusiveChoices(degreeOfExclusivitySlider.getSlider().getValue());
 			config.setDegreeOfSequences(degreeOfSequenceSlider.getSlider().getValue());

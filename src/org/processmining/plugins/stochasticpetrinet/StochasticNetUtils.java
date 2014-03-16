@@ -46,6 +46,7 @@ import org.deckfour.xes.model.XTrace;
 import org.deckfour.xes.model.impl.XTraceImpl;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
+import org.processmining.framework.packages.PackageManager;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.connections.petrinets.behavioral.FinalMarkingConnection;
@@ -175,17 +176,22 @@ public class StochasticNetUtils {
 //			e.printStackTrace();
 			System.err.println("Unable to get initial marking connection -> setting a default one (each place without input gets a token).");
 			
-			// creating initial marking with a token on each input place. 
-			initialMarking = new Marking();
-			for (Place p : petriNet.getPlaces()){
-				Collection<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>> inEdges = petriNet.getInEdges(p);
-				if (inEdges == null || inEdges.size() == 0){
-					initialMarking.add(p);
-				}
-			}
+			initialMarking = getDefaultInitialMarking(petriNet);
 		}
 		if (useCache && initialMarking != null){
 			initialMarkings.put(petriNet, initialMarking);
+		}
+		return initialMarking;
+	}
+	public static Marking getDefaultInitialMarking(PetrinetGraph petriNet) {
+		Marking initialMarking;
+		// creating initial marking with a token on each input place. 
+		initialMarking = new Marking();
+		for (Place p : petriNet.getPlaces()){
+			Collection<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>> inEdges = petriNet.getInEdges(p);
+			if (inEdges == null || inEdges.size() == 0){
+				initialMarking.add(p);
+			}
 		}
 		return initialMarking;
 	}
@@ -552,6 +558,7 @@ public class StochasticNetUtils {
 		// select algorithm with ILP
 		PetrinetReplayerILPRestrictedMoveModel replayWithILP = new PetrinetReplayerILPRestrictedMoveModel();
 		if (!initialized){
+			PackageManager.getInstance().setAutoUpdate(false);
 			replayWithILP.isAllReqSatisfied(null, net, log, flattener.getMap(), parameter);
 			initialized = true;
 		}

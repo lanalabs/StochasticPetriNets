@@ -3,11 +3,8 @@ package org.processmining.plugins.pnml.exporting;
 import java.awt.Dimension;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Set;
-import java.util.TreeSet;
 
 import org.processmining.models.connections.GraphLayoutConnection;
 import org.processmining.models.graphbased.AbstractGraphNode;
@@ -62,14 +59,14 @@ public class StochasticNetToPNMLConverter {
 			pnmlPage.getList().add(getPNMLPlace(p,initialMarking,nodeCount++,layout));
 		}
 		int arcCount = 0;
-		Set<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>> arcs = new TreeSet<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>>(new Comparator<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>>() {
-			public int compare(PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> o1,
-					PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> o2) {
-				return getId(o1.getSource()).compareTo(getId(o2.getSource()));
-			}
-		});
-		arcs.addAll(net.getEdges());
-		for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> arc : arcs){
+//		Set<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>> arcs = new TreeSet<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>>(new Comparator<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>>() {
+//			public int compare(PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> o1,
+//					PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> o2) {
+//				return getId(o1.getSource()).compareTo(getId(o2.getSource()));
+//			}
+//		});
+//		arcs.addAll(net.getEdges());
+		for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> arc : net.getEdges()){
 			pnmlPage.getList().add(getPNMLArc(arc, arcCount++,layout));
 		}
 		pnmlPages.add(pnmlPage);
