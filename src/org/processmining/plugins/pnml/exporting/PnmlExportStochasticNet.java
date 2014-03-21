@@ -24,29 +24,21 @@ import org.simpleframework.xml.core.Persister;
 public class PnmlExportStochasticNet {
 
 	@PluginVariant(variantLabel = "PNML export (Stochastic Petri net)", requiredParameterLabels = { 0, 1 })
-	public void exportPetriNetToPNMLFile(PluginContext context, Petrinet net, File file) throws Exception {
-		if (net instanceof StochasticNet){
-			Serializer serializer = new Persister();
-			serializer.write(convertToPNML(context, net), file);
-		} else {
-			throw new IllegalArgumentException("Only stochastic Petri nets supported!");
-		}
+	public void exportPetriNetToPNMLFile(PluginContext context, StochasticNet net, File file) throws Exception {
+		Serializer serializer = new Persister();
+		serializer.write(convertToPNML(context, net), file);
 	}
-	
-	public void exportPetriNetToPNMLFile(PluginContext context, Petrinet net, Writer writer) throws Exception {
-		if (net instanceof StochasticNet){
-			Serializer serializer = new Persister();
-			serializer.write(convertToPNML(context, net), writer);
-		} else {
-			throw new IllegalArgumentException("Only stochastic Petri nets supported!");
-		}
+
+	public void exportPetriNetToPNMLFile(PluginContext context, StochasticNet net, Writer writer) throws Exception {
+		Serializer serializer = new Persister();
+		serializer.write(convertToPNML(context, net), writer);
 	}
 
 	private PNMLRoot convertToPNML(PluginContext context, Petrinet net) {
 		StochasticNetToPNMLConverter converter = new StochasticNetToPNMLConverter();
 		Marking marking = new Marking();
 		try {
-			if (context!=null){
+			if (context != null) {
 				marking = context.tryToFindOrConstructFirstObject(Marking.class, InitialMarkingConnection.class,
 						InitialMarkingConnection.MARKING, net);
 			} else {
@@ -57,7 +49,7 @@ public class PnmlExportStochasticNet {
 		}
 		GraphLayoutConnection layout;
 		try {
-			if (context != null){
+			if (context != null) {
 				layout = context.getConnectionManager().getFirstConnection(GraphLayoutConnection.class, context, net);
 			} else {
 				throw new ConnectionCannotBeObtained("No context available.", GraphLayoutConnection.class);
@@ -65,7 +57,7 @@ public class PnmlExportStochasticNet {
 		} catch (ConnectionCannotBeObtained e) {
 			layout = new GraphLayoutConnection(net);
 		}
-		
+
 		PNMLRoot root = converter.convertNet((StochasticNet) net, marking, layout);
 		return root;
 	}
