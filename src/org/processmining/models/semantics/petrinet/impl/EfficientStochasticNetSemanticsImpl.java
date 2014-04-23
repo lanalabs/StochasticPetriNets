@@ -251,4 +251,12 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 		}
 		return null;
 	}	
+	
+	public Object clone() {
+		//TODO Make more efficient by just cloning all fields
+		EfficientStochasticNetSemanticsImpl clone = new EfficientStochasticNetSemanticsImpl();
+		clone.initialize(Arrays.asList(transitions), getCurrentState());
+		
+		return clone;
+	}
 }
