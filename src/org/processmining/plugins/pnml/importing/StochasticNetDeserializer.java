@@ -183,7 +183,7 @@ public class StochasticNetDeserializer {
 				}
 			}
 		}
-		if (addConnections){
+		if (addConnections && context != null){
 			InitialMarkingConnection conn = new InitialMarkingConnection(net, initialMarking);
 			context.addConnection(conn);
 			LayoutUtils.setLayout(net, layout);
