@@ -96,11 +96,27 @@ public class PNSimulator {
 	 */
 	public XLog simulate(UIPluginContext context, PetrinetGraph petriNet,
 			Semantics<Marking, Transition> semantics, PNSimulatorConfig config, Marking initialMarking) {
-		XLog log = null;
 		Marking finalMarking = null;
 		if (context != null){
 			finalMarking = StochasticNetUtils.getFinalMarking(context, petriNet);
 		}
+		return simulate(context, petriNet, semantics, config, initialMarking, finalMarking);
+	}
+
+	/**
+	 * Performs a simulation according to a given configuration {@link PNSimulatorConfig}
+	 * @param context {@link UIPluginContext} ProM plugin context
+	 * @param petriNet a petri net (preferable with stochastic timing information 
+	 * @param semantics a {@link Semantics} according to which simulation should be performed
+	 * @param config {@link PNSimulatorConfig}
+	 * @param initialMarking
+	 * 
+	 * @param finalMarking
+	 * @return
+	 */
+	public XLog simulate(UIPluginContext context, PetrinetGraph petriNet,
+			Semantics<Marking, Transition> semantics, PNSimulatorConfig config, Marking initialMarking, Marking finalMarking) {
+		XLog log = null;
 		if (initialMarking == null || initialMarking.isEmpty()){
 			if (context!=null){
 				context.log("No initial marking found! Trying to use a default one...");
@@ -147,9 +163,9 @@ public class PNSimulator {
 				long time = System.currentTimeMillis();
 				
 				XTrace trace = createTrace(1);
-				LinkedList<Pair<XTrace,Marking>> statesToVisit = new LinkedList<>();
+				LinkedList<Pair<XTrace,Marking>> statesToVisit = new LinkedList<Pair<XTrace,Marking>>();
 				statesToVisit.add(new Pair<XTrace, Marking>(trace, initialMarking));
-				
+				semantics.initialize(petriNet.getTransitions(), initialMarking);
 				addAllDifferentTracesToLog(log, statesToVisit, semantics, config, finalMarking, time);
 			}
 			
@@ -158,8 +174,9 @@ public class PNSimulator {
 			}
 		}
 		return log;
+		
+		
 	}
-
 	private void addAllDifferentTracesToLog(XLog log, LinkedList<Pair<XTrace, Marking>> statesToVisit,
 			Semantics<Marking, Transition> semantics, PNSimulatorConfig config, Marking finalMarking, long time) {
 		while (!statesToVisit.isEmpty()){

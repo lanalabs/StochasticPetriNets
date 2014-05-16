@@ -14,6 +14,7 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet.Execu
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.StochasticNetSemanticsImpl;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
 
@@ -123,6 +124,30 @@ public class SimulatorTest {
 		
 		Assert.assertNotNull(log);
 		Assert.assertEquals(traces, log.size());
+	}
+	
+	@Test
+	public void testSimulatingComplexModelComplete() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("Parallel_Loop_A-F",true);
+		
+		StochasticNet net = (StochasticNet) netAndMarking[0];
+		Marking marking = (Marking) netAndMarking[1];
+		
+		PNSimulator simulator = new PNSimulator();
+		
+		int traces = 1000;
+		
+		// do a simulation with global preselection:
+		PNSimulatorConfig config = new PNSimulatorConfig(traces,TimeUnit.MINUTES,0,1,15,ExecutionPolicy.RACE_ENABLING_MEMORY);
+		config.setDeterministicBoundedStateSpaceExploration(true);
+		XLog log = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), config, marking, StochasticNetUtils.getFinalMarking(null, net));
+//		for (XTrace trace : log){
+//			System.out.println(StochasticNetUtils.debugTrace(trace));
+//		}
+		
+		Assert.assertNotNull(log);
+		Assert.assertEquals(156, log.size());
+		
 	}
 	
 
