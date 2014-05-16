@@ -12,6 +12,7 @@ import java.util.TreeMap;
 
 import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
+import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.model.XAttributeMap;
 import org.deckfour.xes.model.XEvent;
@@ -101,7 +102,9 @@ public class PNSimulator {
 			finalMarking = StochasticNetUtils.getFinalMarking(context, petriNet);
 		}
 		if (initialMarking == null || initialMarking.isEmpty()){
-			context.log("No initial marking found! Trying to use a default one...");
+			if (context!=null){
+				context.log("No initial marking found! Trying to use a default one...");
+			}
 			StochasticNetUtils.getDefaultInitialMarking(petriNet);
 		}
 		if (config != null) {
@@ -123,25 +126,73 @@ public class PNSimulator {
 				context.getProgress().setMaximum(config.numberOfTraces);
 			}
 
-			// do a trace by trace simulation (assumed independence from each other..)
-			for (int i = 0; i < config.numberOfTraces; i++) {
-				if (context != null){
-					context.getProgress().setValue(i);
+			if (!config.deterministicBoundedStateSpaceExploration){
+				// do a trace by trace simulation (assumed independence from each other..)
+				for (int i = 0; i < config.numberOfTraces; i++) {
+					if (context != null){
+						context.getProgress().setValue(i);
+					}
+	
+					traceStart = getNextArrivalDate(traceStart, config.unitFactor);
+					//Map<Place, List<Long>> placeTimes = new HashMap<Place, List<Long>>();
+					//updatePlaceTimes(initialMarking, traceStart, placeTimes);
+					semantics.initialize(petriNet.getTransitions(), initialMarking);
+					
+					XTrace trace = (XTrace) simulateOneTrace(petriNet, semantics, config, initialMarking, traceStart.getTime(), traceStart.getTime(), i, false, finalMarking);
+					log.add(trace);
 				}
-
-				traceStart = getNextArrivalDate(traceStart, config.unitFactor);
-				//Map<Place, List<Long>> placeTimes = new HashMap<Place, List<Long>>();
-				//updatePlaceTimes(initialMarking, traceStart, placeTimes);
-				semantics.initialize(petriNet.getTransitions(), initialMarking);
+			} else {
+				// explore the state space of the structural model with a breadth first search, 
+				// but produce only valid traces that correctly finish within a certain threshold.
+				long time = System.currentTimeMillis();
 				
-				XTrace trace = (XTrace) simulateOneTrace(petriNet, semantics, config, initialMarking, traceStart.getTime(), traceStart.getTime(), i, false, finalMarking);
-				log.add(trace);
+				XTrace trace = createTrace(1);
+				LinkedList<Pair<XTrace,Marking>> statesToVisit = new LinkedList<>();
+				statesToVisit.add(new Pair<XTrace, Marking>(trace, initialMarking));
+				
+				addAllDifferentTracesToLog(log, statesToVisit, semantics, config, finalMarking, time);
 			}
+			
 			if (context != null){
 				context.log(config.numberOfTraces+" traces generated successfully.");
 			}
 		}
 		return log;
+	}
+
+	private void addAllDifferentTracesToLog(XLog log, LinkedList<Pair<XTrace, Marking>> statesToVisit,
+			Semantics<Marking, Transition> semantics, PNSimulatorConfig config, Marking finalMarking, long time) {
+		while (!statesToVisit.isEmpty()){
+			Pair<XTrace, Marking> currentState = statesToVisit.removeFirst();
+			
+			XTrace prefix = currentState.getFirst();
+			Marking currentMarking = currentState.getSecond();
+			if (currentMarking.equals(finalMarking)){
+				// ensure proper naming:
+				String instance = String.valueOf(log.size());
+				XConceptExtension.instance().assignName(prefix, "tr_"+instance);
+				for (XEvent e : prefix){
+					XConceptExtension.instance().assignInstance(e, instance);	
+				}
+				log.add(prefix);
+			} else if (prefix.size() < config.maxEventsInOneTrace){
+				// explore all executable transitions:
+				semantics.setCurrentState(currentMarking);
+				Collection<Transition> executableTransitions = semantics.getExecutableTransitions();
+				for (Transition t : executableTransitions){
+					semantics.setCurrentState(currentMarking);
+					XTrace clone = (XTrace) prefix.clone();
+					XEvent e = createSimulatedEvent(t.getLabel(), ++time, XConceptExtension.instance().extractName(clone));
+					clone.add(e);
+					try {
+						semantics.executeExecutableTransition(t);
+					} catch (IllegalTransitionException e1) {
+						e1.printStackTrace();
+					}
+					statesToVisit.addLast(new Pair<XTrace, Marking>(clone, semantics.getCurrentState()));
+				}
+			}
+		}
 	}
 
 	/**

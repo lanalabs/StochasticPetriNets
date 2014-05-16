@@ -22,7 +22,7 @@ public class PNSimulatorConfig {
 	/** The random seed to make results reproducible */
 	long seed;
 	
-	/** In case of loopy models, this is useful to prevent unfinite simulation. 
+	/** In case of loopy models, this is useful to prevent infinite simulation. 
 	 * We simply stop simulation for one trace, when this number of events is reached. */
 	int maxEventsInOneTrace;
 	
@@ -43,6 +43,13 @@ public class PNSimulatorConfig {
 	 * the firing selection policy and the memory policy needs to be selected. This is called the execution policy.
 	 */
 	ExecutionPolicy executionPolicy;
+	
+	/**
+	 * For a deterministic mode that tries to cover a large share of the allowed structural behavior in the model.
+	 * In case of loopy models, the state space is infinite! 
+	 * Therefore, only create traces that finish within the given number of {@link #maxEventsInOneTrace}.
+	 */
+	boolean deterministicBoundedStateSpaceExploration = false;
 	
 	/**
 	 * Counter variable to provide a basic form of unique labeling of logs
@@ -94,5 +101,14 @@ public class PNSimulatorConfig {
 		this.maxEventsInOneTrace = maxEventsInOneTrace;
 		this.logName = logName;
 		this.executionPolicy = policy;
-	}	
+	}
+
+	public boolean isDeterministicBoundedStateSpaceExploration() {
+		return deterministicBoundedStateSpaceExploration;
+	}
+
+	public void setDeterministicBoundedStateSpaceExploration(boolean deterministicBoundedStateSpaceExploration) {
+		this.deterministicBoundedStateSpaceExploration = deterministicBoundedStateSpaceExploration;
+	}
+	
 }
