@@ -3,10 +3,12 @@ package org.processmining.plugins.stochasticpetrinet.simulator;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.Random;
+import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
 
@@ -30,6 +32,7 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
+import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.IllegalTransitionException;
@@ -166,7 +169,8 @@ public class PNSimulator {
 				LinkedList<Pair<XTrace,Marking>> statesToVisit = new LinkedList<Pair<XTrace,Marking>>();
 				statesToVisit.add(new Pair<XTrace, Marking>(trace, initialMarking));
 				semantics.initialize(petriNet.getTransitions(), initialMarking);
-				addAllDifferentTracesToLog(log, statesToVisit, semantics, config, finalMarking, time);
+				Marking endPlaces = getEndPlaces(petriNet);
+				addAllDifferentTracesToLog(log, statesToVisit, semantics, new HashMap<String,Set<Integer>>(), config, endPlaces, time);
 			}
 			
 			if (context != null){
@@ -177,14 +181,25 @@ public class PNSimulator {
 		
 		
 	}
+	private Marking getEndPlaces(PetrinetGraph petriNet) {
+		Marking endPlaces = new Marking();
+		for (Place p : petriNet.getPlaces()){
+			if (petriNet.getOutEdges(p).size() == 0){
+				endPlaces.add(p);
+			}
+		}
+		return endPlaces;
+	}
+
 	private void addAllDifferentTracesToLog(XLog log, LinkedList<Pair<XTrace, Marking>> statesToVisit,
-			Semantics<Marking, Transition> semantics, PNSimulatorConfig config, Marking finalMarking, long time) {
+			Semantics<Marking, Transition> semantics, Map<String,Set<Integer>> numberOfDecisionTransitions, PNSimulatorConfig config, Marking endPlaces, long time) {
+		
 		while (!statesToVisit.isEmpty()){
 			Pair<XTrace, Marking> currentState = statesToVisit.removeFirst();
 			
 			XTrace prefix = currentState.getFirst();
 			Marking currentMarking = currentState.getSecond();
-			if (currentMarking.equals(finalMarking)){
+			if (isFinal(currentMarking, endPlaces)){
 				// ensure proper naming:
 				String instance = String.valueOf(log.size());
 				XConceptExtension.instance().assignName(prefix, "tr_"+instance);
@@ -192,24 +207,42 @@ public class PNSimulator {
 					XConceptExtension.instance().assignInstance(e, instance);	
 				}
 				log.add(prefix);
-			} else if (prefix.size() < config.maxEventsInOneTrace){
+//			} else if (prefix.size() < config.maxEventsInOneTrace){
+			} else {
 				// explore all executable transitions:
 				semantics.setCurrentState(currentMarking);
 				Collection<Transition> executableTransitions = semantics.getExecutableTransitions();
+				if (executableTransitions.size() == 0){
+					throw new IllegalArgumentException("Petri net contains a deadlock!");
+				}
 				for (Transition t : executableTransitions){
-					semantics.setCurrentState(currentMarking);
-					XTrace clone = (XTrace) prefix.clone();
-					XEvent e = createSimulatedEvent(t.getLabel(), ++time, XConceptExtension.instance().extractName(clone));
-					clone.add(e);
-					try {
-						semantics.executeExecutableTransition(t);
-					} catch (IllegalTransitionException e1) {
-						e1.printStackTrace();
+					String markingTransitionCombination = currentMarking.toString()+"_"+t.getLabel()+t.getId();
+					if (!numberOfDecisionTransitions.containsKey(markingTransitionCombination)){
+						numberOfDecisionTransitions.put(markingTransitionCombination, new HashSet<Integer>());
 					}
-					statesToVisit.addLast(new Pair<XTrace, Marking>(clone, semantics.getCurrentState()));
+					
+					if (numberOfDecisionTransitions.get(markingTransitionCombination).size() > 2){
+						// do not explore this transition further...
+					} else {
+						numberOfDecisionTransitions.get(markingTransitionCombination).add(prefix.size());
+						semantics.setCurrentState(currentMarking);
+						XTrace clone = (XTrace) prefix.clone();
+						XEvent e = createSimulatedEvent(t.getLabel(), ++time, XConceptExtension.instance().extractName(clone));
+						clone.add(e);
+						try {
+							semantics.executeExecutableTransition(t);
+						} catch (IllegalTransitionException e1) {
+							e1.printStackTrace();
+						}
+						statesToVisit.addLast(new Pair<XTrace, Marking>(clone, semantics.getCurrentState()));
+					}
 				}
 			}
 		}
+	}
+
+	private boolean isFinal(Marking currentMarking, Marking endPlaces) {
+		return currentMarking.isLessOrEqual(endPlaces);
 	}
 
 	/**

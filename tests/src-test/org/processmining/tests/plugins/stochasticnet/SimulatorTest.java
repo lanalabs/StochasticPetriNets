@@ -141,12 +141,12 @@ public class SimulatorTest {
 		PNSimulatorConfig config = new PNSimulatorConfig(traces,TimeUnit.MINUTES,0,1,15,ExecutionPolicy.RACE_ENABLING_MEMORY);
 		config.setDeterministicBoundedStateSpaceExploration(true);
 		XLog log = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), config, marking, StochasticNetUtils.getFinalMarking(null, net));
-//		for (XTrace trace : log){
-//			System.out.println(StochasticNetUtils.debugTrace(trace));
-//		}
+		for (XTrace trace : log){
+			System.out.println(StochasticNetUtils.debugTrace(trace));
+		}
 		
 		Assert.assertNotNull(log);
-		Assert.assertEquals(156, log.size());
+		Assert.assertEquals(157, log.size());
 		
 	}
 	
