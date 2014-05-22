@@ -8,6 +8,7 @@ import java.util.Set;
 import org.processmining.models.graphbased.directed.DirectedGraphNode;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.petrinet.impl.StochasticNetImpl;
@@ -39,22 +40,22 @@ public class IbmToStochasticNetConverter {
 		
 		// add processes
 		for (IbmCallToProcess callProcess : process.getFlowContent().getCallsToProcess()){
-			Transition t = net.addTransition(getProcessName(callProcess.getName()));
+			Transition t = addDefaultTimedTransition(net,getProcessName(callProcess.getName()));
 			pnElementByName.put(callProcess.getName(), t);
 		}
 		// add call tasks
 		for (IbmCallToTask callTask : process.getFlowContent().getCallsToTask()){
-			Transition t = net.addTransition(getTaskName(callTask.getName()));
+			Transition t = addDefaultTimedTransition(net,getTaskName(callTask.getName()));
 			pnElementByName.put(callTask.getName(), t);
 		}
 		// add tasks
 		for (IbmTask callTask : process.getFlowContent().getTasks()){
-			Transition t = net.addTransition(getTaskName(callTask.getName()));
+			Transition t = addDefaultTimedTransition(net,getTaskName(callTask.getName()));
 			pnElementByName.put(callTask.getName(), t);
 		}
 		// add services
 		for (IbmCallToService callService : process.getFlowContent().getCallsToService()){
-			Transition t = net.addTransition(getServiceName(callService.getName()));
+			Transition t = addDefaultTimedTransition(net,getServiceName(callService.getName()));
 			pnElementByName.put(callService.getName(), t);
 		}
 		// add start nodes
@@ -79,6 +80,7 @@ public class IbmToStochasticNetConverter {
 			if (decision.isInclusive()){
 				// and split
 				System.out.println("todo: handle inclusive or split!");
+				throw new IllegalArgumentException("Can't transform models with inclusive OR-splits!");
 			}
 			Place decisionPlace = net.addPlace(getDecisionName(decision.getName()));
 			pnElementByName.put(decision.getName(), decisionPlace);
@@ -179,7 +181,7 @@ public class IbmToStochasticNetConverter {
 								net.addArc(tChoice, (Place)tNode);
 							}
 						} else {
-							Transition arcTransition = net.addTransition(sNode.getLabel()+"_"+tNode.getLabel());
+							Transition arcTransition = net.addImmediateTransition(sNode.getLabel()+"_"+tNode.getLabel());
 							net.addArc((Place) sNode, arcTransition);
 							net.addArc(arcTransition, (Place) tNode);
 						}
@@ -215,6 +217,10 @@ public class IbmToStochasticNetConverter {
 		return net;
 	}
 	
+	private static Transition addDefaultTimedTransition(StochasticNet net, String processName) {
+		return net.addTimedTransition(processName, DistributionType.EXPONENTIAL, 1.0);
+	}
+
 	private static String getPlaceName(String name) {
 		return name+"_place";
 	}

@@ -13,9 +13,9 @@ public class PNMLPage extends AbstractPNMLElement {
 	private String id;
 
 	@ElementListUnion({ 
-		@ElementList(entry = "transition", type = PNMLTransition.class, inline = true),
-		@ElementList(entry = "place", type = PNMLPlace.class, inline = true),
-		@ElementList(entry = "arc", type = PNMLArc.class, inline = true) })
+		@ElementList(entry = "transition", type = PNMLTransition.class, inline = true, required=false),
+		@ElementList(entry = "place", type = PNMLPlace.class, inline = true,required=false),
+		@ElementList(entry = "arc", type = PNMLArc.class, inline = true,required=false) })
 	private List<Object> list;
 
 	public String getId() {

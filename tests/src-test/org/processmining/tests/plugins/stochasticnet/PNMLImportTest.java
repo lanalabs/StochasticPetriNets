@@ -65,7 +65,7 @@ public class PNMLImportTest {
 		PNMLRoot pnml = serializer.read(PNMLRoot.class, source);
 		String netId = pnml.getNet().get(0).getId();
 		Assert.assertEquals("net1", netId);
-		PNMLPage page = pnml.getNet().get(0).getPage().get(0);
+		PNMLPage page = pnml.getNet().get(0).getPage()!=null?pnml.getNet().get(0).getPage().get(0):pnml.getNet().get(0);
 		PNMLTransition transition = (PNMLTransition) page.getList().get(12);
 		Assert.assertEquals("#FFFFFF", transition.getGraphics().getFill().getColor());
 		PNMLArc arc = (PNMLArc) page.getList().get(18);

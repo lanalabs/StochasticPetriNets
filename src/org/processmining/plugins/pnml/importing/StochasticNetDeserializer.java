@@ -4,7 +4,9 @@ import java.awt.Dimension;
 import java.awt.geom.Dimension2D;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -86,7 +88,14 @@ public class StochasticNetDeserializer {
 			}
 		}
 		
-		for (PNMLPage page: pnmlNet.getPage()){
+		Collection<PNMLPage> pages = new LinkedList<>();
+		if (pnmlNet.getPage()!=null && pnmlNet.getPage().size() > 0){
+			pages.addAll(pnmlNet.getPage());
+		} else {
+			pages.add(pnmlNet);
+		}
+		
+		for (PNMLPage page: pages){
 			Dimension2D size = getSize(page);
 			Point2D position = getPosition(page, offset);
 			
@@ -198,6 +207,7 @@ public class StochasticNetDeserializer {
 				context.addConnection(fConn);
 			}
 		}
+		
 		return new Object[]{net,initialMarking,finalMarking};
 	}
 	

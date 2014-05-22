@@ -6,26 +6,26 @@ import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.ElementList;
 import org.simpleframework.xml.Root;
 
-@Root(name="net")
-public class PNMLNet extends AbstractPNMLElement{
+@Root(name="net", strict=false)
+public class PNMLNet extends PNMLPage{
 	public static final String PT_NET_CLASS = "http://www.pnml.org/version-2009/grammar/ptnet";
 	
 	@Attribute(name="type",required=false)
 	private String type;
 	
-	@Attribute(name="id")
-	private String id;
+//	@Attribute(name="id")
+//	private String id;
 	
-	@ElementList(inline=true)
+	@ElementList(inline=true, required=false)
 	private List<PNMLPage> page;
 
-	public String getId() {
-		return id;
-	}
-
-	public void setId(String id) {
-		this.id = id;
-	}
+//	public String getId() {
+//		return id;
+//	}
+//
+//	public void setId(String id) {
+//		this.id = id;
+//	}
 
 	public String getType() {
 		return type;
