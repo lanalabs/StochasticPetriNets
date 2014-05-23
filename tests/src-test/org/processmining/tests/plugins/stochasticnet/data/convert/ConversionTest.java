@@ -81,7 +81,7 @@ public class ConversionTest {
 		}
 //		System.out.println("----\nTotal: "+processes.size());
 	}
-	
+
 	@Ignore
 	@Test
 	public void testMappingConstraints() throws Exception {
@@ -137,6 +137,39 @@ public class ConversionTest {
 					}
 				} 
 				System.out.println("...done.");
+			}
+		}
+	}
+	@Ignore
+	@Test
+	public void testMapper() throws Exception {
+		//String[] names = new String[]{"A"};
+		String[] names = new String[]{"A","B1","B2","B3","C"};
+		
+//				List<IbmProcess> processes = new LinkedList<IbmProcess>();
+		
+		int ignored = 0;
+		
+		for (String name : names){
+			Serializer serializer = new Persister();
+			File source = new File("tests/testfiles/ibm/"+name+".xml");
+
+			IbmModel model = serializer.read(IbmModel.class, source);
+			
+			
+			for (IbmProcess process : model.getProcessModel().getProcesses()){
+				System.out.println("Handling process "+process.getName()+"...");
+				StochasticNet net = null;
+				try{
+					net = IbmToStochasticNetConverter.convertFromIbmProcess(process);
+					net.setExecutionPolicy(ExecutionPolicy.RACE_ENABLING_MEMORY);
+					net.setTimeUnit(TimeUnit.MINUTES);
+				} catch (IllegalArgumentException e){
+					System.out.println("Ignored model "+process.getName()+", due to inclusive or splits.");
+				}
+				if (net != null && new File("tests/testfiles/ibm/converted/"+name+"_"+process.getName()+".xes").exists()){
+					
+				}
 			}
 		}
 	}

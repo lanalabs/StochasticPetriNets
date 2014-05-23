@@ -2,6 +2,7 @@ package org.processmining.tests.plugins.stochasticnet.data.convert;
 
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -19,6 +20,7 @@ import org.processmining.tests.plugins.stochasticnet.data.IbmConnection;
 import org.processmining.tests.plugins.stochasticnet.data.IbmDecision;
 import org.processmining.tests.plugins.stochasticnet.data.IbmEndNode;
 import org.processmining.tests.plugins.stochasticnet.data.IbmFork;
+import org.processmining.tests.plugins.stochasticnet.data.IbmInput;
 import org.processmining.tests.plugins.stochasticnet.data.IbmJoin;
 import org.processmining.tests.plugins.stochasticnet.data.IbmMerge;
 import org.processmining.tests.plugins.stochasticnet.data.IbmOutput;
@@ -37,6 +39,9 @@ public class IbmToStochasticNetConverter {
 		
 		Map<String, IbmOutputBranch> outputBranches = new HashMap<String, IbmOutputBranch>();
 		Set<String> forks = new HashSet<String>();
+		
+		Set<Place> startNodes = new HashSet<Place>();
+		Set<Place> endNodes = new HashSet<Place>();
 		
 		// add processes
 		for (IbmCallToProcess callProcess : process.getFlowContent().getCallsToProcess()){
@@ -58,11 +63,13 @@ public class IbmToStochasticNetConverter {
 			Transition t = addDefaultTimedTransition(net,getServiceName(callService.getName()));
 			pnElementByName.put(callService.getName(), t);
 		}
+		
+		
 		// add start nodes
 		for (IbmStartNode startNode : process.getFlowContent().getStartNodes()){
 			Place startPlace = net.addPlace(getStartNodeName(startNode.getName()));
 			pnElementByName.put(startNode.getName(), startPlace);
-			
+			startNodes.add(startPlace);
 //			Transition startTransition = net.addImmediateTransition(startNode.getName());
 //			pnElementByName.put(startNode.getName(), startTransition);
 //			
@@ -74,6 +81,7 @@ public class IbmToStochasticNetConverter {
 		for (IbmEndNode endNode : process.getFlowContent().getEndNodes()){
 			Place endPlace = net.addPlace(getEndNodeName(endNode.getName()));
 			pnElementByName.put(endNode.getName(), endPlace);
+			endNodes.add(endPlace);
 		}
 		// add splitting gateways
 		for (IbmDecision decision : process.getFlowContent().getDecisions()){
@@ -213,10 +221,71 @@ public class IbmToStochasticNetConverter {
 				}
 			}
 		}
+		// add connections for inputs for nodes that are not connected yet (initial inputs)
+		for (IbmConnection conn : process.getFlowContent().getConnections()){
+			String sourceRef = conn.getSourceNode();
+			String targetRef = conn.getTargetNode();
+			
+			String sourceContactPoint = conn.getSourceContactPoint();
+			String targetContactPoint = conn.getTargetContactPoint();
+			
+			// check inputs
+			if (sourceRef == null && targetRef != null && sourceContactPoint != null && isInput(sourceContactPoint,process.getInputs())){
+				if (pnElementByName.containsKey(targetRef)){
+					DirectedGraphNode targetNode = pnElementByName.get(targetRef);
+					if (targetNode instanceof Transition){
+						if (startNodes.isEmpty()){
+							// create start node
+							Place startNode = net.addPlace("input_start");
+							startNodes.add(startNode);
+							net.addArc(startNodes.iterator().next(), (Transition) targetNode);
+						} else {
+							// connect start node with Transition
+							net.addArc(startNodes.iterator().next(), (Transition) targetNode);
+						}
+					}
+				}
+			}
+			
+			// check outputs
+			if (targetRef == null && sourceRef != null && targetContactPoint != null && isOutput(targetContactPoint,process.getOutputs())){
+				if (pnElementByName.containsKey(sourceRef)){
+					DirectedGraphNode sourceNode = pnElementByName.get(sourceRef);
+					if (sourceNode instanceof Transition) { // ignore places (they are fine)
+						if (endNodes.isEmpty()){
+							// create end place
+							Place endNode = net.addPlace("output_end");
+							endNodes.add(endNode);
+							net.addArc((Transition) sourceNode, endNodes.iterator().next());
+						} else {
+							net.addArc((Transition) sourceNode, endNodes.iterator().next());
+						}
+					}
+				}
+			}
+		}
 		
 		return net;
 	}
 	
+	private static boolean isOutput(String targetContactPoint, List<IbmOutput> outputs) {
+		for (IbmOutput output : outputs){
+			if (output.getName().equals(targetContactPoint)){
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private static boolean isInput(String sourceContactPoint, List<IbmInput> inputs) {	
+		for (IbmInput input : inputs){
+			if (input.getName().equals(sourceContactPoint)){
+				return true;
+			}
+		}
+		return false;
+	}
+
 	private static Transition addDefaultTimedTransition(StochasticNet net, String processName) {
 		return net.addTimedTransition(processName, DistributionType.EXPONENTIAL, 1.0);
 	}
