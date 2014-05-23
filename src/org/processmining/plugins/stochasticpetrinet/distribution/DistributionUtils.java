@@ -7,6 +7,7 @@ import java.util.List;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.complex.Complex;
 import org.apache.commons.math3.distribution.RealDistribution;
+import org.apache.commons.math3.util.FastMath;
 
 public class DistributionUtils {
 
@@ -37,6 +38,14 @@ public class DistributionUtils {
 			realPart[i] = complexValues[i].getReal();
 		}
 		return realPart;
+	}
+	
+	public static double[] getVectorLength(Complex[] complexValues){
+		double[] lengths = new double[complexValues.length];
+		for (int i = 0; i < lengths.length; i++){
+			lengths[i] = FastMath.sqrt(FastMath.pow(complexValues[i].getReal(),2) + FastMath.pow(complexValues[i].getImaginary(), 2));
+		}
+		return lengths;
 	}
 	
 	public static double[] shuffle(double[] values) {

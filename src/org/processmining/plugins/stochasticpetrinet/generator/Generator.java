@@ -271,8 +271,8 @@ public class Generator {
 			case DETERMINISTIC:
 				return new double[]{0.01+(random.nextDouble()*10)};
 			case NORMAL:
-				double mean = random.nextDouble()*10+1; // uniform 1-11
-				double sd = (mean/10)*(random.nextDouble()+0.01); // uniform 
+				double mean = random.nextInt(20)+5; // uniform 1-11
+				double sd = Math.min((int)mean/3.0, 1+(random.nextInt(5))); // uniform 
 				return new double[]{mean,sd};
 			case LOGNORMAL:
 				double logMean = Math.log(random.nextDouble()*10+1);

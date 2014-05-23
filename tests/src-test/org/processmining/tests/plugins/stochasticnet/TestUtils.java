@@ -35,8 +35,8 @@ import org.processmining.plugins.pnml.importing.StochasticNetDeserializer;
 import org.processmining.plugins.pnml.simple.PNMLRoot;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.enricher.experiment.PerformanceEnricherExperimentPlugin;
-import org.processmining.plugins.stochasticpetrinet.enricher.experiment.PerformanceEnricherExperimentPlugin.ExperimentType;
 import org.processmining.plugins.stochasticpetrinet.enricher.experiment.PerformanceEnricherExperimentResult;
+import org.processmining.plugins.stochasticpetrinet.enricher.experiment.PerformanceEnricherExperimentPlugin.ExperimentType;
 import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
 
@@ -95,14 +95,17 @@ public class TestUtils {
 	}
 	
 	public static XLog loadLog(String name) throws Exception {
+		return loadLog(new File("tests/testfiles/"+name));
+	}
+	
+	public static XLog loadLog(File file) throws Exception {
 		XUniversalParser parser = new XUniversalParser();
-		Collection<XLog> logs = parser.parse(new File("tests/testfiles/"+name));
+		Collection<XLog> logs = parser.parse(file);
 		if (logs.size() > 0){
 			return logs.iterator().next();
 		}
 		return null;
 	}
-	
 	public static void saveCSV(String csvContent, String fileName) throws IOException{
 		File resultsFolder = new File("./experimentResults");
 		if (!resultsFolder.exists()){

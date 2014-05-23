@@ -122,7 +122,7 @@ public class OutlierVisualizer implements ActionListener{
 		JPanel infoPanel = new JPanel();
 		infoPanel.setLayout(new BorderLayout());
 		JPanel headerPanel = new JPanel();
-		headerPanel.add(new JLabel("enter outlier rate (recommended value: 0.05)"));
+		headerPanel.add(new JLabel("enter outlier rate (e.g., to find 1 percent: 0.01)"));
 		outlierPercentageField = new JTextField(String.valueOf(analyzer.getOutlierRate()));
 		updateButton = new JButton("update");
 		updateButton.addActionListener(this);

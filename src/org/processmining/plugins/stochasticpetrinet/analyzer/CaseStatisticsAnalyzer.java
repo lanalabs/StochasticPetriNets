@@ -18,6 +18,7 @@ import org.processmining.models.graphbased.directed.petrinet.elements.TimedTrans
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.stochasticpetrinet.distribution.ApproximateDensityDistribution;
+import org.processmining.plugins.stochasticpetrinet.distribution.DiagonalDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.GaussianKernelDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.numeric.ConvolutionHelper;
 
@@ -45,6 +46,8 @@ public class CaseStatisticsAnalyzer {
 	private Map<CaseStatistics, List<ReplayStep>> numberOfIndividualOutliers;
 	private Map<Transition, Double> logLikelihoodCutoffs;
 	private Map<Transition, GaussianKernelDistribution> logLikelihoodDistributions;
+	
+	private Map<String,ApproximateDensityDistribution> logLikelihoodApproximations;
 
 	private Marking initialMarking;
 
@@ -58,6 +61,7 @@ public class CaseStatisticsAnalyzer {
 		this.stochasticNet = stochasticNet;
 		this.initialMarking = initialMarking;
 		this.logLikelihoodDistributions = new HashMap<Transition, GaussianKernelDistribution>();
+		this.logLikelihoodApproximations = new HashMap<String, ApproximateDensityDistribution>();
 		
 		initList();
 	}
@@ -100,6 +104,98 @@ public class CaseStatisticsAnalyzer {
 			outliers = numberOfIndividualOutliers.get(cs).size();
 		}
 		return outliers;
+	}
+	
+	/**
+	 * Returns the likelihood ratio of the {@link ReplayStep} x stemming from an error distribution, 
+	 * or from the original distribution.
+	 * Assume that there is but one child (could use weighted average of scores for multiple children).
+	 * 
+	 * Let's assume an error distribution that can shift the duration of this step and also affect the duration of the next step.
+	 * We compare the joint probability of the two durations x and y (y is the activity that follows x) 
+	 * in the original model that we learned from historical observations
+	 * with the distribution that results when we add an error along the y=-x line. Latter is correct because, if x is a measurement error, it also 
+	 * affects the duration of the child in a conversely. For example, when the end of x is mistakenly measured later, than the duration of y 
+	 * is also affected (it is shorter than expected).
+	 * 
+	 * @param x {@link ReplayStep} to compute the error score for
+	 * @param assumedErrorDistribution the {@link RealDistribution} that is assumed as noise in the data for measurement errors
+	 * @param assumedErrorRate the rate of error occurrence (must be between 0 inclusive and 1 exclusive)
+	 * @return densities of the models:
+	 * <ul> 
+	 * <li>index 0 contains density of p(x,y) original model,</li> 
+	 * <li>index 1 contains density of p(x,y) error-model</li> 
+	 * <li>index 2 contains the weighted ratio for x,y according to the assumed error rate</li>
+	 * 
+	 * <li>index 3 contains density of original p(x)</li>
+	 * <li>index 4 contains density of error-model for p(x)</li>
+	 * <li>index 5 contains the weighted ratio according for x to the assumed error rate</li>
+	 * 
+	 * <li>index 6 contains density of original p(y)</li>
+	 * <li>index 7 contains density of error-model for p(y)</li>
+	 * <li>index 8 contains the weighted ratio according for y to the assumed error rate</li>
+	 * <ul>
+	 */
+	public double[] getModelDensities(ReplayStep x, RealDistribution assumedErrorDistribution, double assumedErrorRate){
+		
+		assert(assumedErrorRate >= 0 && assumedErrorRate <= 1);
+		ApproximateDensityDistribution errorDistributionX = null;
+		ApproximateDensityDistribution errorDistributionY = null;
+		String errorDistName = x.transition.getLabel()+"_error";
+		if (logLikelihoodApproximations.containsKey(errorDistName)){
+			errorDistributionX = logLikelihoodApproximations.get(errorDistName);
+		} else {
+			errorDistributionX = (ApproximateDensityDistribution) ConvolutionHelper.getConvolvedDistribution(x.transition.getDistribution(), assumedErrorDistribution);
+			logLikelihoodApproximations.put(errorDistName,errorDistributionX);
+		}
+			
+			
+		double[] values = computeWeightedScoreBetweenDistributions(x, assumedErrorRate, x.transition.getDistribution(), errorDistributionX);
+		double[] retVal = new double[]{1,1,1, 1,1,1, 1,1,1};
+		for (int i = 0; i < values.length; i++){
+			retVal[3+i] = values[i];
+		}
+		
+		if (x.children.size()>0){
+			// TODO: improve by looking at multiple children (current experiments are mostly sequential)
+			ReplayStep y = x.children.iterator().next();
+			RealDistribution distributionAlongDiagonalProjectedToX = new DiagonalDistribution(x.transition.getDistribution(), 
+					y.transition.getDistribution(), x.duration+y.duration);
+			RealDistribution errorDistributionProjectedToX = ConvolutionHelper.getConvolvedDistribution(distributionAlongDiagonalProjectedToX, assumedErrorDistribution);
+			values =  computeWeightedScoreBetweenDistributions(x, assumedErrorRate, distributionAlongDiagonalProjectedToX,
+					errorDistributionProjectedToX);
+			for (int i = 0; i < values.length; i++){
+				retVal[i] = values[i];
+			}
+			
+			String errorDistNameY = y.transition.getLabel()+"_error";
+			if (logLikelihoodApproximations.containsKey(errorDistNameY)){
+				errorDistributionY = logLikelihoodApproximations.get(errorDistNameY);
+			} else {
+				errorDistributionY = (ApproximateDensityDistribution) ConvolutionHelper.getConvolvedDistribution(y.transition.getDistribution(), assumedErrorDistribution);
+				logLikelihoodApproximations.put(errorDistNameY,errorDistributionY);
+			}
+			values = computeWeightedScoreBetweenDistributions(y, assumedErrorRate, y.transition.getDistribution(), errorDistributionY);
+			for (int i = 0; i < values.length; i++){
+				retVal[6+i] = values[i];
+			}
+		}
+		return retVal;
+	}
+
+	private double[] computeWeightedScoreBetweenDistributions(ReplayStep x, double assumedErrorRate,
+			RealDistribution distributionAlongDiagonalProjectedToX, RealDistribution errorDistributionProjectedToX) {
+		double densityXYAssumingOriginal = distributionAlongDiagonalProjectedToX.density(x.duration);
+		double densityXYAssumingError = errorDistributionProjectedToX.density(x.duration);
+		double densitySum = (1-assumedErrorRate) * densityXYAssumingOriginal + assumedErrorRate * densityXYAssumingError;
+		double errorScore = 0;
+		if (densitySum > 0){
+			errorScore = assumedErrorRate * densityXYAssumingError / densitySum;
+		} else {
+			// value is completely inexplicable according to both models! It must be an error.
+			errorScore = 1;
+		}
+		return new double[]{densityXYAssumingOriginal, densityXYAssumingError, errorScore};
 	}
 	
 	/**
@@ -231,14 +327,20 @@ public class CaseStatisticsAnalyzer {
 	}
 	
 	public double computePValueByApproximateIntegration(RealDistribution dist, double x){
-		int size = 10000;
-		double[] samples = dist.sample(size);
-		for (int i = 0; i < samples.length; i++){
-			samples[i] = Math.log(dist.density(samples[i]));
+		ApproximateDensityDistribution approximateDistribution = null; 
+		if (this.logLikelihoodApproximations.containsKey(dist.toString())){
+			approximateDistribution = this.logLikelihoodApproximations.get(dist.toString());
+		} else {
+			int size = 10000;
+			double[] samples = dist.sample(size);
+			for (int i = 0; i < samples.length; i++){
+				samples[i] = Math.log(dist.density(samples[i]));
+			}
+			GaussianKernelDistribution kernelApproximation = new GaussianKernelDistribution();
+			kernelApproximation.addValues(samples);
+			approximateDistribution = new ApproximateDensityDistribution(kernelApproximation, true);
+			this.logLikelihoodApproximations.put(dist.toString(),approximateDistribution);
 		}
-		GaussianKernelDistribution kernelApproximation = new GaussianKernelDistribution();
-		kernelApproximation.addValues(samples);
-		ApproximateDensityDistribution approximateDistribution = new ApproximateDensityDistribution(kernelApproximation);
 		TrapezoidIntegrator integrator = new TrapezoidIntegrator();
 		if (dist.density(x) == 0){
 			return 0;

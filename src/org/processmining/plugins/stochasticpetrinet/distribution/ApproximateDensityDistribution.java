@@ -26,15 +26,17 @@ public class ApproximateDensityDistribution extends AbstractRealDistribution imp
 	private SliceSampler sampler;
 
 	private double shift;
+
+	private boolean isZero = false;
 	
-	public ApproximateDensityDistribution(RealDistribution dist){
-		this(dist, DEFAULT_SEGMENTS, DEFAULT_CUTOFF);
+	public ApproximateDensityDistribution(RealDistribution dist, boolean sample){
+		this(dist, DEFAULT_SEGMENTS, DEFAULT_CUTOFF, sample);
 	}
 	/**
 	 * Approximates a distribution with a density piecewise line through some sample density points 
 	 * @param dist
 	 */
-	public ApproximateDensityDistribution(RealDistribution dist, int points, double cutoffBelow){
+	public ApproximateDensityDistribution(RealDistribution dist, int points, double cutoffBelow, boolean sample){
 		super(new  Well1024a());
 		min = dist.getSupportLowerBound();
 		if (min == Double.NEGATIVE_INFINITY){
@@ -50,7 +52,7 @@ public class ApproximateDensityDistribution extends AbstractRealDistribution imp
 		}
 		this.binwidth = (max-min)/(densityValues.length-1);
 		this.shift = 0;
-		computeCumulativeValues();
+		computeCumulativeValues(sample);
 	}
 	
 	public ApproximateDensityDistribution(double[] values, double min, double max){
@@ -64,10 +66,10 @@ public class ApproximateDensityDistribution extends AbstractRealDistribution imp
 		this.max = max;
 		this.binwidth = (max-min)/(values.length-1);
 		this.shift = shift;
-		computeCumulativeValues();
+		computeCumulativeValues(true);
 	}
 	
-	private void computeCumulativeValues() {
+	private void computeCumulativeValues(boolean sample) {
 		cumulativeValues = new double[densityValues.length];
 		double maxDens = 0;
 		int modeIndex = 0;
@@ -82,18 +84,27 @@ public class ApproximateDensityDistribution extends AbstractRealDistribution imp
 				cumulativeValues[i] = cumulativeValues[i-1]+densityValues[i]*binwidth;
 			}
 		}
-		mode = modeIndex/(double)densityValues.length *(max-min)+min;
+		mode = min + (modeIndex/(double)densityValues.length) * (max-min) + shift;
 		// scale to 1:
 		double factor = cumulativeValues[cumulativeValues.length-1];
-		assert(Math.abs(1-factor) < 0.1);
-		for (int i = 0; i < cumulativeValues.length; i++){
-			cumulativeValues[i] /= factor;
-			densityValues[i] /= factor;
+		if (factor > 0){
+	//		assert(Math.abs(1-factor) < 0.1);
+			for (int i = 0; i < cumulativeValues.length; i++){
+				cumulativeValues[i] /= factor;
+				densityValues[i] /= factor;
+			}
+			if (sample){
+				this.sampler = new SliceSampler((UnivariateFunction)this, mode, value(mode)/2);
+			}
+		} else {
+			// approximation is entirely 0!
+			isZero  = true;
 		}
-		this.sampler = new SliceSampler((UnivariateFunction)this, mode, value(mode)/2);
  	}
 
 	public double cumulativeProbability(double x) {
+		if (isZero) return 0;
+		
 		x += shift;
 		if (x <= min){
 			return 0;
@@ -113,6 +124,8 @@ public class ApproximateDensityDistribution extends AbstractRealDistribution imp
 	}
 
 	public double density(double x) {
+		if (isZero) return 0;
+		
 		x -= shift;
 		if (x <= min){
 			return 0;
@@ -134,6 +147,8 @@ public class ApproximateDensityDistribution extends AbstractRealDistribution imp
 		return density(x);
 	}
 	public double getNumericalMean() {
+		if (isZero) return 0;
+		
 		if (cachedMean == null){
 			computeNumericalStats();
 		}

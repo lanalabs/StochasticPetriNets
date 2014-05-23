@@ -21,7 +21,7 @@ public class FastDensityFunction implements UnivariateFunction {
 	 * @param step
 	 */
 	public FastDensityFunction(ReplayStep step){
-		this.distribution = new ApproximateDensityDistribution(step.transition.getDistribution());
+		this.distribution = new ApproximateDensityDistribution(step.transition.getDistribution(), true);
 	}
 
 	public double value(double x) {
