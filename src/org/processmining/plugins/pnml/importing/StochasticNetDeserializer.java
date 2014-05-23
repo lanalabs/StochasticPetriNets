@@ -88,7 +88,7 @@ public class StochasticNetDeserializer {
 			}
 		}
 		
-		Collection<PNMLPage> pages = new LinkedList<>();
+		Collection<PNMLPage> pages = new LinkedList<PNMLPage>();
 		if (pnmlNet.getPage()!=null && pnmlNet.getPage().size() > 0){
 			pages.addAll(pnmlNet.getPage());
 		} else {
