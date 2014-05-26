@@ -234,14 +234,21 @@ public class IbmToStochasticNetConverter {
 				if (pnElementByName.containsKey(targetRef)){
 					DirectedGraphNode targetNode = pnElementByName.get(targetRef);
 					if (targetNode instanceof Transition){
-						if (startNodes.isEmpty()){
-							// create start node
-							Place startNode = net.addPlace("input_start");
-							startNodes.add(startNode);
-							net.addArc(startNodes.iterator().next(), (Transition) targetNode);
-						} else {
-							// connect start node with Transition
-							net.addArc(startNodes.iterator().next(), (Transition) targetNode);
+						if (net.getInEdges(targetNode).isEmpty()){
+//							// create start node
+//							Place startNode = net.addPlace("input_start");
+////							startNodes.add(startNode);
+//							net.addArc(startNodes.iterator().next(), (Transition) targetNode);
+//						}
+							if (startNodes.isEmpty()){
+								// create start node
+								Place startNode = net.addPlace("input_start");
+								startNodes.add(startNode);
+								net.addArc(startNodes.iterator().next(), (Transition) targetNode);
+							} else {
+								// connect start node with Transition
+								net.addArc(startNodes.iterator().next(), (Transition) targetNode);
+							}
 						}
 					}
 				}
@@ -252,14 +259,20 @@ public class IbmToStochasticNetConverter {
 				if (pnElementByName.containsKey(sourceRef)){
 					DirectedGraphNode sourceNode = pnElementByName.get(sourceRef);
 					if (sourceNode instanceof Transition) { // ignore places (they are fine)
-						if (endNodes.isEmpty()){
-							// create end place
+						if (net.getOutEdges(sourceNode).isEmpty()){
+							// create end data place
 							Place endNode = net.addPlace("output_end");
-							endNodes.add(endNode);
-							net.addArc((Transition) sourceNode, endNodes.iterator().next());
-						} else {
-							net.addArc((Transition) sourceNode, endNodes.iterator().next());
+//							endNodes.add(endNode);
+							net.addArc((Transition) sourceNode, endNode);
 						}
+//						if (endNodes.isEmpty()){
+//							// create end place
+//							Place endNode = net.addPlace("output_end");
+//							endNodes.add(endNode);
+//							net.addArc((Transition) sourceNode, endNodes.iterator().next());
+//						} else {
+//							net.addArc((Transition) sourceNode, endNodes.iterator().next());
+//						}
 					}
 				}
 			}

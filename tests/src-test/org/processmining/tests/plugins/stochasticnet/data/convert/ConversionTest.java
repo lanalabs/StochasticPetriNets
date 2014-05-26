@@ -26,7 +26,7 @@ import org.simpleframework.xml.core.Persister;
 
 public class ConversionTest {
 
-	@Ignore
+//	@Ignore
 	@Test
 	public void testConversion() throws Exception {
 		
@@ -52,7 +52,7 @@ public class ConversionTest {
 					net.setExecutionPolicy(ExecutionPolicy.RACE_ENABLING_MEMORY);
 					net.setTimeUnit(TimeUnit.MINUTES);
 					
-					File file = new File("tests/testfiles/ibm/converted/"+name+"_"+process.getName()+".pnml");
+					File file = new File("tests/testfiles/ibm/converted2/"+name+"_"+process.getName()+".pnml");
 					if (!file.exists()){
 						file.createNewFile();
 					}
@@ -82,7 +82,7 @@ public class ConversionTest {
 //		System.out.println("----\nTotal: "+processes.size());
 	}
 
-	@Ignore
+//	@Ignore
 	@Test
 	public void testMappingConstraints() throws Exception {
 		//String[] names = new String[]{"A"};
@@ -123,7 +123,7 @@ public class ConversionTest {
 						XLog log = simulator.simulate(null, net, semantics, simConfig, initialMarking);
 						
 						
-						File logFile = new File("tests/testfiles/ibm/converted/"+name+"_"+process.getName()+".xes");
+						File logFile = new File("tests/testfiles/ibm/converted2/"+name+"_"+process.getName()+".xes");
 						if (!logFile.exists()){
 							logFile.createNewFile();
 						}
@@ -134,6 +134,8 @@ public class ConversionTest {
 						System.out.println(process.getName()+": simulated "+log.size()+" traces in "+(System.currentTimeMillis()-beforeSimulation)+"ms.");
 					} catch (IllegalArgumentException e) {
 						System.err.println(process.getName()+" simulation error: "+e.getMessage());
+					} catch (OutOfMemoryError oome){
+						System.err.println(process.getName()+" simulation error: "+oome.getMessage());
 					}
 				} 
 				System.out.println("...done.");
