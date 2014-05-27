@@ -136,6 +136,7 @@ public class IbmToStochasticNetConverter {
 		
 		for (IbmFork fork : process.getFlowContent().getForks()){
 			Transition forkTransition = net.addImmediateTransition(fork.getName());
+			forkTransition.setInvisible(true);
 			pnElementByName.put(fork.getName(), forkTransition);
 //			for (IbmOutputBranch outputBranch : fork.getOutputBranches()){
 //				Place forkPlace = net.addPlace(outputBranch.getName());
@@ -147,6 +148,7 @@ public class IbmToStochasticNetConverter {
 		
 		for (IbmJoin join : process.getFlowContent().getJoins()){
 			Transition joinTransition = net.addImmediateTransition(join.getName());
+			joinTransition.setInvisible(true);
 			pnElementByName.put(join.getName(), joinTransition);
 //			for (IbmInputBranch inputBranch : join.getInputBranches()){
 //				// connect later...
@@ -190,6 +192,7 @@ public class IbmToStochasticNetConverter {
 							}
 						} else {
 							Transition arcTransition = net.addImmediateTransition(sNode.getLabel()+"_"+tNode.getLabel());
+							arcTransition.setInvisible(true);
 							net.addArc((Place) sNode, arcTransition);
 							net.addArc(arcTransition, (Place) tNode);
 						}

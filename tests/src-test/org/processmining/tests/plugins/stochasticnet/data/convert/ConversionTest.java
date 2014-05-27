@@ -109,10 +109,11 @@ public class ConversionTest {
 				} catch (IllegalArgumentException e){
 					System.out.println("Ignored model "+process.getName()+", due to inclusive or splits.");
 				}
-				if (net != null){
+				if (net != null && net.getTransitions() != null && net.getTransitions().size() > 0){
 					PNSimulator simulator = new PNSimulator();
 					PNSimulatorConfig simConfig = new PNSimulatorConfig(100, TimeUnit.MINUTES);
 					simConfig.setDeterministicBoundedStateSpaceExploration(true);
+					simConfig.setAllowUnbounded(false);
 					
 					StochasticNetSemantics semantics = new EfficientStochasticNetSemanticsImpl();
 					Marking initialMarking = StochasticNetUtils.getInitialMarking(null,net);
@@ -123,7 +124,7 @@ public class ConversionTest {
 						XLog log = simulator.simulate(null, net, semantics, simConfig, initialMarking);
 						
 						
-						File logFile = new File("tests/testfiles/ibm/converted2/"+name+"_"+process.getName()+".xes");
+						File logFile = new File("tests/testfiles/ibm/converted2/"+name+"_"+process.getName()+".xes.gz");
 						if (!logFile.exists()){
 							logFile.createNewFile();
 						}

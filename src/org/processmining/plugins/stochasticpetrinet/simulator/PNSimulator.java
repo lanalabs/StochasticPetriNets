@@ -71,6 +71,8 @@ public class PNSimulator {
 	 * Stores the time of the last step in the simulation.
 	 */
 	long lastFiringTime;
+	
+	Marking oneMarking;
 
 	public PNSimulator(){
 		transitionRemainingTimes = new HashMap<Transition, Long>();
@@ -126,6 +128,9 @@ public class PNSimulator {
 			}
 			StochasticNetUtils.getDefaultInitialMarking(petriNet);
 		}
+		if (oneMarking == null){
+			oneMarking = new Marking(petriNet.getPlaces());
+		}
 		if (config != null) {
 			arrivalDistribution = new ExponentialDistribution(config.arrivalRate);
 			transitionRemainingTimes = new HashMap<Transition, Long>();
@@ -170,6 +175,9 @@ public class PNSimulator {
 				statesToVisit.add(new Pair<XTrace, Marking>(trace, initialMarking));
 				semantics.initialize(petriNet.getTransitions(), initialMarking);
 				Marking endPlaces = getEndPlaces(petriNet);
+				if (petriNet.getLabel().equals("s00000633##s00004419")){
+					throw new IllegalArgumentException("Too many states!");
+				}
 				addAllDifferentTracesToLog(log, statesToVisit, semantics, new HashMap<String,Set<Integer>>(), config, endPlaces, time);
 			}
 			
@@ -199,6 +207,20 @@ public class PNSimulator {
 			
 			XTrace prefix = currentState.getFirst();
 			Marking currentMarking = currentState.getSecond();
+			
+			if (prefix.size() > config.maxEventsInOneTrace){
+				throw new IllegalArgumentException("Petri net contains a potential lifelock!");
+			}
+			if (!config.allowUnbounded && !isOneBounded(currentMarking)){
+				throw new IllegalArgumentException("Petri net is not 1-bounded!");
+			}
+			if (statesToVisit.size() > Math.max(config.maxEventsInOneTrace*10, 40000)){
+				throw new IllegalArgumentException("Too many states!");
+			}
+			if (log.size() > Math.max(config.maxEventsInOneTrace,10000)){
+				throw new IllegalArgumentException("Too many states!");
+			} 
+			
 			if (isFinal(currentMarking, endPlaces)){
 				// ensure proper naming:
 				String instance = String.valueOf(log.size());
@@ -207,7 +229,6 @@ public class PNSimulator {
 					XConceptExtension.instance().assignInstance(e, instance);	
 				}
 				log.add(prefix);
-//			} else if (prefix.size() < config.maxEventsInOneTrace){
 			} else {
 				// explore all executable transitions:
 				semantics.setCurrentState(currentMarking);
@@ -227,8 +248,10 @@ public class PNSimulator {
 						numberOfDecisionTransitions.get(markingTransitionCombination).add(prefix.size());
 						semantics.setCurrentState(currentMarking);
 						XTrace clone = (XTrace) prefix.clone();
-						XEvent e = createSimulatedEvent(t.getLabel(), ++time, XConceptExtension.instance().extractName(clone));
-						clone.add(e);
+						if (!t.isInvisible()){
+							XEvent e = createSimulatedEvent(t.getLabel(), ++time, XConceptExtension.instance().extractName(clone));
+							clone.add(e);
+						}
 						try {
 							semantics.executeExecutableTransition(t);
 						} catch (IllegalTransitionException e1) {
@@ -239,6 +262,10 @@ public class PNSimulator {
 				}
 			}
 		}
+	}
+
+	private boolean isOneBounded(Marking currentMarking) {
+		return currentMarking.isLessOrEqual(oneMarking);
 	}
 
 	private boolean isFinal(Marking currentMarking, Marking endPlaces) {
