@@ -3,7 +3,6 @@ package org.processmining.plugins.stochasticpetrinet.simulator;
 import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.Map;
@@ -237,10 +236,10 @@ public class PNSimulator {
 					throw new IllegalArgumentException("Petri net contains a deadlock!");
 				}
 				for (Transition t : executableTransitions){
-					String markingTransitionCombination = currentMarking.toString()+"_"+t.getLabel()+t.getId();
-					if (!numberOfDecisionTransitions.containsKey(markingTransitionCombination)){
-						numberOfDecisionTransitions.put(markingTransitionCombination, new HashSet<Integer>());
-					}
+//					String markingTransitionCombination = currentMarking.toString()+"_"+t.getLabel()+t.getId();
+//					if (!numberOfDecisionTransitions.containsKey(markingTransitionCombination)){
+//						numberOfDecisionTransitions.put(markingTransitionCombination, new HashSet<Integer>());
+//					}
 					
 					int numberOfTimesAlreadyInTrace = 0;
 					
@@ -250,10 +249,12 @@ public class PNSimulator {
 						}
 					}
 					
-					if (numberOfDecisionTransitions.get(markingTransitionCombination).size() > 5 || numberOfTimesAlreadyInTrace >= 2){
+					if (numberOfTimesAlreadyInTrace >= 2){
+						// old version: numberOfDecisionTransitions.get(markingTransitionCombination).size() > 5
+						
 						// do not explore this transition further...
 					} else {
-						numberOfDecisionTransitions.get(markingTransitionCombination).add(prefix.size());
+//						numberOfDecisionTransitions.get(markingTransitionCombination).add(prefix.size());
 						semantics.setCurrentState(currentMarking);
 						XTrace clone = (XTrace) prefix.clone();
 						if (!t.isInvisible()){
