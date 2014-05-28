@@ -10,8 +10,11 @@ import org.deckfour.xes.model.XTrace;
 import org.junit.Assert;
 import org.junit.Test;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
+import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
+import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.StochasticNetSemanticsImpl;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
@@ -146,7 +149,36 @@ public class SimulatorTest {
 		}
 		
 		Assert.assertNotNull(log);
-		Assert.assertEquals(157, log.size());
+		Assert.assertEquals(156, log.size());
+		
+	}
+	
+	@Test
+	public void testLoopyCompleteModel() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("loopy_realistic", true);
+		StochasticNet net = (StochasticNet) netAndMarking[0];
+		Marking initialMarking = (Marking) netAndMarking[1];
+		
+		for (Transition t : net.getTransitions()){
+			if (t instanceof TimedTransition && ((TimedTransition) t).getDistributionType().equals(DistributionType.IMMEDIATE)){
+				t.setInvisible(true);
+			}
+		}
+		
+		PNSimulator simulator = new PNSimulator();
+		
+		int traces = 1000;
+		
+		// do a simulation with global preselection:
+		PNSimulatorConfig config = new PNSimulatorConfig(traces,TimeUnit.MINUTES,0,1,15,ExecutionPolicy.RACE_ENABLING_MEMORY);
+		config.setDeterministicBoundedStateSpaceExploration(true);
+		XLog log = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), config, initialMarking, StochasticNetUtils.getFinalMarking(null, net));
+		for (XTrace trace : log){
+			System.out.println(StochasticNetUtils.debugTrace(trace));
+		}
+		
+		Assert.assertNotNull(log);
+		Assert.assertEquals(96, log.size());
 		
 	}
 	
@@ -169,5 +201,6 @@ public class SimulatorTest {
 	}
 
 
+	
 
 }

@@ -208,18 +208,18 @@ public class PNSimulator {
 			XTrace prefix = currentState.getFirst();
 			Marking currentMarking = currentState.getSecond();
 			
-			if (prefix.size() > config.maxEventsInOneTrace){
-				throw new IllegalArgumentException("Petri net contains a potential lifelock!");
-			}
+//			if (prefix.size() > config.maxEventsInOneTrace*10){
+//				throw new IllegalArgumentException("Petri net contains a potential lifelock!");
+//			}
 			if (!config.allowUnbounded && !isOneBounded(currentMarking)){
 				throw new IllegalArgumentException("Petri net is not 1-bounded!");
 			}
-			if (statesToVisit.size() > Math.max(config.maxEventsInOneTrace*10, 40000)){
+			if (statesToVisit.size() > config.maxEventsInOneTrace*10){
 				throw new IllegalArgumentException("Too many states!");
 			}
-			if (log.size() > Math.max(config.maxEventsInOneTrace,10000)){
+			if (log.size() >config.maxEventsInOneTrace){
 				throw new IllegalArgumentException("Too many states!");
-			} 
+			}
 			
 			if (isFinal(currentMarking, endPlaces)){
 				// ensure proper naming:
@@ -242,7 +242,15 @@ public class PNSimulator {
 						numberOfDecisionTransitions.put(markingTransitionCombination, new HashSet<Integer>());
 					}
 					
-					if (numberOfDecisionTransitions.get(markingTransitionCombination).size() > 2){
+					int numberOfTimesAlreadyInTrace = 0;
+					
+					for (XEvent event : prefix){
+						if (XConceptExtension.instance().extractName(event).equals(t.getLabel())){
+							numberOfTimesAlreadyInTrace++;
+						}
+					}
+					
+					if (numberOfDecisionTransitions.get(markingTransitionCombination).size() > 5 || numberOfTimesAlreadyInTrace >= 2){
 						// do not explore this transition further...
 					} else {
 						numberOfDecisionTransitions.get(markingTransitionCombination).add(prefix.size());

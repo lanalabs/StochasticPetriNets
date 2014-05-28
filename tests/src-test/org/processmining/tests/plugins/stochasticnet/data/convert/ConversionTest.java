@@ -111,7 +111,7 @@ public class ConversionTest {
 				}
 				if (net != null && net.getTransitions() != null && net.getTransitions().size() > 0){
 					PNSimulator simulator = new PNSimulator();
-					PNSimulatorConfig simConfig = new PNSimulatorConfig(100, TimeUnit.MINUTES);
+					PNSimulatorConfig simConfig = new PNSimulatorConfig(1000, TimeUnit.MINUTES);
 					simConfig.setDeterministicBoundedStateSpaceExploration(true);
 					simConfig.setAllowUnbounded(false);
 					
