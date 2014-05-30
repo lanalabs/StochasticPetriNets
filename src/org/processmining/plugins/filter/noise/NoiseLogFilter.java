@@ -150,7 +150,7 @@ public class NoiseLogFilter {
 				// in case of ADD_EVENTS, add events randomly to the trace
 				for (XEvent e : duplicatedEvents) {
 					adjustTimeStampOfNewEvent(random, xTime, traceBounds, e);
-					XConceptExtension.instance().assignName(e, "random_exception_event_"+random.nextInt());
+//					XConceptExtension.instance().assignName(e, "random_exception_event_"+random.nextInt());
 					copy.insertOrdered(e);
 				}
 			} catch (Exception e) {

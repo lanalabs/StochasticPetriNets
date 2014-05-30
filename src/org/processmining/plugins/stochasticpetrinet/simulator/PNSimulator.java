@@ -14,6 +14,7 @@ import java.util.TreeMap;
 import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.deckfour.xes.extension.std.XConceptExtension;
+import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.model.XAttributeMap;
 import org.deckfour.xes.model.XEvent;
@@ -170,14 +171,14 @@ public class PNSimulator {
 				long time = System.currentTimeMillis();
 				
 				XTrace trace = createTrace(1);
-				LinkedList<Pair<XTrace,Marking>> statesToVisit = new LinkedList<Pair<XTrace,Marking>>();
-				statesToVisit.add(new Pair<XTrace, Marking>(trace, initialMarking));
+				LinkedList<Pair<Pair<XTrace,Marking>,Long>> statesToVisit = new LinkedList<Pair<Pair<XTrace,Marking>,Long>>();
+				statesToVisit.add(new Pair<Pair<XTrace, Marking>,Long>(new Pair<XTrace,Marking>(trace, initialMarking),time));
 				semantics.initialize(petriNet.getTransitions(), initialMarking);
 				Marking endPlaces = getEndPlaces(petriNet);
 				if (petriNet.getLabel().equals("s00000633##s00004419")){
 					throw new IllegalArgumentException("Too many states!");
 				}
-				addAllDifferentTracesToLog(log, statesToVisit, semantics, new HashMap<String,Set<Integer>>(), config, endPlaces, time);
+				addAllDifferentTracesToLog(log, statesToVisit, semantics, new HashMap<String,Set<Integer>>(), config, endPlaces);
 			}
 			
 			if (context != null){
@@ -198,12 +199,13 @@ public class PNSimulator {
 		return endPlaces;
 	}
 
-	private void addAllDifferentTracesToLog(XLog log, LinkedList<Pair<XTrace, Marking>> statesToVisit,
-			Semantics<Marking, Transition> semantics, Map<String,Set<Integer>> numberOfDecisionTransitions, PNSimulatorConfig config, Marking endPlaces, long time) {
+	private void addAllDifferentTracesToLog(XLog log, LinkedList<Pair<Pair<XTrace, Marking>,Long>> statesToVisit,
+			Semantics<Marking, Transition> semantics, Map<String,Set<Integer>> numberOfDecisionTransitions, PNSimulatorConfig config, Marking endPlaces) {
 		
 		while (!statesToVisit.isEmpty()){
-			Pair<XTrace, Marking> currentState = statesToVisit.removeFirst();
-			
+			Pair<Pair<XTrace, Marking>,Long> currentStateWithTime = statesToVisit.removeFirst();
+			Pair<XTrace, Marking> currentState = currentStateWithTime.getFirst();
+			long time = currentStateWithTime.getSecond();
 			XTrace prefix = currentState.getFirst();
 			Marking currentMarking = currentState.getSecond();
 			
@@ -258,7 +260,13 @@ public class PNSimulator {
 						semantics.setCurrentState(currentMarking);
 						XTrace clone = (XTrace) prefix.clone();
 						if (!t.isInvisible()){
-							XEvent e = createSimulatedEvent(t.getLabel(), ++time, XConceptExtension.instance().extractName(clone));
+							if (!prefix.isEmpty()){
+								long lastEventTime = XTimeExtension.instance().extractTimestamp(prefix.get(prefix.size()-1)).getTime();
+								time = Math.max(time, lastEventTime);
+							}
+								
+							time += (long)(config.unitFactor.getUnitFactorToMillis()*StochasticNetUtils.sampleWithConstraint((TimedTransition) t, 0.1));
+							XEvent e = createSimulatedEvent(t.getLabel(), time, XConceptExtension.instance().extractName(clone));
 							clone.add(e);
 						}
 						try {
@@ -266,7 +274,7 @@ public class PNSimulator {
 						} catch (IllegalTransitionException e1) {
 							e1.printStackTrace();
 						}
-						statesToVisit.addLast(new Pair<XTrace, Marking>(clone, semantics.getCurrentState()));
+						statesToVisit.addLast(new Pair<Pair<XTrace,Marking>,Long>(new Pair<XTrace, Marking>(clone, semantics.getCurrentState()),time));
 					}
 				}
 			}

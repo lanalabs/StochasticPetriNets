@@ -303,7 +303,7 @@ public class IbmToStochasticNetConverter {
 	}
 
 	private static Transition addDefaultTimedTransition(StochasticNet net, String processName) {
-		return net.addTimedTransition(processName, DistributionType.EXPONENTIAL, 1.0);
+		return net.addTimedTransition(processName, DistributionType.NORMAL, 100,10);
 	}
 
 	private static String getPlaceName(String name) {
