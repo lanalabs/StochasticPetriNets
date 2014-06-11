@@ -20,8 +20,8 @@ import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.apache.commons.math.util.MathUtils;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.apache.commons.math3.util.ArithmeticUtils;
 import org.deckfour.xes.classification.XEventClass;
 import org.deckfour.xes.classification.XEventClasses;
 import org.deckfour.xes.classification.XEventClassifier;
@@ -82,7 +82,7 @@ public class OptimalSelectionPredictionTest {
 		List<List<Integer>> possibilities = fillPossibilities(n,k,0);
 		System.out.println("n ("+n+") choose k ("+k+"):");
 		System.out.println(possibilities);
-		Assert.assertEquals(MathUtils.binomialCoefficient(n, k), possibilities.size());
+		Assert.assertEquals(ArithmeticUtils.binomialCoefficient(n, k), possibilities.size());
 	}
 	
 	public void runAllCombinations() throws Exception{
@@ -125,7 +125,7 @@ public class OptimalSelectionPredictionTest {
 		Map<String[],DescriptiveStatistics[]> predictionErrors = new HashMap<String[],DescriptiveStatistics[]>();
 		int n = selectableTransitions.size();
 		boolean optimal = false;
-		long number = org.apache.commons.math.util.MathUtils.binomialCoefficient(n, k);
+		long number = ArithmeticUtils.binomialCoefficient(n, k);
 		if (number > 150){
 			for (int i = 0; i < RANDOM_COUNT; i++){
 				String[] randomlySelected = selectRandomly(selectableTransitions,k);

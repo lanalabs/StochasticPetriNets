@@ -1,6 +1,6 @@
 package org.processmining.models.graphbased.directed.petrinet;
 
-import org.apache.commons.math.distribution.NormalDistribution;
+import org.apache.commons.math3.distribution.NormalDistribution;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 
 /**
