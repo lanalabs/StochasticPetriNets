@@ -16,6 +16,7 @@ public class PNMLToolSpecific {
 	public static final String EXECUTION_POLICY = "executionPolicy";
 	public static final String PRIORITY = "priority";
 	public static final String WEIGHT = "weight";
+	public static final String INVISIBLE = "invisible";
 	public static final String DISTRIBUTION_TYPE = "distributionType";
 	public static final String DISTRIBUTION_PARAMETERS = "distributionParameters";
 	public static final String VALUES_SEPARATOR = ";";
