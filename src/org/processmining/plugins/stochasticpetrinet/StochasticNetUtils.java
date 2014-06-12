@@ -20,10 +20,10 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.Map.Entry;
 
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -505,7 +505,11 @@ public class StochasticNetUtils {
 			if (!s.isEmpty()){
 				s += ", ";
 			}
-			s += XConceptExtension.instance().extractName(e)+"("+format.format(getTraceDate(e))+")";
+			Date eventTime = getTraceDate(e);
+			s += XConceptExtension.instance().extractName(e);
+			if (eventTime != null){
+				s += "("+format.format(eventTime)+")"; 
+			}
 		}
 		return s;
 	}
