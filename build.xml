@@ -142,6 +142,7 @@
 							<dependency name="PNetReplayer"/>
 							<dependency name="TransitionSystems"/>
 							<dependency name="Widgets"/>
+							<dependency name="BasicUtils"/>
 						</package>
 					</packages>
 				</echoxml>

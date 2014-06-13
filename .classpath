@@ -48,9 +48,6 @@
 	<classpathentry kind="lib" path="lib/simple-xml-2.7.jar"/>
 	<classpathentry kind="lib" path="packagelib/PNetReplayer.jar"/>
 	<classpathentry kind="lib" path="packagelib/PNetAlignmentAnalysis.jar"/>
-	<classpathentry kind="lib" path="packagelib/PNetReplayer-lib/javailp-1.2a.jar"/>
-	<classpathentry kind="lib" path="packagelib/PNetReplayer-lib/lpsolve55j.jar"/>
-	<classpathentry kind="lib" path="packagelib/PNetReplayer-lib/trove-3.0.1.jar"/>
 	<classpathentry kind="lib" path="stdlib/EfficientStorage.jar"/>
 	<classpathentry kind="lib" path="lib/JRI.jar"/>
 	<classpathentry kind="lib" path="lib/JRIEngine.jar"/>
@@ -58,5 +55,7 @@
 	<classpathentry kind="lib" path="stdlib/guava-16.0.1.jar"/>
 	<classpathentry kind="lib" path="packagelib/Log-lib/OpenXES-XStream.jar"/>
 	<classpathentry kind="lib" path="packagelib/Log-lib/OpenXES.jar"/>
+	<classpathentry kind="lib" path="packagelib/BasicUtils-lib/javailp-1.2a.jar"/>
+	<classpathentry kind="lib" path="packagelib/BasicUtils-lib/trove-3.0.3.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
