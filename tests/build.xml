@@ -81,6 +81,9 @@
 		<!-- where to store the cobertura logging information -->
 
 	<property name="cobertura.datafile" location="${test.basedir}/cobertura.ser" />
+	
+	<!-- Added backward compatibility for tests -->
+	<!--<property name="coverage.additional.jvmargs" value="-Xmx512m -XX:-UseSplitVerifier"/>-->
 
 	<!-- instrument all classes specified in classes.coveragereport -->
 	<target name="prepare-cobertura">
@@ -109,6 +112,7 @@
 	    	<jvmarg value="-ea"/>
 	    	<jvmarg value="-Xmx1G"/>
 	    	<jvmarg value="-Djava.library.path=.//lib;.//stdlib;.//packagelib"/>
+	    	<jvmarg value="-XX:-UseSplitVerifier"/>
 	    	<!-- fixed location for cobertura to log method calls and generate report from -->
 	    	<jvmarg value="-Dnet.sourceforge.cobertura.datafile=${cobertura.datafile}"/>
 	    	
