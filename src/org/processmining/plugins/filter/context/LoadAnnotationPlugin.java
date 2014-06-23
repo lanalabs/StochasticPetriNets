@@ -33,6 +33,8 @@ import org.processmining.framework.plugin.annotations.Plugin;
  */
 public class LoadAnnotationPlugin {
 
+	public static final String CONTEXT_LOAD = "context:load";
+	
 	/**
 	 * Count the number of active cases in the process and add the count to each instance
 	 */
@@ -101,7 +103,7 @@ public class LoadAnnotationPlugin {
 			XTrace traceCopy = XFactoryRegistry.instance().currentDefault().createTrace((XAttributeMap) trace.getAttributes().clone());
 			for (XEvent event : trace){
 				XEvent eventCopy = XFactoryRegistry.instance().currentDefault().createEvent((XAttributeMap) event.getAttributes().clone());
-				eventCopy.getAttributes().put("context:load", new XAttributeDiscreteImpl("context:load", loadInEvent.get(event)));
+				eventCopy.getAttributes().put(CONTEXT_LOAD, new XAttributeDiscreteImpl(CONTEXT_LOAD, loadInEvent.get(event)));
 				traceCopy.add(eventCopy);
 			}
 			enrichedLog.add(traceCopy);
