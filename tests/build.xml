@@ -97,7 +97,7 @@
 		<javac classpathref="classpath.test"
 			srcdir="${dir.test-src}"
          	destdir="${dir.test-bin}"
-         	debug="on" />
+         	debug="on" source="1.7" target="1.7"/>
 	</target>
          		
 	<!-- run tests -->
@@ -124,6 +124,7 @@
 
 	      <!-- JUnit: test cases to run -->
     	  <sysproperty key="test.testFileRoot" path="${dir.testfiles}"/>
+	      <test name="org.processmining.tests.plugins.stochasticnet.FilterTest" todir="${test.basedir}" />
 	      <test name="org.processmining.tests.plugins.stochasticnet.PNMLImportTest" todir="${test.basedir}" />
           <test name="org.processmining.tests.plugins.stochasticnet.TruncatedDistributionTest" todir="${test.basedir}" />
 	    </junit>
