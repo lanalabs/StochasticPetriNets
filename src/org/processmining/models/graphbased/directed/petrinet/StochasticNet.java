@@ -178,4 +178,5 @@ public interface StochasticNet extends ResetNet, Petrinet{
 	// timed transitions
 	public TimedTransition addTimedTransition(String label, DistributionType type, double... distributionParameters);
 	public TimedTransition addTimedTransition(String label, double weight, DistributionType type, double... distributionParameters);
+	public TimedTransition addTimedTransition(String label, double weight, DistributionType type, String trainingData, double... distributionParameters);
 }

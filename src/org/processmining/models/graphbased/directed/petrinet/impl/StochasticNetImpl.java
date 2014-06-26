@@ -64,10 +64,16 @@ public class StochasticNetImpl extends AbstractResetInhibitorNet implements Stoc
 
 	public TimedTransition addTimedTransition(String label, double weight, DistributionType type,
 			double... distributionParameters) {
+		return addTimedTransition(label, weight, type, "", distributionParameters);
+	}
+	
+	public TimedTransition addTimedTransition(String label, double weight, DistributionType type,
+			String trainingData, double... distributionParameters) {
 		TimedTransition t = new TimedTransition(label, this, null, weight, 0, type, distributionParameters);
 		transitions.add(t);
 		nodes.add(t);
 		graphElementAdded(t);
+		t.setTrainingData(trainingData);
 		return t;
 	}
 

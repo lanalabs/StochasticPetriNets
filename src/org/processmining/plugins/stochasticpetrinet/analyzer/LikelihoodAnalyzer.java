@@ -29,7 +29,7 @@ public class LikelihoodAnalyzer {
 		PerformanceEnricherConfig mineConfig = new PerformanceEnricherConfig(DistributionType.EXPONENTIAL, net.getTimeUnit(), net.getExecutionPolicy(), null);
 		
 		StochasticManifestCollector performanceCollector = new StochasticManifestCollector((ManifestEvClassPattern) manifest,  mineConfig);
-		performanceCollector.collectDataFromManifest();
+		performanceCollector.collectDataFromManifest(null);
 		CaseStatisticsList logLikelihoods = new CaseStatisticsList();
 		for (int traceId = 0; traceId < log.size(); traceId++){
 			logLikelihoods.add(performanceCollector.getCaseStatistics(traceId));
@@ -54,7 +54,7 @@ public class LikelihoodAnalyzer {
 		PerformanceEnricherConfig mineConfig = new PerformanceEnricherConfig(DistributionType.EXPONENTIAL, net.getTimeUnit(), net.getExecutionPolicy(), null);
 		
 		StochasticManifestCollector performanceCollector = new StochasticManifestCollector((ManifestEvClassPattern) manifest,  mineConfig);
-		performanceCollector.collectDataFromManifest();
+		performanceCollector.collectDataFromManifest(null);
 		
 		return performanceCollector.getCaseStatistics(0).getLogLikelihood();
 //		

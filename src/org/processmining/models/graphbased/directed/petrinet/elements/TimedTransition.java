@@ -78,6 +78,13 @@ public class TimedTransition extends Transition{
 	protected double[] distributionParameters;
 	
 	/**
+	 * Contains the data that was used to train the model 
+	 * (Basically, this is a table with a header to describe the data 
+	 *  and each line represents one entry)
+	 */
+	protected String trainingData;
+	
+	/**
 	 * By default generate a timed transition with exponential firing rate lamda=1
 	 * 
 	 * @param label
@@ -256,4 +263,13 @@ public class TimedTransition extends Transition{
 	public void setPriority(int priority) {
 		this.priority = priority;
 	}
+
+	public String getTrainingData() {
+		return trainingData;
+	}
+
+	public void setTrainingData(String trainingData) {
+		this.trainingData = trainingData;
+	}
+
 }

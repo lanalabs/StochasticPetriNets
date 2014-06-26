@@ -126,6 +126,7 @@ public class StochasticNetDeserializer {
 						boolean invisible = stochasticAnnotation.getProperties().containsKey(PNMLToolSpecific.INVISIBLE)?Boolean.parseBoolean(stochasticAnnotation.getProperties().get(PNMLToolSpecific.INVISIBLE)):false;
 						DistributionType type = DistributionType.fromString(stochasticAnnotation.getProperties().get(PNMLToolSpecific.DISTRIBUTION_TYPE));
 						String parametersString = stochasticAnnotation.getProperties().get(PNMLToolSpecific.DISTRIBUTION_PARAMETERS);
+						String trainingData = stochasticAnnotation.getProperties().get(PNMLToolSpecific.TRAINING_DATA);
 						double[] parameters = null;
 						if (parametersString != null && !parametersString.isEmpty()){
 							String[] stringParameters = parametersString.split(PNMLToolSpecific.VALUES_SEPARATOR);
@@ -143,7 +144,7 @@ public class StochasticNetDeserializer {
 						if (type.equals(DistributionType.IMMEDIATE)){
 							objects.put(key, net.addImmediateTransition(getName(transition), weight, priority));
 						} else {
-							objects.put(key, net.addTimedTransition(getName(transition), weight, type, parameters));
+							objects.put(key, net.addTimedTransition(getName(transition), weight, type, trainingData, parameters));
 						}
 						((Transition)objects.get(key)).setInvisible(invisible);
 					} else {

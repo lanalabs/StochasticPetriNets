@@ -18,7 +18,9 @@ import java.util.Set;
 
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.deckfour.xes.extension.std.XTimeExtension;
+import org.deckfour.xes.model.XAttributeDiscrete;
 import org.deckfour.xes.model.XEvent;
+import org.deckfour.xes.model.XLog;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
@@ -32,6 +34,7 @@ import org.processmining.models.graphbased.directed.petrinet.elements.ResetArc;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
+import org.processmining.plugins.filter.context.LoadAnnotationPlugin;
 import org.processmining.plugins.manifestanalysis.visualization.performance.PerfCounter;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.manifestreplayresult.ManifestEvClassPattern;
@@ -123,6 +126,8 @@ public class StochasticManifestCollector {
 	 */
 	private double[][] transitionDurationsPerCase;
 	
+	private String[] transitionTrainingDataStrings;
+	
 	
 	/** for each visited marking, collect the number of times a transition was picked.
 	* the transitions are indexed by their encoded id used in the parent class's {@link #getTrans2Idx()}
@@ -174,6 +179,7 @@ public class StochasticManifestCollector {
 		int transSize = transitions.size();
 		this.idx2Trans = transitions.toArray(new Transition[transSize]);
 		this.trans2Idx = new TObjectIntHashMap<Transition>(transSize);
+		this.transitionTrainingDataStrings = new String[transSize];
 		for (int i = 0; i < idx2Trans.length; i++) {
 			trans2Idx.put(idx2Trans[i], i);
 			
@@ -181,6 +187,7 @@ public class StochasticManifestCollector {
 			censoredTimes.put(i, new ArrayList<Double>());
 			// TODO: add interval censored times (this is for model moves, i.e., we know an upper border for the transitions in between)
 		}
+		
 		
 		// init places
 		List<Place> places = new ArrayList<Place>(net.getPlaces());
@@ -224,12 +231,21 @@ public class StochasticManifestCollector {
 		}
 	}
 	
-	public void collectDataFromManifest(){
+	public void collectDataFromManifest(XLog enrichedLog){
 		// performance calculation
 		int[] cases = manifest.getCasePointers();
 		
 		// init table for case-based transition times (to look for dependencies and other analysis)
 		transitionDurationsPerCase = new double[cases.length][];
+		
+		XLog log = manifest.getLog();
+		if (enrichedLog != null){
+			log = enrichedLog;
+		}
+		String trainingDataHeader = null;
+		if (log.get(0).get(0).getAttributes().containsKey(LoadAnnotationPlugin.CONTEXT_LOAD)){
+			trainingDataHeader = "duration"+DELIMITER+"systemLoad";
+		}
 		
 		for (int i = 0; i < cases.length; i++) {
 			producerOfToken = new HashMap<Integer, Set<ReplayStep>>();
@@ -248,7 +264,8 @@ public class StochasticManifestCollector {
 				java.util.Arrays.fill(transitionDurationsPerCase[i], Double.NaN);
 				
 				// create trace iterator
-				Iterator<XEvent> it = manifest.getLog().get(i).iterator();
+				Iterator<XEvent> it = log.get(i).iterator();
+				
 
 				// now, iterate through all manifests for the case
 				int[] man = manifest.getManifestForCase(i);
@@ -269,7 +286,7 @@ public class StochasticManifestCollector {
 							synchronousAndInvisibleMoves++;
 							time = 0; // assume that invisible transitions are immediate
 						}
-						updateMarking(marking, man[currIdx+1], time, i);
+						updateMarking(marking, man[currIdx+1], time, i, null);
 						currIdx += 2;
 						stepsInAlignment++;
 					} else if (man[currIdx] == Manifest.MOVESYNC) {
@@ -284,7 +301,18 @@ public class StochasticManifestCollector {
 						}
 						lastFiringTime = currEventTime;
 						int encTrans = manifest.getEncTransOfManifest(man[currIdx+1]);
-						updateMarking(marking, encTrans, timeSpentInMarking / config.getUnitFactor(), i);
+						String line = "";
+						if (trainingDataHeader != null){
+							line += ((XAttributeDiscrete)currEvent.getAttributes().get(LoadAnnotationPlugin.CONTEXT_LOAD)).getValue();
+						}
+						line = updateMarking(marking, encTrans, timeSpentInMarking / config.getUnitFactor(), i, line);
+						if (trainingDataHeader != null && line != null){
+							if (transitionTrainingDataStrings[encTrans] == null){
+								transitionTrainingDataStrings[encTrans] = trainingDataHeader+"\n";
+							}
+							transitionTrainingDataStrings[encTrans] += line+"\n";
+						}
+						
 						currIdx += 2;
 						stepsInAlignment++;
 						synchronousAndInvisibleMoves++;
@@ -333,7 +361,16 @@ public class StochasticManifestCollector {
 		return new Pair<Long, Long>(start, end);
 	}
 
-	private void updateMarking(short[] marking, int encTrans, double timeSpentInMarking, int caseId) {
+	/**
+	 * @param marking
+	 * @param encTrans
+	 * @param timeSpentInMarking
+	 * @param caseId
+	 * @return String line to add
+	 */
+	private String updateMarking(short[] marking, int encTrans, double timeSpentInMarking, int caseId, String data) {
+		
+		String line = null;
 		
 		// find competing transitions:
 		short[] markingBefore = marking.clone();
@@ -369,6 +406,7 @@ public class StochasticManifestCollector {
 					for (Integer enabledBefore : currentlyEnabled){
 						if (enabledBefore != encTrans){
 							censoredTimes.get(enabledBefore).add(timeSpentInMarking);
+							line = "> "+timeSpentInMarking+DELIMITER+data;
 						}
 					}
 				}
@@ -407,6 +445,7 @@ public class StochasticManifestCollector {
 			}
 			firingTimes.get(encTrans).add(timeSpentInMarking);
 			transitionDurationsPerCase[caseId][encTrans] = timeSpentInMarking;
+			line = timeSpentInMarking+DELIMITER+data;
 			
 			if (manifest.getNet() instanceof StochasticNet){
 				// get distribution:
@@ -445,6 +484,7 @@ public class StochasticManifestCollector {
 				}
 			}
 		}
+		return line;
 	}
 		
 	private double getChanceToChooseTransition(int encTrans, Set<Integer> conflictingTransitions) {
@@ -610,6 +650,10 @@ public class StochasticManifestCollector {
 
 	public List<Double> getFiringTimes(int indexOfTransition) {
 		return firingTimes.get(indexOfTransition);
+	}
+	
+	public String getTrainingData(int indexOfTransition){
+		return transitionTrainingDataStrings[indexOfTransition];
 	}
 
 	public List<Double> getCensoredFiringTimes(int indexOfTransition) {

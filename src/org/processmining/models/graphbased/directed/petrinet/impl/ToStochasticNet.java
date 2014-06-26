@@ -55,6 +55,7 @@ public class ToStochasticNet {
 				target.setDistributionParameters((tt.getDistributionParameters()!=null?tt.getDistributionParameters().clone():null));
 				target.setPriority(tt.getPriority());
 				target.setWeight(tt.getWeight());
+				target.setTrainingData(tt.getTrainingData());
 				target.initDistribution(0);
 			}
 		}

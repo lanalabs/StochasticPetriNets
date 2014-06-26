@@ -124,6 +124,7 @@ public class StochasticNetToPNMLConverter {
 			specific.getProperties().put(PNMLToolSpecific.WEIGHT, String.valueOf(tt.getWeight()));
 			specific.getProperties().put(PNMLToolSpecific.INVISIBLE, String.valueOf(tt.isInvisible()));
 			specific.getProperties().put(PNMLToolSpecific.DISTRIBUTION_TYPE, tt.getDistributionType().toString());
+			specific.getProperties().put(PNMLToolSpecific.TRAINING_DATA, tt.getTrainingData());
 			double[] parameters = tt.getDistributionParameters();
 			StringBuilder params = new StringBuilder();
 			if (parameters != null){

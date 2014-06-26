@@ -1,10 +1,7 @@
 package org.processmining.tests.plugins.stochasticnet;
 
-import org.deckfour.xes.extension.std.XConceptExtension;
-import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.model.XAttributeDiscrete;
-import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.junit.Assert;
@@ -20,18 +17,18 @@ public class FilterTest {
 		XLog log = XFactoryRegistry.instance().currentDefault().createLog();
 		XTrace trace = XFactoryRegistry.instance().currentDefault().createTrace();
 		
-		addEvent("a",trace);
-		addEvent("b",trace);
-		addEvent("c",trace);
-		addEvent("b",trace);
-		addEvent("d",trace);
+		TestUtils.addEvent("a",trace);
+		TestUtils.addEvent("b",trace);
+		TestUtils.addEvent("c",trace);
+		TestUtils.addEvent("b",trace);
+		TestUtils.addEvent("d",trace);
 		
 		XTrace trace2 = XFactoryRegistry.instance().currentDefault().createTrace();
-		addEvent("a",trace2);
-		addEvent("b",trace2);
-		addEvent("c",trace2);
-		addEvent("a",trace2);
-		addEvent("d",trace2);
+		TestUtils.addEvent("a",trace2);
+		TestUtils.addEvent("b",trace2);
+		TestUtils.addEvent("c",trace2);
+		TestUtils.addEvent("a",trace2);
+		TestUtils.addEvent("d",trace2);
 		
 		log.add(trace);
 		log.add(trace2);
@@ -46,37 +43,24 @@ public class FilterTest {
 		Assert.assertEquals("a, b, c, a_2, d", StochasticNetUtils.debugTrace(log2.get(1)));
 	}
 
-	private XEvent addEvent(String name, XTrace trace, long time){
-		XEvent e = addEvent(name, trace);
-		XTimeExtension.instance().assignTimestamp(e, time);
-		return e;
-	}
-	
-	private XEvent addEvent(String name, XTrace trace) {
-		XEvent e = XFactoryRegistry.instance().currentDefault().createEvent();
-		XConceptExtension.instance().assignName(e, name);
-		trace.add(e);
-		return e;
-	}
-	
 	@Test
 	public void testContextAnnotator(){
 		XLog log = XFactoryRegistry.instance().currentDefault().createLog();
 		XTrace trace = XFactoryRegistry.instance().currentDefault().createTrace();
 		
-		addEvent("a",trace, 10);
-		addEvent("b",trace, 21);
-		addEvent("c",trace, 50);
+		TestUtils.addEvent("a",trace, 10);
+		TestUtils.addEvent("b",trace, 21);
+		TestUtils.addEvent("c",trace, 50);
 		
 		XTrace trace2 = XFactoryRegistry.instance().currentDefault().createTrace();
-		addEvent("a",trace2, 15);
-		addEvent("b",trace2, 25);
-		addEvent("c",trace2, 55);
+		TestUtils.addEvent("a",trace2, 15);
+		TestUtils.addEvent("b",trace2, 25);
+		TestUtils.addEvent("c",trace2, 55);
 		
 		XTrace trace3 = XFactoryRegistry.instance().currentDefault().createTrace();
-		addEvent("a",trace3, 20);
-		addEvent("b",trace3, 30);
-		addEvent("c",trace3, 60);
+		TestUtils.addEvent("a",trace3, 20);
+		TestUtils.addEvent("b",trace3, 30);
+		TestUtils.addEvent("c",trace3, 60);
 		
 		log.add(trace);
 		log.add(trace2);

@@ -19,11 +19,18 @@ public class PerformanceEnricherConfig {
 	
 	private File correlationMatrixFile;
 	
-	public PerformanceEnricherConfig(DistributionType distType, TimeUnit timeUnit, ExecutionPolicy executionPolicy, File correlationMatrixFile) {
+	private boolean collectingLoadData;
+	
+	public PerformanceEnricherConfig(DistributionType distType, TimeUnit timeUnit, ExecutionPolicy executionPolicy, File correlationMatrixFile){
+		this(distType,timeUnit,executionPolicy,correlationMatrixFile, true);
+	}
+	
+	public PerformanceEnricherConfig(DistributionType distType, TimeUnit timeUnit, ExecutionPolicy executionPolicy, File correlationMatrixFile, boolean collectLoadData) {
 		this.type = distType;
 		this.timeUnit = timeUnit;
 		this.policy = executionPolicy;
 		this.correlationMatrixFile = correlationMatrixFile;
+		this.collectingLoadData = collectLoadData;
 	}
 
 	public DistributionType getType() {
@@ -60,5 +67,13 @@ public class PerformanceEnricherConfig {
 
 	public TimeUnit getTimeUnit() {
 		return this.timeUnit;
+	}
+
+	public boolean isCollectingLoadData() {
+		return collectingLoadData;
+	}
+
+	public void setCollectingLoadData(boolean collectingLoadData) {
+		this.collectingLoadData = collectingLoadData;
 	}
 }

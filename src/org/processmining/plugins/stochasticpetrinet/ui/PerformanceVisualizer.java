@@ -90,6 +90,7 @@ public class PerformanceVisualizer {
 //							plot.add(new DistributionWrapper(transition.getDistribution()));
 							plot.add(transition.getDistribution());
 							plots.add(plot);
+							plotForTransition.setTrainingData(transition.getTrainingData());
 							plotForTransition.setPlots(plots);
 						} else {
 							plotForTransition.displayMessage("no timing information available for: "+node.getLabel());

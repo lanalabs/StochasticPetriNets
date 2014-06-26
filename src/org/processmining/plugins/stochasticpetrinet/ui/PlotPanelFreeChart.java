@@ -18,8 +18,10 @@ import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
+import org.jfree.data.xy.XYDataset;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
+import org.processmining.plugins.stochasticpetrinet.enricher.StochasticManifestCollector;
 
 public class PlotPanelFreeChart extends JPanel {
 	private static final long serialVersionUID = -4121860809081058096L;
@@ -35,6 +37,9 @@ public class PlotPanelFreeChart extends JPanel {
 	
 	private JComponent currentChart = null;
 	
+	private String scatterData;
+	private JComponent secondChart = null;
+	
 	public PlotPanelFreeChart() {
 		super();
 		plots = new LinkedList<Plot>();
@@ -45,6 +50,14 @@ public class PlotPanelFreeChart extends JPanel {
 		this.plots = plots;
 		updateChart();
 	}
+	public void setTrainingData(String trainingData){
+		this.scatterData = trainingData;
+		if (secondChart!= null){
+			this.remove(secondChart);
+		}
+		this.secondChart = null;
+	}
+	
 	public void addPlot(Plot plot){
 		this.plots.add(plot);
 		updateChart();
@@ -114,7 +127,7 @@ public class PlotPanelFreeChart extends JPanel {
 		JFreeChart chart = ChartFactory.createXYLineChart(
 		"",
 		"time",
-		"proability density",
+		"probability density",
 		dataset,
 		PlotOrientation.VERTICAL,
 		true, true, false);
@@ -137,12 +150,47 @@ public class PlotPanelFreeChart extends JPanel {
 		}
 
 		currentChart = new ChartPanel(chart);
+		
+		
+		if (secondChart == null && scatterData != null){
+			// TODO parse scatter data
+			XYSeries scatterSeries = new XYSeries("Load");
+			double[][] data = parse(scatterData);
+			for (int j = 0; j < data.length; j++){
+				scatterSeries.add(data[j][0], data[j][1]);
+			}
+			XYDataset xyDatasetScatter = new XYSeriesCollection(scatterSeries);
+
+			JFreeChart scatterChart = ChartFactory.createScatterPlot
+			      ("XYLine Chart using JFreeChart", "load", "duration",
+			      xyDatasetScatter, PlotOrientation.VERTICAL, true, true, false);			
+			
+			secondChart = new ChartPanel(scatterChart);	
+		}
+		
+		
+
 		add(currentChart, BorderLayout.CENTER);
+		
+		if (secondChart != null){
+			add(secondChart, BorderLayout.EAST);	
+		}
 		
 		this.revalidate();
 		this.repaint();	
 	}
 	
+	private double[][] parse(String scatterData) {
+		// ignore first row
+		String[] lines = scatterData.split("\n");
+		double[][] data = new double[lines.length-1][];
+		for (int i = 1; i < lines.length; i++){
+			String[] parts = lines[i].split(StochasticManifestCollector.DELIMITER);
+			data[i-1] = new double[]{Double.valueOf(parts[1]),Double.valueOf(parts[0])};
+		}
+		return data;
+	}
+
 	public class PointOfInterest{
 		public boolean drawLine = true;
 		public boolean showLabel = true;

@@ -8,8 +8,13 @@ import java.util.Collection;
 import java.util.concurrent.Executor;
 
 import org.deckfour.xes.classification.XEventClassifier;
+import org.deckfour.xes.extension.std.XConceptExtension;
+import org.deckfour.xes.extension.std.XTimeExtension;
+import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.in.XUniversalParser;
+import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
+import org.deckfour.xes.model.XTrace;
 import org.processmining.framework.connections.Connection;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.connections.ConnectionManager;
@@ -35,8 +40,8 @@ import org.processmining.plugins.pnml.importing.StochasticNetDeserializer;
 import org.processmining.plugins.pnml.simple.PNMLRoot;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.enricher.experiment.PerformanceEnricherExperimentPlugin;
-import org.processmining.plugins.stochasticpetrinet.enricher.experiment.PerformanceEnricherExperimentResult;
 import org.processmining.plugins.stochasticpetrinet.enricher.experiment.PerformanceEnricherExperimentPlugin.ExperimentType;
+import org.processmining.plugins.stochasticpetrinet.enricher.experiment.PerformanceEnricherExperimentResult;
 import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
 
@@ -106,6 +111,20 @@ public class TestUtils {
 		}
 		return null;
 	}
+	
+	public static XEvent addEvent(String name, XTrace trace, long time){
+		XEvent e = addEvent(name, trace);
+		XTimeExtension.instance().assignTimestamp(e, time);
+		return e;
+	}
+	
+	public static XEvent addEvent(String name, XTrace trace) {
+		XEvent e = XFactoryRegistry.instance().currentDefault().createEvent();
+		XConceptExtension.instance().assignName(e, name);
+		trace.add(e);
+		return e;
+	}
+	
 	public static void saveCSV(String csvContent, String fileName) throws IOException{
 		File resultsFolder = new File("./experimentResults");
 		if (!resultsFolder.exists()){

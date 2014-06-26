@@ -26,6 +26,7 @@ import org.deckfour.xes.model.XAttributeContinuous;
 import org.deckfour.xes.model.XAttributeDiscrete;
 import org.deckfour.xes.model.XAttributeTimestamp;
 import org.deckfour.xes.model.XEvent;
+import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.plugin.PluginContext;
@@ -39,6 +40,7 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeU
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.petrinet.impl.ToStochasticNet;
+import org.processmining.plugins.filter.context.LoadAnnotationPlugin;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.manifestreplayresult.ManifestEvClassPattern;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
@@ -93,7 +95,13 @@ public class PerformanceEnricher {
 		sNet.setExecutionPolicy(mineConfig.getPolicy());
 		sNet.setTimeUnit(mineConfig.getTimeUnit());
 		
-		performanceCollector.collectDataFromManifest();
+		XLog enrichedLog = null;
+		if (mineConfig.isCollectingLoadData() && !manifest.getLog().get(0).get(0).getAttributes().containsKey(LoadAnnotationPlugin.CONTEXT_LOAD)){
+			LoadAnnotationPlugin annotator = new LoadAnnotationPlugin();
+			enrichedLog = annotator.addNumberOfInstancesInSystemToLogHeadless(context, manifest.getLog());
+		}
+		
+		performanceCollector.collectDataFromManifest(enrichedLog);
 		if (mineConfig.getCorrelationMatrixFile() != null){
 			performanceCollector.outputCorrelationMatrix();
 		}
@@ -116,6 +124,7 @@ public class PerformanceEnricher {
 			int indexOfTransition = performanceCollector.getEncOfTrans(originalTransition);
 			List<Double> transitionStats = performanceCollector.getFiringTimes(indexOfTransition);
 			List<Double> censoredStats = performanceCollector.getCensoredFiringTimes(indexOfTransition);
+			String trainingData = performanceCollector.getTrainingData(indexOfTransition);
 			
 			if (!censoredStats.isEmpty()){
 				System.out.println("Transition "+originalTransition.getLabel()+" has "+censoredStats.size()+" censored and "+ transitionStats.size() +" observed firings...");
@@ -124,6 +133,7 @@ public class PerformanceEnricher {
 			feedbackMessage += addTimingInformationToTransition(newTimedTransition, transitionStats, censoredStats, mineConfig, performanceCollector.getMeanTraceFitness(), performanceCollector.getMaxTraceDuration());
 			
 			newTimedTransition.initDistribution(performanceCollector.getMaxTraceDuration());
+			newTimedTransition.setTrainingData(trainingData);
 		}
 		// weights of the transitions are calculated based on firing ratios on each marking.
 		double[] weights = new double[net.getTransitions().size()];

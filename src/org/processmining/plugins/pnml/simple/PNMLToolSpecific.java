@@ -19,6 +19,7 @@ public class PNMLToolSpecific {
 	public static final String INVISIBLE = "invisible";
 	public static final String DISTRIBUTION_TYPE = "distributionType";
 	public static final String DISTRIBUTION_PARAMETERS = "distributionParameters";
+	public static final String TRAINING_DATA = "trainingData";
 	public static final String VALUES_SEPARATOR = ";";
 	
 	@Attribute
