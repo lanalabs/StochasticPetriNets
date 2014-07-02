@@ -54,6 +54,9 @@ public class StochasticNetSemanticsImpl extends AbstractResetInhibitorNetSemanti
 				} else {
 					// other transitions with higher priority disable the current transition!
 				}
+			} else {
+				// ignore priorities
+				highestPriorityTransitions.add(t);
 			}
 		}
 		return highestPriorityTransitions;

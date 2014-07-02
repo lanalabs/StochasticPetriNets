@@ -582,7 +582,7 @@ public class PNSimulator {
  	 * @return The transition that is picked as the next one to fire with its duration in the current marking 
 	 */
 	private Pair<Transition, Long> pickTransition(Collection<Transition> transitions, PetrinetGraph petriNet, PNSimulatorConfig config, long startOfTransition, long constraint, boolean usePositiveTimeContraint) {
-		if (petriNet instanceof StochasticNet){
+		if (petriNet instanceof StochasticNet && transitionsContainTimingInfo(transitions)){
 			// sanity check of the semantics, to make sure that only immediate transitions, or timed transitions are competing for the right to fire next!
 			boolean allImmediate = getOnlyImmediateTransitions(transitions, true);
 			boolean allTimed = getOnlyImmediateTransitions(transitions, false);
@@ -646,6 +646,14 @@ public class PNSimulator {
 		}
 	}
 
+	private boolean transitionsContainTimingInfo(Collection<Transition> transitions) {
+		boolean allTimed = true;
+		for (Transition t : transitions){
+			allTimed &= t instanceof TimedTransition;
+		}
+		return allTimed;
+	}
+	
 	/**
 	 * Checks whether all transitions in set are immediate (if flag onlyImmediate is true)
 	 * or whether all transitions in set are timed (if flag onlyImmediate is false).
@@ -658,8 +666,12 @@ public class PNSimulator {
 	private boolean getOnlyImmediateTransitions(Collection<Transition> transitions, boolean immediate) {
 		boolean allSame = true;
 		for (Transition transition : transitions){
-			TimedTransition tt = (TimedTransition) transition;
-			allSame = allSame && (immediate?tt.getDistributionType().equals(DistributionType.IMMEDIATE):!tt.getDistributionType().equals(DistributionType.IMMEDIATE));
+			if (transition instanceof TimedTransition){
+				TimedTransition tt = (TimedTransition) transition;
+				allSame = allSame && (immediate?tt.getDistributionType().equals(DistributionType.IMMEDIATE):!tt.getDistributionType().equals(DistributionType.IMMEDIATE));
+			} else {
+				return !immediate;
+			}
 		}
 		return allSame;
 	}
