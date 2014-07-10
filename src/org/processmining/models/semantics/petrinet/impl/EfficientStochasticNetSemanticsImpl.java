@@ -226,6 +226,9 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 		}
 		return m;
 	}
+	public int[] getCurrentInternalState(){
+		return currentMarking;
+	}
 
 	public void setCurrentState(Marking currentState) {
 		Arrays.fill(currentMarking, 0);
@@ -235,6 +238,9 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 		for (Place p : currentState){
 			currentMarking[placePositionInArray.get(p)]++;
 		}
+	}
+	public void setCurrentState(int[] currentState){
+		currentMarking = currentState.clone();
 	}
 
 	public PetrinetExecutionInformation executeExecutableTransition(Transition toExecute)
