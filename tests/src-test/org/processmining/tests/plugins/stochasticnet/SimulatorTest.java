@@ -1,5 +1,8 @@
 package org.processmining.tests.plugins.stochasticnet;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+
 import java.util.HashMap;
 import java.util.Map;
 
@@ -180,6 +183,24 @@ public class SimulatorTest {
 		Assert.assertNotNull(log);
 		Assert.assertEquals(96, log.size());
 		
+	}
+	
+	@Test
+	public void testPNMLModel() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("Diagramm_Vortrag_Signavio",true);
+		StochasticNet net = ((StochasticNet) netAndMarking[0]);
+		Marking marking = (Marking) netAndMarking[1];
+			
+		PNSimulator simulator = new PNSimulator();
+		PNSimulatorConfig simConfig = new PNSimulatorConfig(1000,TimeUnit.MINUTES,0,1,1000);
+		XLog log = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), simConfig, marking);
+		
+		assertEquals(1000, log.size());
+		
+		for(XTrace xTrace : log) {
+			assertNotNull(xTrace);
+			System.out.print(xTrace.size()+",");
+		}
 	}
 	
 

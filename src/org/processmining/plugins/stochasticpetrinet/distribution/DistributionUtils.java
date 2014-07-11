@@ -3,6 +3,9 @@ package org.processmining.plugins.stochasticpetrinet.distribution;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.TreeMap;
 
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.complex.Complex;
@@ -59,5 +62,57 @@ public class DistributionUtils {
 			values[i] = valuesList.get(i);
 		}
 		return values;
+	}
+	
+	public static Map<Integer, Double> discretizeDistribution(RealDistribution dist, double binwidth){
+		Map<Integer, Double> probabilitiesPerBin = new TreeMap<>();
+		double lowerBound = Math.max(dist.getSupportLowerBound(), 0);
+		double upperBound = Math.min(dist.getSupportUpperBound(), 1000);
+		int lowerIndex = getIndex(lowerBound,binwidth);
+		int upperIndex = getIndex(upperBound, binwidth);
+		double lower = getValue(lowerIndex, binwidth);
+		double lowerDensity = dist.density(lower);
+		double binwidthThird = binwidth / 3;
+		double densityMass = 0;
+		for (int i = lowerIndex; i <= upperIndex;i++){
+			double upper = lower+binwidth;
+			double midL = lower+binwidthThird;
+			double midU = midL+binwidthThird;
+			
+			double midLDensity = dist.density(midL);
+			double midUDensity = dist.density(midU);
+			double upperDensity = dist.density(upper);
+			
+			double density = (lowerDensity+midLDensity+midUDensity+upperDensity)/4.;
+			if (density > 0){
+				densityMass+=density;
+				probabilitiesPerBin.put(i, density);
+			}
+			
+			// approximate probability by averaging the densities of lower, middle and upper;
+			lower = upper;
+			lowerDensity = upperDensity;
+		}
+		// normalize the probabilities to 1:
+		for (Entry<Integer, Double> entry : probabilitiesPerBin.entrySet()){
+			entry.setValue(entry.getValue()/densityMass);
+		}
+		
+		return probabilitiesPerBin;
+	}
+	
+	/**
+	 * The bin index starting with 0 for values between 0 inclusive and binwidth exclusive
+	 * 
+	 * @param value
+	 * @param binwidth
+	 * @return
+	 */
+	public static int getIndex(double value, double binwidth){
+		return (int)Math.floor(value / binwidth);
+	}
+	
+	public static double getValue(int index, double binwidth){
+		return index*binwidth;
 	}
 }

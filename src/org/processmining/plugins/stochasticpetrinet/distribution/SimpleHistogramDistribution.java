@@ -31,6 +31,8 @@ public class SimpleHistogramDistribution extends AbstractRealDistribution{
 		sampleSize = 0;
 		samples = new double[0];
 	}
+	
+	
 
 	public void addValues(double[] observation) {
 		int currentSampleSize = samples.length;
@@ -74,7 +76,7 @@ public class SimpleHistogramDistribution extends AbstractRealDistribution{
 
 	public double probability(double x) {
 		int index = getIndex(x);
-		return binsAndValues.containsKey(index)?(binsAndValues.get(index)/(sampleSize*binwidth)):0;
+		return binsAndValues.containsKey(index)?(binsAndValues.get(index)/sampleSize):0;
 	}
 
 	public double density(double x) {
