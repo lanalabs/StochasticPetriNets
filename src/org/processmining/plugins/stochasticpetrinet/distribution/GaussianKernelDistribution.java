@@ -9,8 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 
-import org.apache.commons.math3.analysis.UnivariateFunction;
-import org.apache.commons.math3.distribution.AbstractRealDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.exception.NumberIsTooLargeException;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -31,7 +29,7 @@ import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
  * @author Andreas Rogge-Solti
  *
  */
-public class GaussianKernelDistribution extends AbstractRealDistribution implements UnivariateFunction{
+public class GaussianKernelDistribution extends AnotherAbstractRealDistribution {
 	private static final long serialVersionUID = 8240483694253488758L;
 
 	/**
@@ -59,6 +57,10 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 	 */
 	protected double h;
 	protected NormalDistribution ndist;
+
+	private Double cachedMean;
+	private Double cachedVariance;
+	
 	
 	
 	
@@ -193,20 +195,11 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 	}
 
 	public double getNumericalMean() {
-		DescriptiveStatistics stats = new DescriptiveStatistics(getDoubleArray(sampleValues));
-		return stats.getMean();
-	}
-
-	/**
-	 * FIXME:
-	 * This is not correct! as the kernel shape parameter {@link #h} adds to the sample variance!!! 
-	 */
-	public double getNumericalVariance() {
-		return Double.NaN;
-//		
-//		DescriptiveStatistics stats = new DescriptiveStatistics(sampleValues);
-//		System.err.println("Variance not implemented correctly, just returning sample variance!");
-//		return stats.getVariance();
+		if (cachedMean == null){
+			DescriptiveStatistics stats = new DescriptiveStatistics(getDoubleArray(sampleValues));
+			cachedMean = stats.getMean();
+		} 
+		return cachedMean;
 	}
 
 	public double getSupportLowerBound() {
@@ -303,9 +296,7 @@ public class GaussianKernelDistribution extends AbstractRealDistribution impleme
 			return ndist.sample()+pos*precision;
 		}
 	}
-	public double value(double x) {
-		return density(x);
-	}
+	
 	public List<Double> getValues() {
 		return this.sampleValues;
 	}

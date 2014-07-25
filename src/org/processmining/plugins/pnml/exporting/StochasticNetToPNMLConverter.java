@@ -42,8 +42,12 @@ public class StochasticNetToPNMLConverter {
 		toolTopSpec.setTool(PNMLToolSpecific.STOCHASTIC_ANNOTATION);
 		toolTopSpec.setVersion(PNMLToolSpecific.STOCHASTIC_ANNOTATION_VERSION);
 		toolTopSpec.setProperties(new HashMap<String, String>());
-		toolTopSpec.getProperties().put(PNMLToolSpecific.EXECUTION_POLICY, net.getExecutionPolicy().toString());
-		toolTopSpec.getProperties().put(PNMLToolSpecific.TIME_UNIT, net.getTimeUnit().toString());
+		if (net.getExecutionPolicy() != null){
+			toolTopSpec.getProperties().put(PNMLToolSpecific.EXECUTION_POLICY, net.getExecutionPolicy().toString());
+		}
+		if (net.getTimeUnit() != null){
+			toolTopSpec.getProperties().put(PNMLToolSpecific.TIME_UNIT, net.getTimeUnit().toString());
+		}
 		toolTopSpecs.add(toolTopSpec);
 		pnmlNet.setToolspecific(toolTopSpecs);
 		

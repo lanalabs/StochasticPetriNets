@@ -1,37 +1,33 @@
 package org.processmining.plugins.stochasticpetrinet.distribution;
 
 import org.apache.commons.math3.analysis.UnivariateFunction;
-import org.apache.commons.math3.analysis.integration.IterativeLegendreGaussIntegrator;
-import org.apache.commons.math3.analysis.integration.SimpsonIntegrator;
-import org.apache.commons.math3.analysis.integration.UnivariateIntegrator;
 import org.apache.commons.math3.distribution.RealDistribution;
-import org.apache.commons.math3.exception.NumberIsTooLargeException;
-import org.apache.commons.math3.exception.OutOfRangeException;
 
-public class TruncatedWrapper implements RealDistribution, UnivariateFunction{
-
-	/** The original distribution  */
-	protected RealDistribution wrappedDist;
-	/** the constraint, such that the distribution is truncated below this constraint */
-	protected double constraint;
+/**
+ * A wrapper around a distribution that cuts off a part below a certain threshold {@link #constraint} 
+ * and rescales the rest of the distribution to become a valid one again.
+ * 
+ * This class should be used if samples from the original distribution are unlikely to fall into the region above the {@link #constraint}.
+ * The sampling of random values from this distribution is done by the <a href="http://en.wikipedia.org/wiki/Slice_sampling">slice sampling technique</a>.  
+ * 
+ * @author Andreas Rogge-Solti
+ *
+ * @see RejectionWrapper for the simpler version building on rejection sampling.
+ * 
+ */
+public class TruncatedWrapper extends RejectionWrapper {
+	private static final long serialVersionUID = -6541835452767655288L;
 	
 	/** sampler to sample from constrained distribution directly*/
 	protected SliceSampler sampler;
-	/** scaling function, such that the truncated distribution will integrate to 1 */
-	protected double scale;
-	
-	protected double numericalMean = Double.NaN;
 	
 	TruncatedWrapper(RealDistribution dist){
 		this(dist,0);
 	}
 	
 	TruncatedWrapper(RealDistribution dist, double constraint){
-		this.wrappedDist = dist;
-		this.constraint = constraint;
-		// rescale the density, such that it integrates to 1:
-		this.scale = 1.0/(1.0-wrappedDist.cumulativeProbability(constraint));
-
+		super(dist, constraint);
+		
 		// init slice sampler:
 		double xStart = findPositiveX(this);
 		if (wrappedDist.density(xStart) == 0){
@@ -40,78 +36,6 @@ public class TruncatedWrapper implements RealDistribution, UnivariateFunction{
 		sampler = new SliceSampler((UnivariateFunction)this,xStart, wrappedDist.density(xStart)*0.5);
 	}
 	
-	public double probability(double x) {
-		throw new UnsupportedOperationException("probability() not implemented");
-	}
-
-	public double density(double x) {
-		if (x < constraint){
-			return 0;
-		} else {
-			return scale * wrappedDist.density(x);
-		}
-	}
-
-	public double cumulativeProbability(double x) {
-		UnivariateIntegrator integrator = new SimpsonIntegrator();
-		return integrator.integrate(10000, this, Double.NEGATIVE_INFINITY, x);
-	}
-
-	public double cumulativeProbability(double x0, double x1) throws NumberIsTooLargeException {
-		UnivariateIntegrator integrator = new SimpsonIntegrator();
-		return integrator.integrate(10000, this, x0, x1);
-	}
-	
-	public UnivariateFunction getWeightedFunction(){
-		UnivariateFunction function = new UnivariateFunction() {
-			public double value(double x) {
-				if (x < constraint){
-					return 0;
-				} else {
-					return x*(density(x));
-				}
-			}
-		};
-		return function;
-	}
-
-	public double inverseCumulativeProbability(double p) throws OutOfRangeException {
-		throw new UnsupportedOperationException("inverseCumulativeProbability not implemented!");
-	}
-
-	public double getNumericalMean() {
-		if (Double.isNaN(numericalMean)){
-			UnivariateIntegrator integrator = new IterativeLegendreGaussIntegrator(16,0.01,0.000001);
-			double upperBound = wrappedDist.inverseCumulativeProbability(.99)+constraint+10;
-			numericalMean = integrator.integrate(integrator.getMaximalIterationCount(), getWeightedFunction(), constraint, upperBound);
-		}
-		return numericalMean;
-	}
-
-	public double getNumericalVariance() {
-		throw new UnsupportedOperationException("numericalVariance not implemented!");
-	}
-
-	public double getSupportLowerBound() {
-		return constraint;
-	}
-
-	public double getSupportUpperBound() {
-		return wrappedDist.getSupportUpperBound();
-	}
-
-	public boolean isSupportLowerBoundInclusive() {
-		return true;
-	}
-
-	public boolean isSupportUpperBoundInclusive() {
-		return wrappedDist.isSupportUpperBoundInclusive();
-	}
-
-	public boolean isSupportConnected() {
-		return true;
-	}
-
 	public void reseedRandomGenerator(long seed) {
 		sampler.setSeed(seed);
 	}
@@ -150,11 +74,5 @@ public class TruncatedWrapper implements RealDistribution, UnivariateFunction{
 		double[] values = sampler.sample(sampleSize);
 		
 		return DistributionUtils.shuffle(values);
-	}
-
-	
-	
-	public double value(double x){
-		return density(x);
 	}
 }

@@ -124,5 +124,9 @@ public class PNSimulatorConfig {
 	public void setAllowUnbounded(boolean allowUnbounded) {
 		this.allowUnbounded = allowUnbounded;
 	}
+
+	public void setSeed(long seed) {
+		this.seed = seed;
+	}
 	
 }

@@ -18,6 +18,7 @@ import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
+import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.stat.descriptive.moment.Mean;
 import org.apache.commons.math3.stat.descriptive.moment.StandardDeviation;
 import org.deckfour.uitopia.api.event.TaskListener.InteractionResult;
@@ -44,6 +45,8 @@ import org.processmining.plugins.filter.context.LoadAnnotationPlugin;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.manifestreplayresult.ManifestEvClassPattern;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.distribution.BernsteinExponentialApproximation;
+import org.processmining.plugins.stochasticpetrinet.distribution.GaussianKernelDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.NonConvergenceException;
 import org.processmining.plugins.stochasticpetrinet.distribution.RCensoredLogSplineDistribution;
 import org.processmining.plugins.stochasticpetrinet.enricher.optimizer.WeightsOptimizer;
@@ -305,6 +308,14 @@ public class PerformanceEnricher {
 				case HISTOGRAM:
 					newTimedTransition.setDistributionParameters(values);
 					break;
+				case BERNSTEIN_EXPOLYNOMIAL:
+					// approximate the kernel density with the bernstein exponential
+					GaussianKernelDistribution dist = new GaussianKernelDistribution();
+					dist.addValues(values);
+					BernsteinExponentialApproximation bea = new BernsteinExponentialApproximation((RealDistribution)dist, 0.0, dist.getSupportUpperBound());
+					newTimedTransition.setDistributionParameters(bea.getParameters());
+					newTimedTransition.setDistribution(bea);
+					break;
 				case LOGSPLINE:
 //					if (transitionStats.size() < 10){
 //						// log-spline fitting needs more data -> fall back to Gaussian kernel
@@ -353,7 +364,7 @@ public class PerformanceEnricher {
 
 	public static PerformanceEnricherConfig getTypeOfDistributionForNet(PluginContext context) {
 		ProMPropertiesPanel panel = new ProMPropertiesPanel("Stochastic Net properties:");
-		DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL, DistributionType.LOGNORMAL, DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL,DistributionType.HISTOGRAM};
+		DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL, DistributionType.LOGNORMAL, DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL, DistributionType.BERNSTEIN_EXPOLYNOMIAL,DistributionType.HISTOGRAM};
 		if (StochasticNetUtils.splinesSupported()){
 			supportedTypes = Arrays.copyOf(supportedTypes, supportedTypes.length+1);
 			supportedTypes[supportedTypes.length-1] = DistributionType.LOGSPLINE;

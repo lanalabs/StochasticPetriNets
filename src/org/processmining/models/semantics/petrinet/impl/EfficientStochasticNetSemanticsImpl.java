@@ -31,20 +31,20 @@ import org.processmining.models.semantics.petrinet.StochasticNetSemantics;
 public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemantics{
 	private static final long serialVersionUID = 7834067963183391132L;
 
-	private int[][] transitionMatrix;
-	private Transition[] transitions;
-	private Place[] places;
-	private Map<Place,Integer> placePositionInArray;
-	private Map<Transition, Integer> transitionPositionInArray;
-	private Map<Integer, List<Pair<Integer,Integer>>> transitionInputs;
-	private Map<Integer, List<Pair<Integer,Integer>>> transitionOutputs;
-	private int[] currentMarking;
+	protected short[][] transitionMatrix;
+	protected Transition[] transitions;
+	protected Place[] places;
+	protected Map<Place,Short> placePositionInArray;
+	protected Map<Transition, Short> transitionPositionInArray;
+	protected Map<Short, List<Pair<Short,Short>>> transitionInputs;
+	protected Map<Short, List<Pair<Short,Short>>> transitionOutputs;
+	protected short[] currentMarking;
 	
 	/**
 	 * Stores for each place (encoded as position in {@link #places} array)
 	 * all transitions that depend on the place, are stored in this map
 	 */
-	private Map<Integer, Set<Integer>> dependentTransitions;
+	protected Map<Short, Set<Short>> dependentTransitions;
 	
 	
 	public void initialize(Collection<Transition> transitions, Marking state) {
@@ -56,24 +56,24 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 				places.add((Place) node);
 			}
 		}
-		this.dependentTransitions = new HashMap<Integer, Set<Integer>>();
+		this.dependentTransitions = new HashMap<Short, Set<Short>>();
 		this.places = places.toArray(new Place[places.size()]);
-		placePositionInArray = new HashMap<Place, Integer>();
-		for (int i = 0; i < this.places.length; i++){
+		placePositionInArray = new HashMap<Place, Short>();
+		for (short i = 0; i < this.places.length; i++){
 			placePositionInArray.put(this.places[i], i);
 		}
-		transitionPositionInArray = new HashMap<Transition, Integer>();
+		transitionPositionInArray = new HashMap<Transition, Short>();
 		
-		transitionInputs = new HashMap<Integer, List<Pair<Integer,Integer>>>();
-		transitionOutputs = new HashMap<Integer, List<Pair<Integer,Integer>>>();
+		transitionInputs = new HashMap<Short, List<Pair<Short,Short>>>();
+		transitionOutputs = new HashMap<Short, List<Pair<Short,Short>>>();
 		
-		transitionMatrix = new int[this.transitions.length][];
-		for (int i = 0; i < this.transitions.length; i++){
-			transitionMatrix[i] = new int[this.places.length];
-			Arrays.fill(transitionMatrix[i],0);
+		transitionMatrix = new short[this.transitions.length][];
+		for (short i = 0; i < this.transitions.length; i++){
+			transitionMatrix[i] = new short[this.places.length];
+			Arrays.fill(transitionMatrix[i],(short)0);
 			
-			List<Pair<Integer,Integer>> transitionInput = new ArrayList<Pair<Integer,Integer>>();
-			List<Pair<Integer,Integer>> transitionOutput = new ArrayList<Pair<Integer,Integer>>();
+			List<Pair<Short,Short>> transitionInput = new ArrayList<Pair<Short,Short>>();
+			List<Pair<Short,Short>> transitionOutput = new ArrayList<Pair<Short,Short>>();
 			
 			Transition t = this.transitions[i];
 			transitionPositionInArray.put(t,i);
@@ -91,22 +91,22 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 					transitionMatrix[i][placePos]++;
 				}
 			}
-			for (int place = 0; place < this.places.length; place++){
+			for (short place = 0; place < this.places.length; place++){
 				if (!dependentTransitions.containsKey(place)){
-					dependentTransitions.put(place, new HashSet<Integer>());
+					dependentTransitions.put(place, new HashSet<Short>());
 				}
 				if (transitionMatrix[i][place]>0){
-					transitionOutput.add(new Pair<Integer, Integer>(place,transitionMatrix[i][place]));
+					transitionOutput.add(new Pair<Short, Short>(place,transitionMatrix[i][place]));
 				}
 				if (transitionMatrix[i][place]<0){
 					dependentTransitions.get(place).add(i);
-					transitionInput.add(new Pair<Integer, Integer>(place,-transitionMatrix[i][place]));
+					transitionInput.add(new Pair<Short, Short>(place,(short)-transitionMatrix[i][place]));
 				}
 			}
 			transitionInputs.put(i, transitionInput);
 			transitionOutputs.put(i, transitionOutput);
 		}
-		currentMarking = new int[this.places.length];
+		currentMarking = new short[this.places.length];
 		setCurrentState(state);
 	}
 
@@ -131,14 +131,14 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 		return enabledTransitions;
 	}
 
-	private List<Transition> getEnabledTransitionsByOnlyLookingAtPossibleCandidates(){
+	protected List<Transition> getEnabledTransitionsByOnlyLookingAtPossibleCandidates(){
 		List<Transition> enabledTransitions = new ArrayList<Transition>();
 		
-		Set<Integer> transitionCandidates = getTransitionCandidates();
-		for (int trans : transitionCandidates){
-			List<Pair<Integer,Integer>> inputs = transitionInputs.get(trans);
+		Set<Short> transitionCandidates = getTransitionCandidates();
+		for (short trans : transitionCandidates){
+			List<Pair<Short,Short>> inputs = transitionInputs.get(trans);
 			boolean enabled = true;
-			for (Pair<Integer,Integer> input : inputs){
+			for (Pair<Short,Short> input : inputs){
 				enabled &= currentMarking[input.getFirst()] >= input.getSecond();
 				if (!enabled) break;
 			}
@@ -149,13 +149,13 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 		return enabledTransitions;
 	}
 	
-	private List<Transition> getEnabledTransitionsBySearchingThroughHashMaps() {
+	protected List<Transition> getEnabledTransitionsBySearchingThroughHashMaps() {
 		List<Transition> enabledTransitions = new ArrayList<Transition>();
 		
 		for (int trans = 0; trans < transitions.length; trans++){
-			List<Pair<Integer,Integer>> inputs = transitionInputs.get(trans);
+			List<Pair<Short,Short>> inputs = transitionInputs.get(trans);
 			boolean enabled = true;
-			for (Pair<Integer,Integer> input : inputs){
+			for (Pair<Short,Short> input : inputs){
 				enabled &= currentMarking[input.getFirst()] >= input.getSecond();
 				if (!enabled) break;
 			}
@@ -166,9 +166,9 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 		return enabledTransitions;
 	}
 	
-	private Set<Integer> getTransitionCandidates() {
-		Set<Integer> transitionCandidates = new HashSet<Integer>();
-		for (int p = 0; p < currentMarking.length; p++){
+	protected Set<Short> getTransitionCandidates() {
+		Set<Short> transitionCandidates = new HashSet<Short>();
+		for (short p = 0; p < currentMarking.length; p++){
 			if (currentMarking[p] > 0){
 				transitionCandidates.addAll(dependentTransitions.get(p));
 			}
@@ -176,7 +176,7 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 		return transitionCandidates;
 	}
 
-	private List<Transition> getEnabledTransitionsBySearchingThroughMatrix() {
+	protected List<Transition> getEnabledTransitionsBySearchingThroughMatrix() {
 		List<Transition> enabledTransitions = new ArrayList<Transition>();
 		for (int trans = 0; trans < transitions.length; trans++){
 			boolean enabled = true;
@@ -191,7 +191,7 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 		return enabledTransitions;
 	}
 
-	private Collection<Transition> getTransitionsOfHighestPriority(Collection<Transition> executableTransitions) {
+	protected Collection<Transition> getTransitionsOfHighestPriority(Collection<Transition> executableTransitions) {
 		int priority = 0;
 
 		List<Transition> highestPriorityTransitions = new ArrayList<Transition>();
@@ -226,12 +226,12 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 		}
 		return m;
 	}
-	public int[] getCurrentInternalState(){
+	public short[] getCurrentInternalState(){
 		return currentMarking;
 	}
 
 	public void setCurrentState(Marking currentState) {
-		Arrays.fill(currentMarking, 0);
+		Arrays.fill(currentMarking, (short)0);
 		if (currentState == null){
 			System.out.println("Debug me!");
 		}
@@ -239,14 +239,31 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 			currentMarking[placePositionInArray.get(p)]++;
 		}
 	}
-	public void setCurrentState(int[] currentState){
+	public void setCurrentState(short[] currentState){
 		currentMarking = currentState.clone();
 	}
+	
+	public short getPlaceId(Place p){
+		if(placePositionInArray.containsKey(p)){
+			return placePositionInArray.get(p);
+		}
+		return -1;
+	}
+	public short getTransitionId(Transition t) {
+		if (transitionPositionInArray.containsKey(t)){
+			return transitionPositionInArray.get(t);
+		}
+		return -1;
+	}
+	public Transition getTransition(short tId) {
+		return transitions[tId];
+	}
+
 
 	public PetrinetExecutionInformation executeExecutableTransition(Transition toExecute)
 				throws IllegalTransitionException {
 		int tId = transitionPositionInArray.get(toExecute);
-		int[] markingBeforeFiring = currentMarking.clone();
+		short[] markingBeforeFiring = currentMarking.clone();
 		
 		for (int place = 0; place < places.length; place++){
 			currentMarking[place] += transitionMatrix[tId][place];
@@ -256,7 +273,7 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 			}
 		}
 		return null;
-	}	
+	}
 	
 	public Object clone() {
 		//TODO Make more efficient by just cloning all fields

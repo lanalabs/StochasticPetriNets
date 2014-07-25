@@ -14,6 +14,7 @@ import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.distribution.BernsteinExponentialApproximation;
 import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.GaussianKernelDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.NonConvergenceException;
@@ -85,7 +86,7 @@ public class TimedTransition extends Transition{
 	protected String trainingData;
 	
 	/**
-	 * By default generate a timed transition with exponential firing rate lamda=1
+	 * By default generate a timed transition with exponential firing rate lambda=1
 	 * 
 	 * @param label
 	 * @param net
@@ -172,6 +173,23 @@ public class TimedTransition extends Transition{
 //						fitGaussianKernels();
 //					}
 					break;
+				case BERNSTEIN_EXPOLYNOMIAL:
+					if (distributionParameters.length < 4){
+						throw new IllegalArgumentException("Bernstein Expolinomial approximations need at least 5 parameters:\n"
+								+ "- a (lower bound)"
+								+ "- b (upper bound)"
+								+ "- c (scaling factor)"
+								+ "- (n + 1) sample points");
+					}
+					Double a = distributionParameters[0];
+					Double b = distributionParameters[1];
+					Double c = distributionParameters[2];
+					double[] nPoints = new double[distributionParameters.length - 3];
+					for (int i = 3; i < distributionParameters.length; i++){
+						nPoints[i-3] = distributionParameters[i]; 
+					}
+					distribution = new BernsteinExponentialApproximation(nPoints, a, b, c);
+					break;
 				case UNDEFINED:
 					// do nothing
 					break;
@@ -226,7 +244,7 @@ public class TimedTransition extends Transition{
 	public void setDistributionParameters(List<Double> transitionStats) {
 		distributionParameters = StochasticNetUtils.getAsDoubleArray(transitionStats);
 	}
-	public void setDistributionParameters(double[] parameters){
+	public void setDistributionParameters(double...parameters){
 		distributionParameters = parameters;
 	}
 

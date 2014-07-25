@@ -1,18 +1,27 @@
 package org.processmining.plugins.stochasticpetrinet.distribution;
 
-import org.apache.commons.math3.analysis.UnivariateFunction;
-import org.apache.commons.math3.analysis.integration.IterativeLegendreGaussIntegrator;
-import org.apache.commons.math3.analysis.integration.SimpsonIntegrator;
-import org.apache.commons.math3.analysis.integration.UnivariateIntegrator;
 import org.apache.commons.math3.distribution.RealDistribution;
-import org.apache.commons.math3.exception.OutOfRangeException;
 
-public class RejectionWrapper implements RealDistribution {
-
+/**
+ * A wrapper around a distribution that cuts off a part below a certain threshold {@link #constraint} 
+ * and rescales the rest of the distribution to become a valid one again.
+ * 
+ * For sampling, a basic rejection sampling approach is implemented in {@link #sample()}.
+ * 
+ * @author Andreas Rogge-Solti
+ * 
+ * @see TruncatedWrapper for a more advanced version using a slice sampling approach.
+ *
+ */
+public class RejectionWrapper extends AnotherAbstractRealDistribution{
+	private static final long serialVersionUID = -5611826477784739098L;
+	
+	/** The original distribution  */
 	protected RealDistribution wrappedDist;
+	/** the constraint, such that the distribution is truncated below this constraint */
 	protected double constraint;
+	/** scaling function, such that the truncated distribution will integrate to 1 */
 	protected double scale;
-	protected double numericalMean = Double.NaN;
 
 	public RejectionWrapper(RealDistribution dist){
 		this(dist,0);
@@ -24,66 +33,12 @@ public class RejectionWrapper implements RealDistribution {
 		this.scale = 1.0/(1.0-wrappedDist.cumulativeProbability(constraint));
 	}
 	
-	public double probability(double x) {
-		throw new UnsupportedOperationException("probability() not implemented");
-	}
-
 	public double density(double x) {
 		if (x < constraint){
 			return 0;
 		} else {
 			return scale * wrappedDist.density(x);
 		}
-	}
-
-	public double cumulativeProbability(double x) {
-		UnivariateIntegrator integrator = new SimpsonIntegrator();
-		return integrator.integrate(10000, getFunction(), Double.NEGATIVE_INFINITY, x);
-	}
-	@Deprecated
-	public double cumulativeProbability(double x0, double x1) {
-		UnivariateIntegrator integrator = new SimpsonIntegrator();
-		return integrator.integrate(10000, getFunction(), x0, x1);
-	}
-
-	
-	public UnivariateFunction getFunction() {
-		UnivariateFunction function = new UnivariateFunction() {
-			public double value(double x) {
-				return density(x);
-			}
-		};
-		return function;
-	}
-	public UnivariateFunction getWeightedFunction(){
-		UnivariateFunction function = new UnivariateFunction() {
-			public double value(double x) {
-				if (x < constraint){
-					return 0;
-				} else {
-					return x*(density(x));
-				}
-			}
-		};
-		return function;
-	}
-
-
-	public double inverseCumulativeProbability(double p) throws OutOfRangeException {
-		throw new UnsupportedOperationException("inverseCumulativeProbability not implemented!");
-	}
-
-	public double getNumericalMean() {
-		if (Double.isNaN(numericalMean)){
-			UnivariateIntegrator integrator = new IterativeLegendreGaussIntegrator(16,0.01,0.000001);
-			double upperBound = wrappedDist.inverseCumulativeProbability(.99)+constraint+10;
-			numericalMean = integrator.integrate(integrator.getMaximalIterationCount(), getWeightedFunction(), constraint, upperBound);
-		}
-		return numericalMean;
-	}
-
-	public double getNumericalVariance() {
-		throw new UnsupportedOperationException("numericalVariance not implemented!");	
 	}
 	
 	public double getSupportLowerBound() {
@@ -110,6 +65,9 @@ public class RejectionWrapper implements RealDistribution {
 		wrappedDist.reseedRandomGenerator(seed);
 	}
 
+	/**
+	 * Perform simple rejection sampling until we find a sample that is above the constraint threshold.
+	 */
 	public double sample() {
 		boolean foundSample = false;
 		double sample = Double.NaN;

@@ -8,14 +8,17 @@ import java.util.Map.Entry;
 import java.util.TreeMap;
 
 import org.apache.commons.math3.analysis.UnivariateFunction;
+import org.apache.commons.math3.analysis.integration.SimpsonIntegrator;
+import org.apache.commons.math3.analysis.integration.UnivariateIntegrator;
 import org.apache.commons.math3.complex.Complex;
 import org.apache.commons.math3.distribution.RealDistribution;
+import org.apache.commons.math3.exception.TooManyEvaluationsException;
 import org.apache.commons.math3.util.FastMath;
 
 public class DistributionUtils {
 
 	/**
-	 * Used for numerical integration.
+	 * Used for numerical integration to compute the mean.
 	 * given a distribution with a density, it returns a function of x * density(x)
 	 * @param dist
 	 * @return
@@ -24,6 +27,35 @@ public class DistributionUtils {
 		UnivariateFunction function = new UnivariateFunction() {
 			public double value(double x) {
 				return x*(dist.density(x));
+			}
+		};
+		return function;
+	}
+	
+	/**
+	 * Used for numerical integration to compute the variance.
+	 * given a distribution with a density, it returns a function of x * density(x)
+	 * @param dist
+	 * @return
+	 */
+	public static UnivariateFunction getWeightedSecondMomentFunction(final RealDistribution dist){
+		UnivariateFunction function = new UnivariateFunction() {
+			public double value(double x) {
+				return FastMath.pow(x,2)*(dist.density(x));
+			}
+		};
+		return function;
+	}	
+	
+	/**
+	 * Simply returns a wrapper function that returns the density.
+	 * @param dist the distribution to extract the density from.
+	 * @return {@link UnivariateFunction}
+	 */
+	public static UnivariateFunction getDensityFunction(final RealDistribution dist){
+		UnivariateFunction function = new UnivariateFunction() {
+			public double value(double x) {
+				return dist.density(x);
 			}
 		};
 		return function;
@@ -67,13 +99,20 @@ public class DistributionUtils {
 	public static Map<Integer, Double> discretizeDistribution(RealDistribution dist, double binwidth){
 		Map<Integer, Double> probabilitiesPerBin = new TreeMap<>();
 		double lowerBound = Math.max(dist.getSupportLowerBound(), 0);
+		if (Double.isInfinite(dist.getSupportLowerBound())){
+			lowerBound = dist.inverseCumulativeProbability(0.000001);
+		}
 		double upperBound = Math.min(dist.getSupportUpperBound(), 1000);
+		if (Double.isInfinite(dist.getSupportUpperBound())){
+			upperBound = dist.inverseCumulativeProbability(0.999999);
+		}
 		int lowerIndex = getIndex(lowerBound,binwidth);
 		int upperIndex = getIndex(upperBound, binwidth);
 		double lower = getValue(lowerIndex, binwidth);
 		double lowerDensity = dist.density(lower);
 		double binwidthThird = binwidth / 3;
 		double densityMass = 0;
+		System.out.println("discretizing distribution "+dist+" with binwidth "+binwidth+ " and "+(upperIndex-lowerIndex)+" bins from ("+lowerIndex+" to "+upperIndex+").");
 		for (int i = lowerIndex; i <= upperIndex;i++){
 			double upper = lower+binwidth;
 			double midL = lower+binwidthThird;
@@ -84,7 +123,7 @@ public class DistributionUtils {
 			double upperDensity = dist.density(upper);
 			
 			double density = (lowerDensity+midLDensity+midUDensity+upperDensity)/4.;
-			if (density > 0){
+			if (density > 0.0000001){
 				densityMass+=density;
 				probabilitiesPerBin.put(i, density);
 			}
@@ -109,10 +148,24 @@ public class DistributionUtils {
 	 * @return
 	 */
 	public static int getIndex(double value, double binwidth){
-		return (int)Math.floor(value / binwidth);
+		return (int)Math.floor((value+(binwidth/2)) / binwidth);
 	}
 	
 	public static double getValue(int index, double binwidth){
 		return index*binwidth;
+	}
+	
+	public static double integrateReliably(UnivariateFunction f, double fromValue, double toValue){
+		long accuracyFactor = 1l;
+		Double result = null;
+		while (result == null){
+			UnivariateIntegrator integrator = new SimpsonIntegrator(SimpsonIntegrator.DEFAULT_RELATIVE_ACCURACY*accuracyFactor, SimpsonIntegrator.DEFAULT_ABSOLUTE_ACCURACY*accuracyFactor, SimpsonIntegrator.DEFAULT_MIN_ITERATIONS_COUNT, SimpsonIntegrator.SIMPSON_MAX_ITERATIONS_COUNT);
+			try {
+				result = integrator.integrate(10000, f, fromValue, toValue);
+			} catch (TooManyEvaluationsException e){
+				accuracyFactor *= 2;
+			}
+		}
+		return result;
 	}
 }

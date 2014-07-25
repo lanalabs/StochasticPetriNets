@@ -87,6 +87,7 @@ import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistr
 import org.processmining.plugins.stochasticpetrinet.distribution.RProvider;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.TruncatedDistributionFactory;
+import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
 import org.rosuda.JRI.Rengine;
 
 public class StochasticNetUtils {
@@ -183,6 +184,7 @@ public class StochasticNetUtils {
 		}
 		return initialMarking;
 	}
+	
 	public static Marking getDefaultInitialMarking(PetrinetGraph petriNet) {
 		Marking initialMarking;
 		// creating initial marking with a token on each input place. 
@@ -235,10 +237,12 @@ public class StochasticNetUtils {
 		}
 		return finalMarking;
 	}
+	
 	public static void cacheFinalMarking(PetrinetGraph net, Marking finalMarking){
 		if (finalMarking != null)
 			finalMarkings.put(net, finalMarking);
 	}
+	
 	public static void cacheInitialMarking(PetrinetGraph net, Marking initialMarking){
 		if (initialMarking != null)
 			initialMarkings.put(net, initialMarking);
@@ -306,6 +310,7 @@ public class StochasticNetUtils {
 		} 
 		return sample;
 	}
+	
 	/**
 	 * Takes a double[] of weights and selects an item randomly according to a random number generator
 	 * such that each item in the array has a probability of (weight of item / sum of weights);
@@ -440,6 +445,19 @@ public class StochasticNetUtils {
 			stats.addValue(duration);
 		}
 		return stats.getMean();
+	}
+	/**
+	 * Gets the mean duration of the model by a simple simulation.
+	 * TODO: Replace with analytical calculations, as for example done in the tool ORIS (www.oris-tool.org)
+	 * @param net
+	 * @param initialMarking
+	 * @return
+	 */
+	public static double getMeanDuration(StochasticNet net, Marking initialMarking){
+		TimePredictor predictor = new TimePredictor();
+		XTrace emptyTrace = XFactoryRegistry.instance().currentDefault().createTrace();
+		Pair<Double, Double> prediction = predictor.predict(net, emptyTrace, new Date(0), initialMarking, false);
+		return prediction.getFirst();
 	}
 	
 	/**
