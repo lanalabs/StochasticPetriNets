@@ -102,10 +102,7 @@ public class DistributionUtils {
 		if (Double.isInfinite(dist.getSupportLowerBound())){
 			lowerBound = dist.inverseCumulativeProbability(0.000001);
 		}
-		double upperBound = Math.min(dist.getSupportUpperBound(), 1000);
-		if (Double.isInfinite(dist.getSupportUpperBound())){
-			upperBound = dist.inverseCumulativeProbability(0.999999);
-		}
+		double upperBound = getReliableUpperBound(dist);
 		int lowerIndex = getIndex(lowerBound,binwidth);
 		int upperIndex = getIndex(upperBound, binwidth);
 		double lower = getValue(lowerIndex, binwidth);
@@ -155,10 +152,20 @@ public class DistributionUtils {
 		return index*binwidth;
 	}
 	
+	/**
+	 * Integrates a function numerically with the {@link SimpsonIntegrator}. Does so 10 times with less and less accuracy.
+	 * 
+	 * @param f the function to be integrated
+	 * @param fromValue the lower boundary of the integral
+	 * @param toValue  the upper boundary of the integral
+	 * @throws IllegalArgumentException if integration fails 10 times (with less and less accuracy)
+	 * @return double the value of the integral
+	 */
 	public static double integrateReliably(UnivariateFunction f, double fromValue, double toValue){
 		long accuracyFactor = 1l;
 		Double result = null;
-		while (result == null){
+		int tries = 0;
+		while (result == null && tries++ < 10){
 			UnivariateIntegrator integrator = new SimpsonIntegrator(SimpsonIntegrator.DEFAULT_RELATIVE_ACCURACY*accuracyFactor, SimpsonIntegrator.DEFAULT_ABSOLUTE_ACCURACY*accuracyFactor, SimpsonIntegrator.DEFAULT_MIN_ITERATIONS_COUNT, SimpsonIntegrator.SIMPSON_MAX_ITERATIONS_COUNT);
 			try {
 				result = integrator.integrate(10000, f, fromValue, toValue);
@@ -166,6 +173,17 @@ public class DistributionUtils {
 				accuracyFactor *= 2;
 			}
 		}
+		if (result == null) {
+			throw new IllegalArgumentException("Could not compute the integral from "+fromValue+" to "+toValue+". Resorting to sampling.");
+		}
 		return result;
+	}
+
+	public static double getReliableUpperBound(RealDistribution dist) {
+		double upperBound = Math.min(dist.getSupportUpperBound(), 1000);
+		if (Double.isInfinite(dist.getSupportUpperBound())){
+			upperBound = dist.inverseCumulativeProbability(0.999999);
+		}
+		return upperBound;
 	}
 }

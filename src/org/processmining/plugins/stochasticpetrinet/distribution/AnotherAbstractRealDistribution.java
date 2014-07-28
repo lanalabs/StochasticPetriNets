@@ -3,10 +3,13 @@ package org.processmining.plugins.stochasticpetrinet.distribution;
 import org.apache.commons.math3.analysis.UnivariateFunction;
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
 import org.apache.commons.math3.random.Well1024a;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.util.FastMath;
 
 public abstract class AnotherAbstractRealDistribution extends AbstractRealDistribution implements UnivariateFunction {
 	private static final long serialVersionUID = -600495498673503611L;
+
+	private static final int SAMPLE_SIZE = 10000;
 
 	protected Double cachedMean, cachedVariance;
 	
@@ -32,7 +35,14 @@ public abstract class AnotherAbstractRealDistribution extends AbstractRealDistri
 	 */
 	public double getNumericalMean() {
 		if (cachedMean == null){
-			cachedMean = DistributionUtils.integrateReliably(DistributionUtils.getWeightedFunction(this), getSupportLowerBound(), getSupportUpperBound());
+			try {
+				cachedMean = DistributionUtils.integrateReliably(DistributionUtils.getWeightedFunction(this), getSupportLowerBound(), getSupportUpperBound());
+			} catch (IllegalArgumentException e){
+				// sample the mean:
+				double[] samples = sample(SAMPLE_SIZE);
+				DescriptiveStatistics stats = new DescriptiveStatistics(samples);
+				cachedMean = stats.getMean(); 
+			}
 		}
 		return cachedMean;
 	}
