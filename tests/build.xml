@@ -130,7 +130,7 @@
     	  <sysproperty key="test.testFileRoot" path="${dir.testfiles}"/>
 	      <test name="org.processmining.tests.plugins.stochasticnet.FilterTest" todir="${test.basedir}" />
 	      <test name="org.processmining.tests.plugins.stochasticnet.PNMLImportTest" todir="${test.basedir}" />
-          <test name="org.processmining.tests.plugins.stochasticnet.TruncatedDistributionTest" todir="${test.basedir}" />
+          <!--test name="org.processmining.tests.plugins.stochasticnet.TruncatedDistributionTest" todir="${test.basedir}" /-->
 	    </junit>
 		
 		<!-- Cobertura: generate HTML coverage report -->
