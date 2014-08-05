@@ -93,23 +93,23 @@ public class FilterTest {
 		XLog log = XFactoryRegistry.instance().currentDefault().createLog();
 		XTrace trace = XFactoryRegistry.instance().currentDefault().createTrace();
 		log.add(trace);
-		
-		TestUtils.addEvent("a",trace, 10);
-		TestUtils.addEvent("b",trace, 20);
-		TestUtils.addEvent("c",trace, 30);
-		TestUtils.addEvent("d",trace, 40);
-		TestUtils.addEvent("e",trace, 50);
-		TestUtils.addEvent("f",trace, 60);
-		TestUtils.addEvent("g",trace, 70);
-		TestUtils.addEvent("h",trace, 80);
-		TestUtils.addEvent("i",trace, 90);
-		TestUtils.addEvent("j",trace, 100);
+		final int MINUTES = 60000;
+		TestUtils.addEvent("a",trace, 10*MINUTES);
+		TestUtils.addEvent("b",trace, 20*MINUTES);
+		TestUtils.addEvent("c",trace, 30*MINUTES);
+		TestUtils.addEvent("d",trace, 40*MINUTES);
+		TestUtils.addEvent("e",trace, 50*MINUTES);
+		TestUtils.addEvent("f",trace, 60*MINUTES);
+		TestUtils.addEvent("g",trace, 70*MINUTES);
+		TestUtils.addEvent("h",trace, 80*MINUTES);
+		TestUtils.addEvent("i",trace, 90*MINUTES);
+		TestUtils.addEvent("j",trace, 100*MINUTES);
 		
 		System.out.println("Inserting noise. Original trace:\n"
 				+ StochasticNetUtils.debugTrace(trace));
 		
+		// remove only
 		AccurateNoiseFilter filter = new AccurateNoiseFilter(0.0, 1, 1);
-		
 		for (int noisePercent = 5; noisePercent < 100; noisePercent+= 5){
 			filter.setNoise(noisePercent/100.);
 			XLog noisyLog = filter.insertNoise(log);
@@ -117,6 +117,28 @@ public class FilterTest {
 			System.out.println("inserted "+noisePercent+" percent noise. Noisy trace:\n"
 					+ StochasticNetUtils.debugTrace(noisyTrace));
 			Assert.assertEquals((100-noisePercent)/100., noisyTrace.size()/(double)trace.size(),0.06);	
+		}
+		
+		// add only
+		filter.setDeletionInsertionRatio(0.0);
+		for (int noisePercent = 5; noisePercent < 100; noisePercent+= 5){
+			filter.setNoise(noisePercent/100.);
+			XLog noisyLog = filter.insertNoise(log);
+			XTrace noisyTrace = noisyLog.get(0);
+			System.out.println("inserted "+noisePercent+" percent noise. Noisy trace:\n"
+					+ StochasticNetUtils.debugTrace(noisyTrace));
+			Assert.assertEquals((100+noisePercent)/200., noisyTrace.size()/(2*(double)trace.size()),0.04);	
+		}
+		
+		// remove half, add half
+		filter.setDeletionInsertionRatio(0.5);
+		for (int noisePercent = 0; noisePercent <= 100; noisePercent+= 5){
+			filter.setNoise(noisePercent/100.);
+			XLog noisyLog = filter.insertNoise(log);
+			XTrace noisyTrace = noisyLog.get(0);
+			System.out.println("inserted "+noisePercent+" percent noise. Noisy trace:\n"
+					+ StochasticNetUtils.debugTrace(noisyTrace));
+			Assert.assertEquals(0.5, noisyTrace.size()/(2*(double)trace.size()),0.06);	
 		}
 	}
 }

@@ -6,6 +6,7 @@ import java.util.Random;
 
 import org.deckfour.xes.classification.XEventClass;
 import org.deckfour.xes.classification.XEventClasses;
+import org.deckfour.xes.classification.XEventNameClassifier;
 import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
@@ -61,7 +62,7 @@ public class AccurateNoiseFilter {
 	 */
 	public XLog insertNoise(XLog log){
 		
-		XLogInfo logInfo = XLogInfoFactory.createLogInfo(log);
+		XLogInfo logInfo = XLogInfoFactory.createLogInfo(log,new XEventNameClassifier());
 		XEventClasses classes = logInfo.getEventClasses();
 		ArrayList<XEventClass> classCollection = new ArrayList<>(classes.getClasses());
 		
@@ -82,28 +83,30 @@ public class AccurateNoiseFilter {
 			double introducedNoise = affectedEvents / (double)trace.size();
 			double introducedNoiseWithOneMore = (affectedEvents+1) / (double)trace.size();
 			double chanceForOneMore = (noise - introducedNoise) / (introducedNoiseWithOneMore-introducedNoise); 
-			affectedEvents = random.nextDouble() < chanceForOneMore ? affectedEvents+1 : affectedEvents;
+			affectedEvents = random.nextDouble() < chanceForOneMore ? affectedEvents + 1 : affectedEvents;
+			
+			int deletedEvents = (int) Math.floor(affectedEvents*deletionInsertionRatio);
+			double deletedEventsRatio = deletedEvents / (double)affectedEvents;
+			double deletedEventsRatioWithOneMore = (deletedEvents+1) / (double)affectedEvents;
+			double chanceForOneMoreDeletion = (deletionInsertionRatio - deletedEventsRatio) / (deletedEventsRatioWithOneMore- deletedEventsRatio);
+			deletedEvents = random.nextDouble() < chanceForOneMoreDeletion ? deletedEvents + 1 : deletedEvents;
 			
 			List<XEvent> affectedEventSet = new ArrayList<>(resultTrace); // make sure that each event is only passed once
-			for (int i = 0; i < affectedEvents; i++){
-				boolean remove = random.nextDouble() <= deletionInsertionRatio;
-				if (deletionInsertionRatio == 0){
-					remove = false;
-				}
+			for (int i = 0; i < deletedEvents; i++){
 				XEvent e = affectedEventSet.remove(random.nextInt(affectedEventSet.size())); // randomly select next event
-				if (remove){
-					resultTrace.remove(e);
-				} else {
-					XEventClass eClass = classCollection.get(random.nextInt(classCollection.size()));
-					XEvent newEvent = XFactoryRegistry.instance().currentDefault().createEvent((XAttributeMap) e.getAttributes().clone());
-					XConceptExtension.instance().assignName(newEvent, eClass.getId());
-					XTimeExtension.instance().assignTimestamp(newEvent, (long) (traceStart+random.nextDouble()*2*meanDuration));
-					resultTrace.insertOrdered(newEvent);
-				}
+				resultTrace.remove(e);
 				if (resultTrace.isEmpty()){
 					// only occurs if we deleted all events -> we readd the last one
 					resultTrace.add(e);
 				}
+			}
+			for (int i = deletedEvents; i < affectedEvents; i++){
+				XEvent e = affectedEventSet.remove(random.nextInt(affectedEventSet.size())); // randomly select next event
+				XEventClass eClass = classCollection.get(random.nextInt(classCollection.size()));
+				XEvent newEvent = XFactoryRegistry.instance().currentDefault().createEvent((XAttributeMap) e.getAttributes().clone());
+				XConceptExtension.instance().assignName(newEvent, eClass.getId());
+				XTimeExtension.instance().assignTimestamp(newEvent, (long) (traceStart+random.nextDouble()*meanDuration));
+				resultTrace.insertOrdered(newEvent);
 			}
 			resultLog.add(resultTrace);
 		}
