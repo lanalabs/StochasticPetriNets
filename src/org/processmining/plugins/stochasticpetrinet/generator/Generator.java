@@ -26,8 +26,9 @@ import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
  */
 public class Generator {
 
-	private int pId = 1; // place counter
-	private int tId = 1; // transition counter
+	private int pId = 0; // place counter
+	private int tId = 0; // transition counter
+	private int tRoutingId = 0; // routing transition counter
 	
 	private enum Structure {
 		SEQUENCE,XOR,AND,LOOP;
@@ -41,8 +42,9 @@ public class Generator {
 	}
 	
 	private void resetCounters() {
-		 pId = 1; 
-		 tId = 1;
+		 pId = 0; 
+		 tId = 0;
+		 tRoutingId = 0;
 	}
 
 	/**
@@ -70,7 +72,7 @@ public class Generator {
 		Place pEnd = net.addPlace("pEnd");
 		finalMarking.add(pEnd);
 		
-		Transition t = net.addTimedTransition(nextTransitionName(), config.getDistributionType(), getRandomParameters(config.getDistributionType()));
+		Transition t = net.addTimedTransition(nextRealTransitionName(), config.getDistributionType(), getRandomParameters(config.getDistributionType()));
 		
 		net.addArc(p1, t);
 		net.addArc(t, pEnd);
@@ -115,7 +117,7 @@ public class Generator {
 		Place outPlace = (Place) outEdges.iterator().next().getTarget();
 		
 		// add new timed Transition
-		Transition newTransition = net.addTimedTransition(nextTransitionName(), config.getDistributionType(), getRandomParameters(config.getDistributionType()));
+		Transition newTransition = net.addTimedTransition(nextRealTransitionName(), config.getDistributionType(), getRandomParameters(config.getDistributionType()));
 		
 		switch(nextStructure){
 			case SEQUENCE:
@@ -131,7 +133,7 @@ public class Generator {
 				// remove arc to transition:
 				net.removeArc(inPlace, t);
 				// add immediate choice transitions:
-				double weightUp = random.nextDouble()*0.8+0.2; // (uniform between 0.2-0.8)
+				double weightUp = random.nextDouble()*0.6+0.2; // (uniform between 0.2-0.8)
 				TimedTransition up = net.addImmediateTransition(nextTransitionName(), weightUp);
 				up.setInvisible(config.isImmedateTransitionsInvisible());
 				Place upPlace = net.addPlace(nextPlaceName());
@@ -272,7 +274,7 @@ public class Generator {
 				return new double[]{0.01+(random.nextDouble()*10)};
 			case NORMAL:
 				double mean = random.nextInt(20)+5; // uniform 1-11
-				double sd = Math.min((int)mean/3.0, 1+(random.nextInt(5))); // uniform 
+				double sd = Math.min((int)mean/3.0, 1+(random.nextDouble()*5)); // between uniform 1-6 and mean/3 
 				return new double[]{mean,sd};
 			case LOGNORMAL:
 				double logMean = Math.log(random.nextDouble()*10+1);
@@ -299,8 +301,26 @@ public class Generator {
 	}
 	
 	private String nextTransitionName() {
-		return "t"+tId++;
+		String name = "t"+tRoutingId;
+		tRoutingId++;
+		return name;
 	}
+	private String nextRealTransitionName() {
+		String name = "t"+getNameForNumber(tId);
+		tId++;
+		return name;
+	}
+	
+	public static String getNameForNumber(int i) {
+		final CharSequence cs = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+		String label = "";
+		while( i/cs.length() > 0){
+			label = cs.charAt(i % cs.length()) + label;
+			i = i/cs.length() - 1;
+		}
+		return cs.charAt(i) + label;
+	}
+	
 	private String nextPlaceName() {
 		return "p"+pId++;
 	}

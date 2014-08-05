@@ -45,7 +45,12 @@ public class TimePredictor {
 			System.out.println("Debug me!");
 		}
 		Marking currentMarking = semantics.getCurrentState();
-		Long lastEventTime = XTimeExtension.instance().extractTimestamp(observedEvents.get(observedEvents.size()-1)).getTime();
+		Long lastEventTime;
+		if (observedEvents.isEmpty()){
+			lastEventTime = currentTime.getTime();
+		} else {
+			lastEventTime = XTimeExtension.instance().extractTimestamp(observedEvents.get(observedEvents.size()-1)).getTime();
+		}
 //		System.out.println("Time between last event and current time: "+(currentTime.getTime()-lastEventTime)+"ms");
 		PNSimulatorTraceLess simulator = new PNSimulatorTraceLess();
 		PNSimulatorConfig config = new PNSimulatorConfig(1,model.getTimeUnit());

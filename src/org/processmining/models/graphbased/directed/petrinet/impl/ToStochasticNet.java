@@ -1,5 +1,6 @@
 package org.processmining.models.graphbased.directed.petrinet.impl;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
@@ -7,9 +8,13 @@ import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.PluginVariant;
 import org.processmining.models.connections.petrinets.behavioral.InitialMarkingConnection;
 import org.processmining.models.graphbased.directed.DirectedGraphElement;
+import org.processmining.models.graphbased.directed.petrinet.Petrinet;
+import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
+import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
+import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
@@ -74,6 +79,15 @@ public class ToStochasticNet {
 		return new Object[] { newNet, newMarking };
 	}
 	
+	/**
+	 * Converts all timed transitions (except immediate and deterministic transitions) to the specified type in the net.
+	 * 
+	 * @param context
+	 * @param net
+	 * @param marking
+	 * @param type
+	 * @return
+	 */
 	public static Object[] convertStochasticNetToType(PluginContext context, StochasticNet net, Marking marking, DistributionType type){
 		StochasticNetImpl newNet = new StochasticNetImpl(net.getLabel());
 		newNet.setExecutionPolicy(net.getExecutionPolicy());
@@ -131,5 +145,67 @@ public class ToStochasticNet {
 		}
 		
 		return new Object[] { newNet, newMarking };
+	}
+	
+
+	/**
+	 * Adopted from exportPN2DOT method from the EventToActivityMatcher plugin 
+	 * @author Thomas Baier, Andreas Rogge-Solti
+	 * 
+	 * @param net
+	 */
+	public static String convertPetrinetToDOT(Petrinet net) {
+		String lsep = System.getProperty("line.separator");
+		
+		String resultString = "digraph G { " + lsep;
+		resultString += "ranksep=\".3\"; fontsize=\"14\"; remincross=true; margin=\"0.0,0.0\"; fontname=\"Arial\";rankdir=\"LR\";" + lsep; 
+		resultString += "edge [arrowsize=\"0.5\"];\n";
+		resultString += "node [height=\".2\",width=\".2\",fontname=\"Arial\",fontsize=\"14\"];\n";
+		resultString += "ratio=0.4;" + lsep;
+		
+		Map<PetrinetNode, String> idMapping = new HashMap<>();
+		int id = 1;
+		for (Transition tr : net.getTransitions()) {
+			
+			String shape = "shape=\"box\"";
+			if (tr instanceof TimedTransition){
+				TimedTransition tt = (TimedTransition) tr;
+				if (tt.getDistributionType().equals(DistributionType.IMMEDIATE)){
+					shape += ",margin=\"0, 0.1\"";
+				}
+			}
+			if (tr.isInvisible()){
+				shape += ",color=\"black\",fontcolor=\"white\"";
+			}
+			id = checkId(tr, idMapping, id);
+			resultString += idMapping.get(tr) + " ["+shape+",label=\""+tr.getLabel()+"\",style=\"filled\"];" + lsep;
+		}
+		
+		
+		// Places
+		for (Place place : net.getPlaces()) {
+			id = checkId(place, idMapping, id);
+			resultString += idMapping.get(place) + " [shape=\"circle\",label=\"\"];" + lsep;
+		}
+		
+		// Edges 
+		for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : net.getEdges()) {
+			id = checkId(edge.getSource(), idMapping, id);
+			id = checkId(edge.getTarget(), idMapping, id);
+			
+			String edgeString = idMapping.get(edge.getSource())  + " -> " + idMapping.get(edge.getTarget());
+			resultString += edgeString +  lsep;
+		}
+		
+		resultString += "}";
+		
+		return resultString;
+	}
+
+	private static int checkId(PetrinetNode node, Map<PetrinetNode, String> idMapping, int currentCounter) {
+		if (!idMapping.containsKey(node)){
+			idMapping.put(node, String.valueOf("id"+(currentCounter++)));
+		}
+		return currentCounter;
 	}
 }

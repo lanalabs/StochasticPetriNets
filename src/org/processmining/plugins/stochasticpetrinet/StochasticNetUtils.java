@@ -460,6 +460,13 @@ public class StochasticNetUtils {
 		return prediction.getFirst();
 	}
 	
+	public static double getUpperBoundDuration(StochasticNet net, Marking initialMarking) {
+		TimePredictor predictor = new TimePredictor();
+		XTrace emptyTrace = XFactoryRegistry.instance().currentDefault().createTrace();
+		Pair<Double, Double> prediction = predictor.predict(net, emptyTrace, new Date(0), initialMarking, false);
+		return prediction.getFirst()+prediction.getSecond()/2; // add half of the confidence interval to the mean to get a reasonable upper bound
+	}
+	
 	/**
 	 * Replays a log on a model based on selected parameters.
 	 * Returns either a {@link PNRepResult} replay result, or converts that into a {@link Manifest} (parameter getManifest)
@@ -916,4 +923,5 @@ public class StochasticNetUtils {
 		}
 		return minDate;
 	}
+
 }

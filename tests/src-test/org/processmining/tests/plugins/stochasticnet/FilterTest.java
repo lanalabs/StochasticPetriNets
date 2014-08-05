@@ -8,6 +8,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.processmining.plugins.filter.context.LoadAnnotationPlugin;
 import org.processmining.plugins.filter.loops.LoopsLinearizerPlugin;
+import org.processmining.plugins.filter.noise.AccurateNoiseFilter;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 
 public class FilterTest {
@@ -85,7 +86,37 @@ public class FilterTest {
 		Assert.assertEquals(3, ((XAttributeDiscrete)annotatedTrace.get(2).getAttributes().get(LoadAnnotationPlugin.CONTEXT_LOAD)).getValue());
 		Assert.assertEquals(2, ((XAttributeDiscrete)annotatedTrace2.get(2).getAttributes().get(LoadAnnotationPlugin.CONTEXT_LOAD)).getValue());
 		Assert.assertEquals(1, ((XAttributeDiscrete)annotatedTrace3.get(2).getAttributes().get(LoadAnnotationPlugin.CONTEXT_LOAD)).getValue());
+	}
+	
+	@Test
+	public void testNoiseFilter() throws Exception {
+		XLog log = XFactoryRegistry.instance().currentDefault().createLog();
+		XTrace trace = XFactoryRegistry.instance().currentDefault().createTrace();
+		log.add(trace);
 		
+		TestUtils.addEvent("a",trace, 10);
+		TestUtils.addEvent("b",trace, 20);
+		TestUtils.addEvent("c",trace, 30);
+		TestUtils.addEvent("d",trace, 40);
+		TestUtils.addEvent("e",trace, 50);
+		TestUtils.addEvent("f",trace, 60);
+		TestUtils.addEvent("g",trace, 70);
+		TestUtils.addEvent("h",trace, 80);
+		TestUtils.addEvent("i",trace, 90);
+		TestUtils.addEvent("j",trace, 100);
 		
+		System.out.println("Inserting noise. Original trace:\n"
+				+ StochasticNetUtils.debugTrace(trace));
+		
+		AccurateNoiseFilter filter = new AccurateNoiseFilter(0.0, 1, 1);
+		
+		for (int noisePercent = 5; noisePercent < 100; noisePercent+= 5){
+			filter.setNoise(noisePercent/100.);
+			XLog noisyLog = filter.insertNoise(log);
+			XTrace noisyTrace = noisyLog.get(0);
+			System.out.println("inserted "+noisePercent+" percent noise. Noisy trace:\n"
+					+ StochasticNetUtils.debugTrace(noisyTrace));
+			Assert.assertEquals((100-noisePercent)/100., noisyTrace.size()/(double)trace.size(),0.06);	
+		}
 	}
 }

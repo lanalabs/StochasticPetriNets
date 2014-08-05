@@ -66,7 +66,7 @@ public class GeneratorConfig {
 		containsLoops = false;
 		degreeOfParallelism = 1;
 		degreeOfExclusiveChoices = 1;
-		degreeOfExclusiveChoices = 1;
+		degreeOfSequences = 1;
 		degreeOfLoops = 0;
 		distributionType = DistributionType.NORMAL;
 		timeUnit = TimeUnit.MINUTES;
