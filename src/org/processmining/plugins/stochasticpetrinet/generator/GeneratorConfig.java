@@ -59,6 +59,9 @@ public class GeneratorConfig {
 	
 	/** A start transition that signals the start of a process (useful for measuring the duration of the first real activity */
 	private boolean createDedicatedImmediateStartTransition;
+
+	/** Allows to introduce parallelism only in later stage of generation (to avoid huge parts of the model to be in parallel.) */
+	private boolean parallelismOnlyInParts;
 	
 	public GeneratorConfig(){
 		transitionSize = DEFAULT_TRANSITION_SIZE;
@@ -73,6 +76,7 @@ public class GeneratorConfig {
 		executionPolicy = ExecutionPolicy.RACE_ENABLING_MEMORY;
 		immedateTransitionsInvisible = true;
 		createDedicatedImmediateStartTransition = false;
+		parallelismOnlyInParts = false;
 	}
 
 	public int getTransitionSize() {
@@ -169,5 +173,14 @@ public class GeneratorConfig {
 	public void setCreateDedicatedImmediateStartTransition(boolean createDedicatedImmediateStartTransition) {
 		this.createDedicatedImmediateStartTransition = createDedicatedImmediateStartTransition;
 	}
+
+	public boolean isParallelismOnlyInParts() {
+		return parallelismOnlyInParts;
+	}
+
+	public void setParallelismOnlyInParts(boolean parallelismOnlyInParts) {
+		this.parallelismOnlyInParts = parallelismOnlyInParts;
+	}
+	
 	
 }

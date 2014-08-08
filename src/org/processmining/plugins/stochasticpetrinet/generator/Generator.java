@@ -78,8 +78,8 @@ public class Generator {
 		net.addArc(t, pEnd);
 		
 		int counter = 1;
-		while (counter++ < config.getTransitionSize()){
-			addRandomStructure(net, config);
+		while (counter < config.getTransitionSize()){
+			addRandomStructure(net, config, counter++);
 		}
 		
 		if (config.isCreateDedicatedImmediateStartTransition()){
@@ -104,8 +104,8 @@ public class Generator {
 	 * @param config {@link GeneratorConfig} 
 	 * @return int number of nodes added to the net
 	 */
-	private void addRandomStructure(StochasticNet net, GeneratorConfig config) {
-		Structure nextStructure = getNextStructure(config);
+	private void addRandomStructure(StochasticNet net, GeneratorConfig config, int counter) {
+		Structure nextStructure = getNextStructure(config, counter);
 		Transition t = pickNextTimedTransition(net.getTransitions());
 		// get places around the transition:
 		Collection<PetrinetEdge<? extends PetrinetNode,? extends PetrinetNode>> inEdges = t.getGraph().getInEdges(t);
@@ -224,12 +224,16 @@ public class Generator {
 	/**
 	 * Picks a structure randomly according to the configuration.
 	 * @param config
+	 * @param counter 
 	 * @return
 	 */
-	private Structure getNextStructure(GeneratorConfig config) {
+	private Structure getNextStructure(GeneratorConfig config, int counter) {
 		int xors = config.getDegreeOfExclusiveChoices();
 		int seqs = config.getDegreeOfSequences();
 		int pars = config.getDegreeOfParallelism();
+		if (config.isParallelismOnlyInParts() && counter < config.getTransitionSize()/2.){
+			pars = 0;
+		}
 		int loops = config.isContainsLoops()?config.getDegreeOfLoops():0;
 		int allTogether = xors+seqs+pars+loops;
 		int pick = random.nextInt(allTogether);

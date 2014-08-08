@@ -18,6 +18,7 @@ import java.util.GregorianCalendar;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -28,6 +29,7 @@ import java.util.TreeMap;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 
+import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -95,8 +97,25 @@ public class StochasticNetUtils {
 	public static final String ITERATION_KEY = "k-fold";
 	public static final String TIME_ATTRIBUTE_KEY = "time:timestamp";
 	
-	private static Map<PetrinetGraph, Marking> initialMarkings = new HashMap<PetrinetGraph, Marking>();
-	private static Map<PetrinetGraph, Marking> finalMarkings = new HashMap<PetrinetGraph, Marking>();
+	private static int cacheSize = 100;
+	private static boolean cacheEnabled = true;
+	
+	private static Map<PetrinetGraph, Marking> initialMarkings = new LinkedHashMap<PetrinetGraph, Marking>() {
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<PetrinetGraph, Marking> eldest) {
+			return size() > StochasticNetUtils.cacheSize;
+		}
+	}; 
+	private static Map<PetrinetGraph, Marking> finalMarkings = new LinkedHashMap<PetrinetGraph, Marking>() {
+		@Override
+		protected boolean removeEldestEntry(Map.Entry<PetrinetGraph, Marking> eldest) {
+			return size() > StochasticNetUtils.cacheSize;
+		}
+	}; 
+	
+	public static void setCacheEnabled(boolean enabled){
+		cacheEnabled = enabled;
+	}
 	
 //	/**
 //	 * indexed array of conversion factors
@@ -122,7 +141,7 @@ public class StochasticNetUtils {
 	 * @return
 	 */
 	public static Marking getInitialMarking(PluginContext context, PetrinetGraph petriNet) {
-		return getInitialMarking(context, petriNet, true);
+		return getInitialMarking(context, petriNet, cacheEnabled);
 	}
 	/**
 	 * Gets a very simple mapping based on the naming of activities
@@ -199,7 +218,7 @@ public class StochasticNetUtils {
 	}
 	
 	public static Marking getFinalMarking(PluginContext context, PetrinetGraph petriNet){
-		return getFinalMarking(context, petriNet, true);
+		return getFinalMarking(context, petriNet, cacheEnabled);
 	}
 	
 	/**
@@ -922,6 +941,13 @@ public class StochasticNetUtils {
 			}
 		}
 		return minDate;
+	}
+	public static String printDistribution(RealDistribution distribution) {
+		if (distribution instanceof NormalDistribution){
+			NormalDistribution dist = (NormalDistribution) distribution;
+			return "norm("+((int)(distribution.getNumericalMean()*10)/10.)+","+((int)(dist.getStandardDeviation()*10)/10.)+")"; 
+		}
+		return "";
 	}
 
 }

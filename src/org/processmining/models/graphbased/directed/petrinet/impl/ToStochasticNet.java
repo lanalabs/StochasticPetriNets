@@ -18,6 +18,7 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.distribution.BernsteinExponentialApproximation;
 
 public class ToStochasticNet {
@@ -167,9 +168,11 @@ public class ToStochasticNet {
 		int id = 1;
 		for (Transition tr : net.getTransitions()) {
 			
+			String label = tr.getLabel();
 			String shape = "shape=\"box\"";
 			if (tr instanceof TimedTransition){
 				TimedTransition tt = (TimedTransition) tr;
+				label += "\\n"+ StochasticNetUtils.printDistribution(tt.getDistribution());
 				if (tt.getDistributionType().equals(DistributionType.IMMEDIATE)){
 					shape += ",margin=\"0, 0.1\"";
 				}
@@ -178,7 +181,7 @@ public class ToStochasticNet {
 				shape += ",color=\"black\",fontcolor=\"white\"";
 			}
 			id = checkId(tr, idMapping, id);
-			resultString += idMapping.get(tr) + " ["+shape+",label=\""+tr.getLabel()+"\",style=\"filled\"];" + lsep;
+			resultString += idMapping.get(tr) + " ["+shape+",label=\""+label+"\",style=\"filled\"];" + lsep;
 		}
 		
 		

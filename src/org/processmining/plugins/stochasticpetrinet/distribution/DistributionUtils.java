@@ -109,7 +109,7 @@ public class DistributionUtils {
 		double lowerDensity = dist.density(lower);
 		double binwidthThird = binwidth / 3;
 		double densityMass = 0;
-		System.out.println("discretizing distribution "+dist+" with binwidth "+binwidth+ " and "+(upperIndex-lowerIndex)+" bins from ("+lowerIndex+" to "+upperIndex+").");
+//		System.out.println("discretizing distribution "+dist+" with binwidth "+binwidth+ " and "+(upperIndex-lowerIndex)+" bins from ("+lowerIndex+" to "+upperIndex+").");
 		for (int i = lowerIndex; i <= upperIndex;i++){
 			double upper = lower+binwidth;
 			double midL = lower+binwidthThird;
