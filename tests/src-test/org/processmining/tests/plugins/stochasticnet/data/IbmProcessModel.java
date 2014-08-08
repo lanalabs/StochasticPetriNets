@@ -15,6 +15,9 @@ public class IbmProcessModel {
 	private List<IbmTask> tasks;
 	
 	@ElementList(required=false)
+	private List<IbmHumanTask> humanTasks;
+	
+	@ElementList(required=false)
 	private List<IbmService> services;
 	
 	public List<IbmProcess> getProcesses() {
@@ -31,6 +34,22 @@ public class IbmProcessModel {
 
 	public void setTasks(List<IbmTask> tasks) {
 		this.tasks = tasks;
+	}
+
+	public List<IbmHumanTask> getHumanTasks() {
+		return humanTasks;
+	}
+
+	public void setHumanTasks(List<IbmHumanTask> humanTasks) {
+		this.humanTasks = humanTasks;
+	}
+
+	public List<IbmService> getServices() {
+		return services;
+	}
+
+	public void setServices(List<IbmService> services) {
+		this.services = services;
 	}
 	
 	

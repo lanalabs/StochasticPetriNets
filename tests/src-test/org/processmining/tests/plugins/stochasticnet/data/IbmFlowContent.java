@@ -15,8 +15,17 @@ public class IbmFlowContent {
 	@ElementList(entry="endNode", inline=true, required=false)
     private List<IbmEndNode> endNodes;
 	
+	@ElementList(entry="stopNode", inline=true, required=false)
+	private List<IbmEndNode> stopNodes;
+	
 	@ElementList(entry="task", inline=true, required=false)
 	private List<IbmTask> tasks;
+	
+	@ElementList(entry="humanTask", inline=true, required=false)
+	private List<IbmHumanTask> humanTasks;
+	
+	@ElementList(entry="process", inline=true, required=false)
+	private List<IbmProcess> processes;
 	
 	@ElementList(entry="decision", inline=true, required=false)
 	private List<IbmDecision> decisions;
@@ -46,11 +55,15 @@ public class IbmFlowContent {
 	public IbmFlowContent(){
 		this.startNodes = new ArrayList<IbmStartNode>();
 		this.endNodes = new ArrayList<IbmEndNode>();
+		this.stopNodes = new ArrayList<IbmEndNode>();
 		this.tasks = new ArrayList<IbmTask>();
+		this.humanTasks = new ArrayList<IbmHumanTask>();
+		this.processes = new ArrayList<IbmProcess>();
 		this.decisions = new ArrayList<IbmDecision>();
 		this.merges = new ArrayList<IbmMerge>();
 		this.forks = new ArrayList<IbmFork>();
 		this.joins = new ArrayList<IbmJoin>();
+		// TODO: Add support for loops!!
 		this.callsToProcess = new ArrayList<IbmCallToProcess>();
 		this.callsToTask = new ArrayList<IbmCallToTask>();
 		this.callsToService = new ArrayList<IbmCallToService>();
@@ -74,6 +87,14 @@ public class IbmFlowContent {
 		this.endNodes = endNodes;
 	}
 
+	public List<IbmEndNode> getStopNodes() {
+		return stopNodes;
+	}
+
+	public void setStopNodes(List<IbmEndNode> stopNodes) {
+		this.stopNodes = stopNodes;
+	}
+
 	public void setJoins(List<IbmJoin> joins) {
 		this.joins = joins;
 	}
@@ -84,6 +105,22 @@ public class IbmFlowContent {
 
 	public void setTasks(List<IbmTask> tasks) {
 		this.tasks = tasks;
+	}
+
+	public List<IbmHumanTask> getHumanTasks() {
+		return humanTasks;
+	}
+
+	public void setHumanTasks(List<IbmHumanTask> humanTasks) {
+		this.humanTasks = humanTasks;
+	}
+
+	public List<IbmProcess> getProcesses() {
+		return processes;
+	}
+
+	public void setProcesses(List<IbmProcess> processes) {
+		this.processes = processes;
 	}
 
 	public List<IbmDecision> getDecisions() {

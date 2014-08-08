@@ -27,6 +27,7 @@ import org.processmining.plugins.pnml.exporting.PnmlExportStochasticNet;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
+import org.processmining.tests.plugins.stochasticnet.data.IbmFlowContent;
 import org.processmining.tests.plugins.stochasticnet.data.IbmModel;
 import org.processmining.tests.plugins.stochasticnet.data.IbmProcess;
 import org.simpleframework.xml.Serializer;
@@ -39,7 +40,8 @@ public class ConversionTest {
 	public void testConversion() throws Exception {
 		
 		//String[] names = new String[]{"A"};
-		String[] names = new String[]{"A","B1","B2","B3","C"};
+		//String[] names = new String[]{"A","B1","B2","B3","C"};
+		String[] names = new String[]{"C"};
 		
 //		List<IbmProcess> processes = new LinkedList<IbmProcess>();
 		
@@ -59,10 +61,11 @@ public class ConversionTest {
 					StochasticNet net = IbmToStochasticNetConverter.convertFromIbmProcess(process);
 					net.setExecutionPolicy(ExecutionPolicy.RACE_ENABLING_MEMORY);
 					net.setTimeUnit(TimeUnit.MINUTES);
+					StochasticNetUtils.exportAsDOTFile(net, "tests/testfiles/ibm/converted5", name+"_"+process.getName());
 					
 					if (isConnected(net)){
 					
-						File file = new File("tests/testfiles/ibm/converted4/"+name+"_"+process.getName()+".pnml");
+						File file = new File("tests/testfiles/ibm/converted5/"+name+"_"+process.getName()+".pnml");
 						if (!file.exists()){
 							file.createNewFile();
 						}
@@ -227,5 +230,32 @@ public class ConversionTest {
 				}
 			}
 		}
+	}
+	
+	@Test
+	public void testBPMNProcess() throws Exception {
+		convertOneFile("IBM_C_s0000001##s00000519");
+	}
+	@Test
+	public void testBPMNProcess2() throws Exception {
+		convertOneFile("IBM_C_s0000001##s00003867");
+	}
+	@Test
+	public void testBPMNProcess3() throws Exception {
+		convertOneFile("IBM_C_s0000003##s00000812");
+	}
+	
+
+	private void convertOneFile(String name) throws Exception {
+		Serializer serializer = new Persister();
+		File source = new File("tests/testfiles/ibm/"+name+".xml");
+
+		IbmProcess model = serializer.read(IbmProcess.class, source);
+		IbmFlowContent content = model.getFlowContent();
+		model.getInputs();
+		model.getOutputs();
+		System.out.println(content.getHumanTasks());
+		StochasticNet net = IbmToStochasticNetConverter.convertFromIbmProcess(model, false);
+		StochasticNetUtils.exportAsDOTFile(net, "tests/testfiles/ibm/", name);
 	}
 }

@@ -67,6 +67,7 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.petrinet.impl.PetrinetImpl;
+import org.processmining.models.graphbased.directed.petrinet.impl.ToStochasticNet;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.EfficientStochasticNetSemanticsImpl;
@@ -914,6 +915,41 @@ public class StochasticNetUtils {
 			}
 		}
 		return spn;
+	}
+	
+	/**
+	 * Exports a stochastic net as a 
+	 * @param net {@link Petrinet} to export
+	 * @param relativeFolderName String a relative folder name (e.g. "tests/testfiles/output") 
+	 * @param fileName String a name for the output file (e.g. "myProcess") an extension to mark it as PostScript (".ps") will be appended.
+	 *  
+	 */
+	public static void exportAsDOTFile(Petrinet net, String relativeFolderName, String fileName){
+		try {
+			if (relativeFolderName == null || relativeFolderName.isEmpty()){
+				relativeFolderName = ".";
+			}
+			if (!relativeFolderName.endsWith(File.separator)){
+				relativeFolderName += File.separator;
+			}
+			String fName = relativeFolderName+fileName+".dot";
+			String fNamePostScript = relativeFolderName+fileName+".ps";
+			String dotString = ToStochasticNet.convertPetrinetToDOT(net);
+			BufferedWriter writer = new BufferedWriter(new FileWriter(new File(fName)));
+			writer.write(dotString);
+			writer.flush();
+			writer.close();
+			
+			Process p = Runtime.getRuntime().exec("dot -Tps "+fName+" -o "+fNamePostScript);
+			p.waitFor();
+			
+			p = Runtime.getRuntime().exec("rm "+fName);
+			p.waitFor();
+		} catch (IOException e) {
+			e.printStackTrace();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	/**
