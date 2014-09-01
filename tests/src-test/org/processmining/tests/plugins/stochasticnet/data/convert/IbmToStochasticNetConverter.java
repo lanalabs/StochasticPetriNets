@@ -19,27 +19,24 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Transition
 import org.processmining.models.graphbased.directed.petrinet.impl.StochasticNetImpl;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.tests.plugins.stochasticnet.data.IbmCallToProcess;
-import org.processmining.tests.plugins.stochasticnet.data.IbmCallToService;
-import org.processmining.tests.plugins.stochasticnet.data.IbmCallToTask;
 import org.processmining.tests.plugins.stochasticnet.data.IbmConnection;
 import org.processmining.tests.plugins.stochasticnet.data.IbmDecision;
-import org.processmining.tests.plugins.stochasticnet.data.IbmEndNode;
 import org.processmining.tests.plugins.stochasticnet.data.IbmFork;
-import org.processmining.tests.plugins.stochasticnet.data.IbmHumanTask;
 import org.processmining.tests.plugins.stochasticnet.data.IbmInput;
 import org.processmining.tests.plugins.stochasticnet.data.IbmJoin;
+import org.processmining.tests.plugins.stochasticnet.data.IbmLoop;
 import org.processmining.tests.plugins.stochasticnet.data.IbmMerge;
+import org.processmining.tests.plugins.stochasticnet.data.IbmNode;
 import org.processmining.tests.plugins.stochasticnet.data.IbmOutput;
 import org.processmining.tests.plugins.stochasticnet.data.IbmOutputBranch;
 import org.processmining.tests.plugins.stochasticnet.data.IbmProcess;
 import org.processmining.tests.plugins.stochasticnet.data.IbmStartNode;
-import org.processmining.tests.plugins.stochasticnet.data.IbmTask;
 
 public class IbmToStochasticNetConverter {
 	public static final String SEPARATOR = "|";
 
 	public static StochasticNet convertFromIbmProcess(IbmProcess process){
-		return convertFromIbmProcess(process, false);
+		return convertFromIbmProcess(process, true);
 	}
 	
 	public static StochasticNet convertFromIbmProcess(IbmProcess process, boolean expandSubProcesses){
@@ -55,46 +52,75 @@ public class IbmToStochasticNetConverter {
 		
 		// add processes
 		for (IbmCallToProcess callProcess : process.getFlowContent().getCallsToProcess()){
-			Transition t = addDefaultTimedTransition(net,getProcessName(callProcess.getName()));
+			Transition t = addDefaultTimedTransition(net,getNodeName(callProcess));
 			pnElementByName.put(callProcess.getName(), t);
 		}
 		// add collapsed sub-processes (don't care about the contents for now
 		for (IbmProcess subprocess : process.getFlowContent().getProcesses()){
 			if (expandSubProcesses){
-				StochasticNet newNet = convertFromIbmProcess(subprocess, false);
+				StochasticNet newNet = convertFromIbmProcess(subprocess, expandSubProcesses);
 				Pair<Place,Place> inputAndOutput = addNet(net, newNet);
 				pnElementByName.put(subprocess.getName(), inputAndOutput);
 			} else {
-				Transition t = addDefaultTimedTransition(net,getProcessName(subprocess.getName()));
+				Transition t = addDefaultTimedTransition(net,getNodeName(subprocess));
 				pnElementByName.put(subprocess.getName(), t);
 			}
 		}
 		
-		// add call tasks
-		for (IbmCallToTask callTask : process.getFlowContent().getCallsToTask()){
-			Transition t = addDefaultTimedTransition(net,getTaskName(callTask.getName()));
-			pnElementByName.put(callTask.getName(), t);
+		// add loops 
+		for (IbmLoop loop : process.getFlowContent().getLoops()){
+			if (expandSubProcesses){
+				StochasticNet newNet = convertFromIbmProcess(loop, expandSubProcesses);
+				Pair<Place,Place> inputAndOutput = addNet(net, newNet);
+				
+				// add loop around loop net:
+				Transition stayInLoopTransition = net.addImmediateTransition(loop.getName()+"_loopback");
+				stayInLoopTransition.setInvisible(true);
+				Transition exitLoopTransition = net.addImmediateTransition(loop.getName()+"_exit_loop");
+				exitLoopTransition.setInvisible(true);
+				
+				Place newEndPlace = net.addPlace(loop.getName()+"_new_end_place");
+				net.addArc(inputAndOutput.getSecond(), stayInLoopTransition);
+				net.addArc(stayInLoopTransition, inputAndOutput.getFirst());
+				net.addArc(inputAndOutput.getSecond(), exitLoopTransition);
+				net.addArc(exitLoopTransition, newEndPlace);
+				
+				Place newStartPlace = inputAndOutput.getFirst();
+				if (loop.isConditionTestedFirst()){
+					Place conditionCheckPlace = net.addPlace(loop.getName()+"_check_condition_first");
+					Transition skipTransition = net.addImmediateTransition(loop.getName()+"_condition_not_met");
+					skipTransition.setInvisible(true);
+					Transition enterLoopTransition = net.addImmediateTransition(loop.getName()+"_condition_met");
+					enterLoopTransition.setInvisible(true);
+					net.addArc(conditionCheckPlace, skipTransition);
+					net.addArc(skipTransition, newEndPlace);
+					net.addArc(conditionCheckPlace, enterLoopTransition);
+					net.addArc(enterLoopTransition, newStartPlace);
+					newStartPlace = conditionCheckPlace;
+					
+				}
+				inputAndOutput = new Pair<Place, Place>(newStartPlace, newEndPlace);
+				pnElementByName.put(loop.getName(), inputAndOutput);
+			} else {
+				Transition t = addDefaultTimedTransition(net, getNodeName(loop));
+				pnElementByName.put(loop.getName(), t);
+			}
 		}
-		// add tasks
-		for (IbmTask task : process.getFlowContent().getTasks()){
-			Transition t = addDefaultTimedTransition(net,getTaskName(task.getName()));
-			pnElementByName.put(task.getName(), t);
-		}
-		// add human tasks
-		for (IbmHumanTask task : process.getFlowContent().getHumanTasks()){
-			Transition t = addDefaultTimedTransition(net,getTaskName(task.getName()));
-			pnElementByName.put(task.getName(), t);
-		}
-		// add services
-		for (IbmCallToService callService : process.getFlowContent().getCallsToService()){
-			Transition t = addDefaultTimedTransition(net,getServiceName(callService.getName()));
-			pnElementByName.put(callService.getName(), t);
-		}
+		List<IbmNode> tasksAndCalls = new ArrayList<>();
+		tasksAndCalls.addAll(process.getFlowContent().getTasks()); // add tasks
+		tasksAndCalls.addAll(process.getFlowContent().getHumanTasks()); // add human tasks
+		tasksAndCalls.addAll(process.getFlowContent().getCallsToService());	// add service calls
+		tasksAndCalls.addAll(process.getFlowContent().getCallsToTask()); // add tasks calls
 		
+		for (IbmNode taskOrCall : tasksAndCalls){
+			Transition t = addDefaultTimedTransition(net,getNodeName(taskOrCall));
+			pnElementByName.put(taskOrCall.getName(), t);
+		}
+
 		
 		// add start nodes
 		for (IbmStartNode startNode : process.getFlowContent().getStartNodes()){
-			Place startPlace = net.addPlace(getStartNodeName(startNode.getName()));
+			Place startPlace = net.addPlace(getNodeName(startNode));
 			pnElementByName.put(startNode.getName(), startPlace);
 			startPlaces.add(startPlace);
 //			Transition startTransition = net.addImmediateTransition(startNode.getName());
@@ -105,10 +131,10 @@ public class IbmToStochasticNetConverter {
 //			net.addArc(startTransition, transitionPlace);
 		}
 		// add final nodes
-		List<IbmEndNode> endIbmNodes = new ArrayList<>(process.getFlowContent().getEndNodes());
+		List<IbmNode> endIbmNodes = new ArrayList<IbmNode>(process.getFlowContent().getEndNodes());
 		endIbmNodes.addAll(process.getFlowContent().getStopNodes());
-		for (IbmEndNode endNode : endIbmNodes){
-			Place endPlace = net.addPlace(getEndNodeName(endNode.getName()));
+		for (IbmNode endNode : endIbmNodes){
+			Place endPlace = net.addPlace(getNodeName(endNode));
 			pnElementByName.put(endNode.getName(), endPlace);
 			endPlaces.add(endPlace);
 		}
@@ -119,7 +145,7 @@ public class IbmToStochasticNetConverter {
 				System.out.println("todo: handle inclusive or split!");
 				throw new IllegalArgumentException("Can't transform models with inclusive OR-splits!");
 			}
-			Place decisionPlace = net.addPlace(getDecisionName(decision.getName()));
+			Place decisionPlace = net.addPlace(getNodeName(decision));
 			pnElementByName.put(decision.getName(), decisionPlace);
 			
 			// create for each arc a transition
@@ -153,7 +179,7 @@ public class IbmToStochasticNetConverter {
 		for (IbmMerge merge : process.getFlowContent().getMerges()){
 			// assume non-inclusive merges!
 			// just join input places to one.
-			Place mergePlace = net.addPlace(getMergeName(merge.getName()));
+			Place mergePlace = net.addPlace(getNodeName(merge));
 			pnElementByName.put(merge.getName(), mergePlace);
 			
 //			for (IbmInputBranch inputBranch : merge.getInputBranches()){
@@ -230,7 +256,7 @@ public class IbmToStochasticNetConverter {
 						if (conn.getSourceContactPoint()!=null && outputBranches.containsKey(conn.getSourceNode()+SEPARATOR+conn.getSourceContactPoint())){
 							IbmOutputBranch outputBranch = outputBranches.get(conn.getSourceNode()+SEPARATOR+conn.getSourceContactPoint());
 							if (mappedBranches.containsKey(outputBranch)){
-								Place pChoice = net.addPlace(getPlaceName(conn.getSourceNode()+SEPARATOR+conn.getSourceContactPoint()));
+								Place pChoice = net.addPlace("place_"+conn.getSourceNode()+SEPARATOR+conn.getSourceContactPoint());
 								net.addArc(mappedBranches.get(outputBranch), pChoice);
 								net.addArc(pChoice, (Transition) tNode);
 							} else {
@@ -238,7 +264,7 @@ public class IbmToStochasticNetConverter {
 								tChoice.setInvisible(true);
 								mappedBranches.put(outputBranch, tChoice);
 								net.addArc((Place)sNode, tChoice);
-								Place pChoice = net.addPlace(getPlaceName(conn.getSourceNode()+SEPARATOR+conn.getSourceContactPoint()));
+								Place pChoice = net.addPlace("place_"+conn.getSourceNode()+SEPARATOR+conn.getSourceContactPoint());
 								net.addArc(tChoice, pChoice);
 								net.addArc(pChoice, (Transition) tNode);
 								isConnected.add(sourceNode+targetNode);
@@ -321,6 +347,17 @@ public class IbmToStochasticNetConverter {
 			}
 		}
 		
+		// clear unconnected tasks and calls dangling around in empty space
+		for (IbmNode taskOrCall : tasksAndCalls){
+			Transition correspondingTransition = (Transition) pnElementByName.get(taskOrCall.getName());
+			if(net.getInEdges(correspondingTransition).isEmpty()){
+				if (net.getOutEdges(correspondingTransition).isEmpty()){
+					net.removeTransition(correspondingTransition);
+				} else {
+					System.out.println("Check process "+net.getLabel()+" for connectedness!");
+				}
+			}
+		}
 		return net;
 	}
 	
@@ -400,37 +437,15 @@ public class IbmToStochasticNetConverter {
 		return net.addTimedTransition(processName, DistributionType.NORMAL, 100,10);
 	}
 
-	private static String getPlaceName(String name) {
-		return name+"_place";
+	private static String getNodeName(IbmNode node){
+		return node.getName()+"("+node.getNodeName()+")";
 	}
-	private static String getProcessName(String name) {
-		return name+"_process";
-	}
-	private static String getTaskName(String name) {
-		return name+"_task";
-	}
-	private static String getServiceName(String name) {
-		return name+"_service";
-	}
-	private static String getStartNodeName(String name) {
-		return name+"_start";
-	}
-	private static String getEndNodeName(String name) {
-		return name+"_end";
-	}
-	private static String getDecisionName(String name) {
-		return name+"_decision";
-	}
-	private static String getMergeName(String name) {
-		return name+"_merge";
-	}
-	
 	
 	private static Place getNextPlace(Object element, Petrinet net){
 		if (element instanceof Place){
 			return (Place) element;
 		} else if(element instanceof Transition){
-			Place place = net.addPlace(getPlaceName(((Transition)element).getLabel()));
+			Place place = net.addPlace("place_"+((Transition)element).getLabel());
 			net.addArc((Transition) element, place);
 			return place;
 		} else {

@@ -4,6 +4,7 @@ import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.Path;
 import org.simpleframework.xml.Root;
+import org.simpleframework.xml.Transient;
 
 @Root(strict=false)
 @Element(name="connection")
@@ -57,5 +58,8 @@ public class IbmConnection extends IbmNode {
 		this.targetContactPoint = targetContactPoint;
 	}
 	
-	
+	@Transient
+	public String getNodeName(){
+		return "connection";
+	}
 }

@@ -6,21 +6,22 @@ import java.util.List;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.ElementList;
 import org.simpleframework.xml.Root;
+import org.simpleframework.xml.Transient;
 
 @Root(strict=false)
 @Element(name="process")
 public class IbmProcess extends IbmNode{
 	@Element(required=false)
-	private String description;
+	protected String description;
 	
 	@ElementList(required=false, name="inputs")
-	private List<IbmInput> inputs;
+	protected List<IbmInput> inputs;
 	
 	@ElementList(required=false)
-	private List<IbmOutput> outputs;
+	protected List<IbmOutput> outputs;
 	
 	@Element
-	private IbmFlowContent flowContent;
+	protected IbmFlowContent flowContent;
 	
 	public IbmProcess(){
 		this.inputs = new ArrayList<IbmInput>();
@@ -57,5 +58,10 @@ public class IbmProcess extends IbmNode{
 
 	public void setFlowContent(IbmFlowContent flowContent) {
 		this.flowContent = flowContent;
+	}
+	
+	@Transient
+	public String getNodeName(){
+		return "process";
 	}
 }

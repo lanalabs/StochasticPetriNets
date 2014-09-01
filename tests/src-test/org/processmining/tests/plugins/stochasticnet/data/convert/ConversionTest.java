@@ -41,11 +41,17 @@ public class ConversionTest {
 		
 		//String[] names = new String[]{"A"};
 		//String[] names = new String[]{"A","B1","B2","B3","C"};
-		String[] names = new String[]{"C"};
+		String[] names = new String[]{"A","B3","C"};
+//		String[] names = new String[]{"C"};
 		
 //		List<IbmProcess> processes = new LinkedList<IbmProcess>();
 		
+		String outputPath = "tests/testfiles/ibm/converted_expanded";
+		
 		int ignored = 0;
+		int empty = 0;
+		int unconnected = 0;
+		int successes = 0;
 		
 		for (String name : names){
 			Serializer serializer = new Persister();
@@ -61,17 +67,20 @@ public class ConversionTest {
 					StochasticNet net = IbmToStochasticNetConverter.convertFromIbmProcess(process);
 					net.setExecutionPolicy(ExecutionPolicy.RACE_ENABLING_MEMORY);
 					net.setTimeUnit(TimeUnit.MINUTES);
-					StochasticNetUtils.exportAsDOTFile(net, "tests/testfiles/ibm/converted5", name+"_"+process.getName());
 					
-					if (isConnected(net)){
-					
-						File file = new File("tests/testfiles/ibm/converted5/"+name+"_"+process.getName()+".pnml");
+					if(isEmpty(net)){
+						empty++;
+						System.err.println("Ignoring "+empty+". empty net "+net.getLabel()+".");
+					} else if (isConnected(net)){
+						StochasticNetUtils.exportAsDOTFile(net, outputPath , name+"_"+process.getName());
+						
+						File file = new File(outputPath+"/"+name+"_"+process.getName()+".pnml");
 						if (!file.exists()){
 							file.createNewFile();
 						}
 						if (file.canWrite()){
 							FileWriter writer = new FileWriter(file);
-							
+							successes++;
 							PnmlExportStochasticNet exporter = new PnmlExportStochasticNet();
 							exporter.exportPetriNetToPNMLFile(null, net, writer);
 							writer.flush();
@@ -81,13 +90,19 @@ public class ConversionTest {
 							System.err.println("can't write to file "+file.getAbsolutePath());
 						}
 					} else {
-						System.err.println("Net "+ net.getLabel()+" is not connected!!!");
+						System.err.println("Net "+ net.getLabel()+" is "+(++unconnected)+" not connected net!");
 					}
 				} catch (IllegalArgumentException e){
-					System.out.println("Ignored "+(++ignored)+" models, due to inclusive or splits.");
+					System.out.println("Ignored "+(++ignored)+" models, due to inclusive or splits.\n"
+							+ e.getMessage());
+					
 				}
 				System.out.println("...done.");
 			}
+			System.out.println("Converted successfully: "+successes);
+			System.out.println("Empty: "+empty);
+			System.out.println("Ignored: "+ignored);
+			System.out.println("Unconnected: "+unconnected);
 			
 //			processes.addAll(model.getProcessModel().getProcesses());
 //			
@@ -98,10 +113,11 @@ public class ConversionTest {
 //		System.out.println("----\nTotal: "+processes.size());
 	}
 
+	private boolean isEmpty(StochasticNet net) {
+		return net.getPlaces().size()==0 || net.getTransitions().size()==0;
+	}
+
 	private boolean isConnected(StochasticNet net) {
-		if (net.getPlaces().size()==0 || net.getTransitions().size()==0){
-			return false;
-		}
 		Set<DirectedGraphNode> markedNodes = new HashSet<DirectedGraphNode>();
 		Place p = net.getPlaces().iterator().next();
 		visit(p, net, markedNodes);
@@ -224,6 +240,7 @@ public class ConversionTest {
 					net.setTimeUnit(TimeUnit.MINUTES);
 				} catch (IllegalArgumentException e){
 					System.out.println("Ignored model "+process.getName()+", due to inclusive or splits.");
+					ignored++;
 				}
 				if (net != null && new File("tests/testfiles/ibm/converted/"+name+"_"+process.getName()+".xes").exists()){
 					
@@ -244,6 +261,10 @@ public class ConversionTest {
 	public void testBPMNProcess3() throws Exception {
 		convertOneFile("IBM_C_s0000003##s00000812");
 	}
+	@Test
+	public void testBPMNProcess4() throws Exception {
+		convertOneFile("IBM_C_s0000001##s00017029");
+	}
 	
 
 	private void convertOneFile(String name) throws Exception {
@@ -255,7 +276,7 @@ public class ConversionTest {
 		model.getInputs();
 		model.getOutputs();
 		System.out.println(content.getHumanTasks());
-		StochasticNet net = IbmToStochasticNetConverter.convertFromIbmProcess(model, false);
+		StochasticNet net = IbmToStochasticNetConverter.convertFromIbmProcess(model, true);
 		StochasticNetUtils.exportAsDOTFile(net, "tests/testfiles/ibm/", name);
 	}
 }

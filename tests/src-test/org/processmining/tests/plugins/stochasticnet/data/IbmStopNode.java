@@ -4,10 +4,10 @@ import org.simpleframework.xml.Root;
 import org.simpleframework.xml.Transient;
 
 @Root(strict=false)
-public class IbmOutput extends IbmNode{
+public class IbmStopNode extends IbmNode {
 
 	@Transient
 	public String getNodeName(){
-		return "output";
+		return "stopNode";
 	}
 }

@@ -16,7 +16,7 @@ public class IbmFlowContent {
     private List<IbmEndNode> endNodes;
 	
 	@ElementList(entry="stopNode", inline=true, required=false)
-	private List<IbmEndNode> stopNodes;
+	private List<IbmStopNode> stopNodes;
 	
 	@ElementList(entry="task", inline=true, required=false)
 	private List<IbmTask> tasks;
@@ -48,6 +48,8 @@ public class IbmFlowContent {
 	@ElementList(entry="callToService", inline=true, required=false)
 	private List<IbmCallToService> callsToService;
 	
+	@ElementList(entry="loop", inline=true, required=false)
+	private List<IbmLoop> loops;
 	
 	@ElementList(entry="connection", inline=true, required=false)
 	private List<IbmConnection> connections;
@@ -55,7 +57,7 @@ public class IbmFlowContent {
 	public IbmFlowContent(){
 		this.startNodes = new ArrayList<IbmStartNode>();
 		this.endNodes = new ArrayList<IbmEndNode>();
-		this.stopNodes = new ArrayList<IbmEndNode>();
+		this.stopNodes = new ArrayList<IbmStopNode>();
 		this.tasks = new ArrayList<IbmTask>();
 		this.humanTasks = new ArrayList<IbmHumanTask>();
 		this.processes = new ArrayList<IbmProcess>();
@@ -63,7 +65,7 @@ public class IbmFlowContent {
 		this.merges = new ArrayList<IbmMerge>();
 		this.forks = new ArrayList<IbmFork>();
 		this.joins = new ArrayList<IbmJoin>();
-		// TODO: Add support for loops!!
+		this.loops = new ArrayList<IbmLoop>();
 		this.callsToProcess = new ArrayList<IbmCallToProcess>();
 		this.callsToTask = new ArrayList<IbmCallToTask>();
 		this.callsToService = new ArrayList<IbmCallToService>();
@@ -87,11 +89,11 @@ public class IbmFlowContent {
 		this.endNodes = endNodes;
 	}
 
-	public List<IbmEndNode> getStopNodes() {
+	public List<IbmStopNode> getStopNodes() {
 		return stopNodes;
 	}
 
-	public void setStopNodes(List<IbmEndNode> stopNodes) {
+	public void setStopNodes(List<IbmStopNode> stopNodes) {
 		this.stopNodes = stopNodes;
 	}
 
@@ -174,7 +176,14 @@ public class IbmFlowContent {
 	public void setCallsToService(List<IbmCallToService> callsToService) {
 		this.callsToService = callsToService;
 	}
+	
+	public List<IbmLoop> getLoops() {
+		return loops;
+	}
 
+	public void setLoops(List<IbmLoop> loops) {
+		this.loops = loops;
+	}
 	public List<IbmConnection> getConnections() {
 		return connections;
 	}

@@ -6,6 +6,7 @@ import org.simpleframework.xml.Element;
 import org.simpleframework.xml.ElementList;
 import org.simpleframework.xml.Path;
 import org.simpleframework.xml.Root;
+import org.simpleframework.xml.Transient;
 
 @Root(strict=false)
 @Element
@@ -32,5 +33,10 @@ public class IbmOutputBranch extends IbmNode{
 
 	public void setProbability(String probability) {
 		this.probability = probability;
+	}
+	
+	@Transient
+	public String getNodeName(){
+		return "outputBranch";
 	}
 }

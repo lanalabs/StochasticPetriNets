@@ -3,6 +3,7 @@ package org.processmining.tests.plugins.stochasticnet.data;
 import java.util.List;
 
 import org.simpleframework.xml.ElementList;
+import org.simpleframework.xml.Transient;
 
 public class IbmGateway extends IbmNode{
 	@ElementList(entry="inputBranch", inline=true)
@@ -25,5 +26,9 @@ public class IbmGateway extends IbmNode{
 
 	public void setOutputBranches(List<IbmOutputBranch> outputBranches) {
 		this.outputBranches = outputBranches;
+	}
+	@Transient
+	public String getNodeName(){
+		return "gateway";
 	}
 }
