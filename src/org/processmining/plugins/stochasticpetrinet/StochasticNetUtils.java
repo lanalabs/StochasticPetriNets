@@ -163,7 +163,7 @@ public class StochasticNetUtils {
 				String[] ecBaseParts = ec.getId().split("\\+|"+SEPARATOR_STRING);
 				String transitionLabel = trans.getLabel().split(SEPARATOR_STRING)[0]; 
 				String ecBaseName = ecBaseParts[0];
-				if (ecBaseName.equals(transitionLabel)) {
+				if (ecBaseName.equals(transitionLabel) || (ecBaseName+"+complete").equals(transitionLabel)) {
 					// found the one
 					mapping.put(trans, ec);
 				}
