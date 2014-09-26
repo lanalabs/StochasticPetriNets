@@ -90,6 +90,7 @@ public class PerformanceVisualizer {
 //							plot.add(new DistributionWrapper(transition.getDistribution()));
 							plot.add(transition.getDistribution());
 							plots.add(plot);
+							plotForTransition.setUnit(((StochasticNet)transition.getGraph()).getTimeUnit().toString());
 							plotForTransition.setTrainingData(transition.getTrainingData());
 							plotForTransition.setPlots(plots);
 						} else {

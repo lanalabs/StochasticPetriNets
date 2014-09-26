@@ -37,6 +37,8 @@ public class PlotPanelFreeChart extends JPanel {
 	
 	private JComponent currentChart = null;
 	
+	private String unit = "s";
+	
 	private String scatterData;
 	private JComponent secondChart = null;
 	
@@ -56,6 +58,10 @@ public class PlotPanelFreeChart extends JPanel {
 			this.remove(secondChart);
 		}
 		this.secondChart = null;
+	}
+	
+	public void setUnit(String unit){
+		this.unit = unit;
 	}
 	
 	public void addPlot(Plot plot){
@@ -162,7 +168,7 @@ public class PlotPanelFreeChart extends JPanel {
 			XYDataset xyDatasetScatter = new XYSeriesCollection(scatterSeries);
 
 			JFreeChart scatterChart = ChartFactory.createScatterPlot
-			      ("XYLine Chart using JFreeChart", "load", "duration",
+			      ("duration by system load", "load (no. of active instances)", "duration (in "+this.unit+")",
 			      xyDatasetScatter, PlotOrientation.VERTICAL, true, true, false);			
 			
 			secondChart = new ChartPanel(scatterChart);	
