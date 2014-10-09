@@ -66,11 +66,15 @@ public class PerformanceVisualizer {
 			if (t instanceof TimedTransition){
 				TimedTransition tt = (TimedTransition)t;
 				map.putViewSpecific(t, AttributeMap.LABEL, t.getLabel()+" ("+tt.getWeight()+")");
+				String parameters = Arrays.toString(tt.getDistributionParameters());
+				if (parameters.length()>101){
+					parameters = parameters.substring(0, 100)+"..."+"("+tt.getDistributionParameters().length+" parameters in total)";
+				}
 				map.putViewSpecific(t, AttributeMap.TOOLTIP, "<html>"+t.getLabel()+"\n<br>" +
 						"priority: "+tt.getPriority()+"\n<br>" +
 						"weight: "+tt.getWeight()+"\n<br>" +
 						"type: "+tt.getDistributionType().toString()+"\n<br>" +
-						"parameters: "+Arrays.toString(tt.getDistributionParameters())+"</html>");
+						"parameters: "+parameters+"</html>");
 			} else {
 				map.putViewSpecific(t, AttributeMap.TOOLTIP, t.getLabel());
 			}
