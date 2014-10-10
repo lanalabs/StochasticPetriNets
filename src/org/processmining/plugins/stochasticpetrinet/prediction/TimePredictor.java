@@ -34,12 +34,43 @@ public class TimePredictor {
 	 * Time
 	 * @param {@link StochasticNet} model the model capturing the stochastic behavior of the net
 	 * @param observedEvents the monitored partial trace (complete, i.e., no visible transition missing) 
-	 * @param currentTime the time of prediction (usually later than the last event's time stamp) 
+	 * @param currentTime the time of prediction (can be later than the last event's time stamp) 
 	 * @param initialMarking initial marking of the net
 	 * @param useTime indicator, whether to use the current time as constraint
 	 * @return
 	 */
 	public Pair<Double,Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, boolean useTime) {
+		DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking, useTime);
+//		System.out.println("stopped simulation after "+i+" samples... with error: "+errorPercent+"%.");
+		
+		StochasticNetUtils.useCache(false);
+		//System.out.println("Simulated 1000 traces in "+(System.currentTimeMillis()-now)+"ms ("+(useTime?"constrained":"unconstrained")+")");
+		return new Pair<Double,Double>(stats.getMean(),getConfidenceIntervalWidth(stats, 0.99));
+	}
+
+	/**
+	 * Maximum likelihood estimate for the risk of missing a deadline until the end of the process. 
+	 * (Currently, we did not implement the time until we reach a certain state)
+	 *  
+	 * @param model StochasticNet capturing the stochastic behavior of the net
+	 * @param observedEvents the monitored partial trace (complete, i.e., no visible transition missing) 
+	 * @param currentTime the time of prediction (can be later than the last event's time stamp) 
+	 * @param targetTime the deadline with respect to which the risk is calculated
+	 * @param initialMarking initial marking of the net
+	 * @param useTime indicator, whether to use the current time as constraint
+	 * @return
+	 */
+	public Double computeRiskToMissTargetTime(StochasticNet model, XTrace observedEvents, Date currentTime, Date targetTime, Marking initialMarking, boolean useTime){
+		DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking, useTime);
+		double[] sortedEstimates = stats.getSortedValues();
+		
+		return 1 - (StochasticNetUtils.getIndexBinarySearch(sortedEstimates, targetTime.getTime()) / (double)sortedEstimates.length);
+	}
+
+	
+	
+	private DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime,
+			Marking initialMarking, boolean useTime) {
 		Semantics<Marking,Transition> semantics = getCurrentState(model, initialMarking, observedEvents);
 		if (semantics.getCurrentState() == null){
 			System.out.println("Debug me!");
@@ -70,11 +101,7 @@ public class TimePredictor {
 				errorPercent = getErrorPercent(stats);
 			}
 		}
-//		System.out.println("stopped simulation after "+i+" samples... with error: "+errorPercent+"%.");
-		
-		StochasticNetUtils.useCache(false);
-		//System.out.println("Simulated 1000 traces in "+(System.currentTimeMillis()-now)+"ms ("+(useTime?"constrained":"unconstrained")+")");
-		return new Pair<Double,Double>(stats.getMean(),getConfidenceIntervalWidth(stats, 0.99));
+		return stats;
 	}
 	
 	private double getErrorPercent(DescriptiveStatistics stats){

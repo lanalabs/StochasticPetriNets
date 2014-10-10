@@ -841,6 +841,36 @@ public class StochasticNetUtils {
 		return arr;
 	}
 	
+	public static int getIndexBinarySearch(double[] sortedValues, double valueToSearchFor) {
+		int l = 0;
+		int u = sortedValues.length-1;
+		int i = 0;
+		
+		// extreme cases:
+		if (sortedValues[u] <= valueToSearchFor){
+			return u;
+		} else if (sortedValues[l] >= valueToSearchFor){
+			return l;
+		}
+		
+		while(u > l){
+			i = l+(u-l)/2;
+			if (sortedValues[i] > valueToSearchFor){
+				// search in left half:
+				u = i;
+			} else if (sortedValues[i] < valueToSearchFor){
+				// search in right half:
+				if (l == i) {
+					return i;
+				}
+				l = i;
+			} else {
+				u = l = i;
+			}
+		}
+		return i;
+	}
+	
 	public static Pair<Long, Long> getBufferedTraceBounds(XTrace trace) {
 		long lowerBound = Long.MAX_VALUE;
 		long upperBound = Long.MIN_VALUE;

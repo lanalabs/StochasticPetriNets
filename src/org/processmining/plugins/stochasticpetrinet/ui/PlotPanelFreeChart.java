@@ -3,6 +3,7 @@ package org.processmining.plugins.stochasticpetrinet.ui;
 import java.awt.BasicStroke;
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.geom.Rectangle2D;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,7 +19,7 @@ import org.jfree.chart.annotations.XYTextAnnotation;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.chart.plot.ValueMarker;
 import org.jfree.chart.plot.XYPlot;
-import org.jfree.data.xy.XYDataset;
+import org.jfree.chart.renderer.xy.XYItemRenderer;
 import org.jfree.data.xy.XYSeries;
 import org.jfree.data.xy.XYSeriesCollection;
 import org.processmining.plugins.stochasticpetrinet.enricher.StochasticManifestCollector;
@@ -40,7 +41,7 @@ public class PlotPanelFreeChart extends JPanel {
 	private String unit = "s";
 	
 	private String scatterData;
-	private JComponent secondChart = null;
+	private JComponent secondChart = null, thirdChart = null;
 	
 	public PlotPanelFreeChart() {
 		super();
@@ -58,6 +59,11 @@ public class PlotPanelFreeChart extends JPanel {
 			this.remove(secondChart);
 		}
 		this.secondChart = null;
+		
+		if (thirdChart != null){
+			this.remove(thirdChart);
+		}
+		this.thirdChart = null;
 	}
 	
 	public void setUnit(String unit){
@@ -160,18 +166,31 @@ public class PlotPanelFreeChart extends JPanel {
 		
 		if (secondChart == null && scatterData != null){
 			// TODO parse scatter data
-			XYSeries scatterSeries = new XYSeries("Load");
-			double[][] data = parse(scatterData);
+			XYSeries loadScatterSeries = new XYSeries("Load");
+			double[][] data = parse(scatterData, StochasticManifestCollector.SYSTEM_LOAD, StochasticManifestCollector.RELATIVE_DURATION);
 			for (int j = 0; j < data.length; j++){
-				scatterSeries.add(data[j][0], data[j][1]);
+				loadScatterSeries.add(data[j][0], data[j][1]);
 			}
-			XYDataset xyDatasetScatter = new XYSeriesCollection(scatterSeries);
-
-			JFreeChart scatterChart = ChartFactory.createScatterPlot
+			JFreeChart loadScatterChart = ChartFactory.createScatterPlot
 			      ("duration by system load", "load (no. of active instances)", "duration (in "+this.unit+")",
-			      xyDatasetScatter, PlotOrientation.VERTICAL, true, true, false);			
+			    		  new XYSeriesCollection(loadScatterSeries), PlotOrientation.VERTICAL, true, true, false);			
 			
-			secondChart = new ChartPanel(scatterChart);	
+			secondChart = new ChartPanel(loadScatterChart);
+			XYItemRenderer renderer = ((XYPlot)loadScatterChart.getPlot()).getRenderer();
+			renderer.setSeriesShape(0, new Rectangle2D.Float(-0.5f, -0.5f, 1f, 1f));
+			
+			
+			XYSeries timeScatterSeries = new XYSeries("Time");
+			double[][] timeData = parse(scatterData, StochasticManifestCollector.TIMESTAMP, StochasticManifestCollector.RELATIVE_DURATION);
+			for (int j = 0; j < timeData.length; j++){
+				timeScatterSeries.add(timeData[j][0], timeData[j][1]);
+			}
+			JFreeChart timeScatterChart = ChartFactory.createScatterPlot
+					("duration by time", "timestamp", "duration (in "+this.unit+")", 
+							new XYSeriesCollection(timeScatterSeries), PlotOrientation.VERTICAL, true, true, false);
+			thirdChart = new ChartPanel(timeScatterChart); 
+			renderer = ((XYPlot)timeScatterChart.getPlot()).getRenderer();
+			renderer.setSeriesShape(0, new Rectangle2D.Float(-0.5f, -0.5f, 1f, 1f));
 		}
 		
 		
@@ -179,22 +198,47 @@ public class PlotPanelFreeChart extends JPanel {
 		add(currentChart, BorderLayout.CENTER);
 		
 		if (secondChart != null){
-			add(secondChart, BorderLayout.EAST);	
+			add(secondChart, BorderLayout.EAST);
+		}
+		if (thirdChart != null){
+			add(thirdChart, BorderLayout.WEST);
 		}
 		
 		this.revalidate();
 		this.repaint();	
 	}
 	
-	private double[][] parse(String scatterData) {
+	/**
+	 * 
+	 * @param scatterData a table containing training data in a {@link StochasticManifestCollector#DELIMITER} separated table.
+	 * @param independentVar the name of the header
+	 * @param dependentVar
+	 * @return
+	 */
+	private double[][] parse(String scatterData, String independentVar, String dependentVar) {
 		// ignore first row
 		String[] lines = scatterData.split("\n");
 		double[][] data = new double[lines.length-1][];
+		
+		String[] headerParts = lines[0].split(StochasticManifestCollector.DELIMITER);
+		
+		int indexOfDependentVar = getPosInArray(headerParts, dependentVar, 0); // e.g., the duration
+		int indexOfIndependendVar = getPosInArray(headerParts, independentVar, 1); // e.g., the system load
+		
 		for (int i = 1; i < lines.length; i++){
 			String[] parts = lines[i].split(StochasticManifestCollector.DELIMITER);
-			data[i-1] = new double[]{Double.valueOf(parts[1]),Double.valueOf(parts[0])};
+			data[i-1] = new double[]{Double.valueOf(parts[indexOfIndependendVar]),Double.valueOf(parts[indexOfDependentVar])};
 		}
 		return data;
+	}
+
+	private int getPosInArray(String[] array, Object objectToFind, int defaultValue) {
+		for (int i = 0; i < array.length; i++){
+			if (array[i].equals(objectToFind)){
+				return i;
+			}
+		}
+		return defaultValue;
 	}
 
 	public class PointOfInterest{

@@ -36,4 +36,17 @@ public class TimePredictorPlugin {
 		TimePredictor predictor = new TimePredictor();
 		return predictor.predict(model, observedEvents, currentTime, initialMarking, false).getFirst();	
 	}
+	
+	@Plugin(name = "Compute risk by Simulation", 
+			parameterLabels = { "StochasticNet", "Trace", "Current Time", "Target Time" }, 
+			returnLabels = { "Expected Duration" }, 
+			returnTypes = { Double.class }, 
+			userAccessible = true,
+			help = "Predicts the remainding duration for a given trace and a model and time.")
+	@UITopiaVariant(affiliation = "Wirtschaftsuniversität Wien", author = "A. Rogge-Solti", email = "andreas.rogge-solti@wu.ac.at", uiLabel = UITopiaVariant.USEPLUGIN)
+	public Double computeRisk(final UIPluginContext context, StochasticNet model, XTrace observedEvents, Date currentTime, Date targetTime){
+		Marking initialMarking = StochasticNetUtils.getInitialMarking(context, model);
+		TimePredictor predictor = new TimePredictor();
+		return predictor.predict(model, observedEvents, currentTime, initialMarking, false).getFirst();	
+	}
 }
