@@ -10,7 +10,11 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.JOptionPane;
+
+import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.plugin.PluginContext;
+import org.processmining.framework.util.ui.widgets.helper.UserCancelledException;
 import org.processmining.models.connections.GraphLayoutConnection;
 import org.processmining.models.connections.petrinets.behavioral.FinalMarkingConnection;
 import org.processmining.models.connections.petrinets.behavioral.InitialMarkingConnection;
@@ -47,7 +51,7 @@ public class StochasticNetDeserializer {
 	public StochasticNetDeserializer(){
 	}
 	
-	public Object[] convertToNet(PluginContext context, PNMLRoot pnml, String filename, boolean addConnections){
+	public Object[] convertToNet(PluginContext context, PNMLRoot pnml, String filename, boolean addConnections) throws UserCancelledException{
 		PNMLNet pnmlNet = null;
 		PNMLMarking pnmlFinalMarking = null;
 		if (pnml.getModule() != null && pnml.getModule().size()>0){
@@ -74,17 +78,83 @@ public class StochasticNetDeserializer {
 		Map<String, Object> objects = new HashMap<String, Object>();
 		
 		Point2D offset = new Point2D.Double(0,0);
+		boolean containsExecutionPolicy = false, containsTimeUnit = false;
+		
 		if (pnmlNet.getToolspecific()!=null && !pnmlNet.getToolspecific().isEmpty()){
 			PNMLToolSpecific toolSpecific = pnmlNet.getToolspecific().get(0);
 			if (toolSpecific.getTool().equals(PNMLToolSpecific.STOCHASTIC_ANNOTATION)){
 				if (toolSpecific.getProperties()!= null){
 					if (toolSpecific.getProperties().containsKey(PNMLToolSpecific.EXECUTION_POLICY)){
 						net.setExecutionPolicy(ExecutionPolicy.fromString(toolSpecific.getProperties().get(PNMLToolSpecific.EXECUTION_POLICY)));
+						containsExecutionPolicy = true;
 					}
 					if (toolSpecific.getProperties().containsKey(PNMLToolSpecific.TIME_UNIT)){
 						net.setTimeUnit(TimeUnit.fromString(toolSpecific.getProperties().get(PNMLToolSpecific.TIME_UNIT)));
+					} else {
+						containsTimeUnit = true;
 					}
 				}
+			}
+		}
+		if (!containsExecutionPolicy){
+			if (context instanceof UIPluginContext){
+				Object result = JOptionPane.showInputDialog(null, "Select execution policy for net "+net.getLabel(), "Execution policy not specified", 
+						JOptionPane.QUESTION_MESSAGE, null, ExecutionPolicy.values(), ExecutionPolicy.RACE_ENABLING_MEMORY);
+				if (result != null){
+					net.setExecutionPolicy((ExecutionPolicy) result);
+				}
+//				
+//				ProMPropertiesPanel panel = new ProMPropertiesPanel("Select stochastic net properties");
+//				ProMComboBox<ExecutionPolicy> selectExecutionPolicy = panel.addComboBox("execution policy:", ExecutionPolicy.values());
+//				selectExecutionPolicy.setSelectedItem(ExecutionPolicy.RACE_ENABLING_MEMORY);
+//				
+//				ProMComboBox<TimeUnit> selectTimeUnit = panel.addComboBox("time unit:", TimeUnit.values());
+//				selectTimeUnit.setSelectedItem(TimeUnit.MINUTES);
+//				
+//				JDialog dialog = new JDialog();
+//				dialog.getContentPane().add(panel);
+//				dialog.pack();
+//				dialog.setVisible(true);
+//				dialog.setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
+//				JButton cancelButton = new JButton("Cancel");
+//				JButton okButton = new JButton("OK");
+//				
+//				cancelButton.addActionListener(new ActionListener() {
+//					public void actionPerformed(ActionEvent e) {
+//						
+//					}
+//				})
+//				dialog.
+//				try {
+//					Thread.sleep(10000);
+//				} catch (InterruptedException e) {
+//					// TODO Auto-generated catch block
+//					e.printStackTrace();
+//				}
+//				
+//				InteractionResult result = ((UIPluginContext) uiContext.getParentContext()).showWizard("Select import specifications", true, true, panel);
+//				if (result.equals(InteractionResult.FINISHED)){
+//					net.setExecutionPolicy((ExecutionPolicy) selectExecutionPolicy.getSelectedItem());
+//					net.setTimeUnit((TimeUnit) selectTimeUnit.getSelectedItem());
+//				} else {
+//					// aborted by user:
+//					throw new UserCancelledException("User canceled import of net "+net.getLabel()+".");
+//				}
+			} else {
+				net.setExecutionPolicy(ExecutionPolicy.RACE_ENABLING_MEMORY);
+				context.log("Assuming race enabling memory for net "+net.getLabel());
+			}
+		}
+		if (!containsExecutionPolicy){
+			if (context instanceof UIPluginContext){
+				Object result = JOptionPane.showInputDialog(null, "Select time unit for net "+net.getLabel(), "Time unit not specified", 
+						JOptionPane.QUESTION_MESSAGE, null, TimeUnit.values(), TimeUnit.MINUTES);
+				if (result != null){
+					net.setTimeUnit((TimeUnit) result);
+				}
+			}  else {
+				net.setTimeUnit(TimeUnit.MINUTES);
+				context.log("Assuming 'minutes' as the time unit in net "+net.getLabel());
 			}
 		}
 		

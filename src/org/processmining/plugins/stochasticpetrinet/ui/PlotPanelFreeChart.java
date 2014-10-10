@@ -132,7 +132,7 @@ public class PlotPanelFreeChart extends JPanel {
 		}
 		JFreeChart chart = ChartFactory.createXYLineChart(
 		"",
-		"time",
+		"transition duration",
 		"probability density",
 		dataset,
 		PlotOrientation.VERTICAL,
