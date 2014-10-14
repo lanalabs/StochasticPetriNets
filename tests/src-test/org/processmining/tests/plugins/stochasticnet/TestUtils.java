@@ -32,6 +32,7 @@ import org.processmining.framework.plugin.events.PluginLifeCycleEventListener.Li
 import org.processmining.framework.plugin.events.ProgressEventListener.ListenerList;
 import org.processmining.framework.plugin.impl.FieldSetException;
 import org.processmining.framework.providedobjects.ProvidedObjectManager;
+import org.processmining.framework.providedobjects.impl.ProvidedObjectManagerImpl;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.semantics.petrinet.Marking;
@@ -148,6 +149,9 @@ public class TestUtils {
 
 		private Progress progress;
 		
+		private ProvidedObjectManager objectManager;
+	
+		
 		public DummyConsolePluginContext(){
 			this.progress = new Progress() {
 				int max = 100;
@@ -198,6 +202,7 @@ public class TestUtils {
 					}
 				}
 			};
+			this.objectManager = new ProvidedObjectManagerImpl();
 		}
 		
 		public PluginManager getPluginManager() {
@@ -205,7 +210,7 @@ public class TestUtils {
 		}
 
 		public ProvidedObjectManager getProvidedObjectManager() {
-			return null;
+			return objectManager;
 		}
 
 		public ConnectionManager getConnectionManager() {
