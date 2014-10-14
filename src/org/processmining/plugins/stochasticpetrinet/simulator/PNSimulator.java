@@ -334,7 +334,12 @@ public class PNSimulator {
 				lastFiringTime = firingTime;
 								
 				if (useTimeConstraint && !transitionAndDuration.getFirst().isInvisible() && firingTime < constraint){
-					System.out.println("Debug me! This should not happen (if timed transitions were picked!!)");
+					if (transitionAndDuration.getFirst() instanceof TimedTransition && 
+							((TimedTransition)transitionAndDuration.getFirst()).getDistributionType().equals(DistributionType.IMMEDIATE)){
+						// ignore immediate transitions firing before passed time.
+					} else {
+						System.out.println("Debug me! This should not happen (if timed transitions were picked!!)");
+					}
 				}
 				insertEvent(i, trace, transitionAndDuration, firingTime);
 				

@@ -37,7 +37,7 @@ public class TimePredictor {
 	 * @param currentTime the time of prediction (can be later than the last event's time stamp) 
 	 * @param initialMarking initial marking of the net
 	 * @param useTime indicator, whether to use the current time as constraint
-	 * @return
+	 * @return {@link Pair} of doubles (the point predictor, and the associated 99 percent confidence interval)
 	 */
 	public Pair<Double,Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, boolean useTime) {
 		DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking, useTime);
