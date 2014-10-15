@@ -65,7 +65,8 @@ public class StochasticNetDeserializer {
 		}
 		
 		if (pnml.getNet()!=null && pnml.getNet().size() > 1){
-			System.out.println("More than one net in PNML - only converting the first one.");
+			String message = "More than one net in PNML - only converting the first one.";
+			log(context, message);
 		}
 		
 		Marking initialMarking = new Marking();
@@ -142,7 +143,7 @@ public class StochasticNetDeserializer {
 //				}
 			} else {
 				net.setExecutionPolicy(ExecutionPolicy.RACE_ENABLING_MEMORY);
-				context.log("Assuming race enabling memory for net "+net.getLabel());
+				log(context, "Assuming race enabling memory for net "+net.getLabel());
 			}
 		}
 		if (!containsExecutionPolicy){
@@ -154,7 +155,7 @@ public class StochasticNetDeserializer {
 				}
 			}  else {
 				net.setTimeUnit(TimeUnit.MINUTES);
-				context.log("Assuming 'minutes' as the time unit in net "+net.getLabel());
+				log(context, "Assuming 'minutes' as the time unit in net "+net.getLabel());
 			}
 		}
 		
@@ -282,6 +283,14 @@ public class StochasticNetDeserializer {
 		}
 		
 		return new Object[]{net,initialMarking,finalMarking};
+	}
+
+	private void log(PluginContext context, String message) {
+		if (context !=null){
+			context.log(message);
+		} else {
+			System.out.println(message);	
+		}
 	}
 	
 	/**
