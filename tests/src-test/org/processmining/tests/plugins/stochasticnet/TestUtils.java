@@ -54,7 +54,14 @@ import org.simpleframework.xml.core.Persister;
  */
 public class TestUtils {
 
-	
+	/**
+	 * Runs a performance enricher experiment on a given Model.
+	 *  
+	 * @param experimentType {@link ExperimentType} specifying the varying input (trace size, or noise)
+	 * @param fileName String the model file name
+	 * @throws Exception
+	 * @throws IOException
+	 */
 	public static void runExperimentAndSaveOutput(ExperimentType experimentType, String fileName) throws Exception,
 			IOException {
 		Object[] netAndMarking = TestUtils.loadModel(fileName,true);
@@ -65,9 +72,10 @@ public class TestUtils {
 
 		PerformanceEnricherExperimentResult result = enrichmentPlugin.performExperiment(null, net, initialMarking,
 				experimentType);
-		TestUtils.saveCSV(result.getResultsCSV(experimentType), fileName + "_" + experimentType + "_"+System.currentTimeMillis()+".csv");
+		saveCSV(result.getResultsCSV(experimentType), fileName + "_" + experimentType + "_"+System.currentTimeMillis()+".csv");
 	}
 	/**
+	 * Loads a Petri net model from the test files folder.
 	 * 
 	 * @param name String filename without the suffix ".pnml" tries to load a {@link StochasticNet} from
 	 * the tests/testfiles folder of the installation.
@@ -94,16 +102,38 @@ public class TestUtils {
 		return netAndMarking;
 	}
 	
+	/**
+	 * Keep only events supplied as selected objects.
+	 * 
+	 * @param log the event log to filter
+	 * @param classifier the classifier to use to extract a string of the events
+	 * @param selectedObjects the array of event classes that we keep - the rest is filtered out.
+	 * @return
+	 */
 	public static XLog filter(XLog log, XEventClassifier classifier, String...selectedObjects){
 		//FinalEventLogFilter filter = new FinalEventLogFilter();
 		EventLogFilter filter = new EventLogFilter();
 		return filter.filterWithClassifier(null, log, classifier, selectedObjects);
 	}
 	
+	/**
+	 * Loads a log from the tests/testfiles folder of the plugin.
+	 * 
+	 * @param name the file name (including the suffix such as .xes, .xes.gz, or .mxml)
+	 * @return the loaded {@link XLog}
+	 * @throws Exception
+	 */
 	public static XLog loadLog(String name) throws Exception {
 		return loadLog(new File("tests/testfiles/"+name));
 	}
 	
+	/**
+	 * Opens a Log from a given file.
+	 * 
+	 * @param file {@link File} containing the log.
+	 * @return the loaded {@link XLog} 
+	 * @throws Exception
+	 */
 	public static XLog loadLog(File file) throws Exception {
 		XUniversalParser parser = new XUniversalParser();
 		Collection<XLog> logs = parser.parse(file);
@@ -113,12 +143,26 @@ public class TestUtils {
 		return null;
 	}
 	
+	/**
+	 * Shorthand to add an event with a given concept:name and a timestamp to a trace.
+	 *  
+	 * @param name the name of the event (representing the event type)
+	 * @param trace the {@link XTrace} to add to
+	 * @param time the time stamp of the new event 
+	 * @return {@link XEvent} the newly created and added event.
+	 */
 	public static XEvent addEvent(String name, XTrace trace, long time){
 		XEvent e = addEvent(name, trace);
 		XTimeExtension.instance().assignTimestamp(e, time);
 		return e;
 	}
 	
+	/**
+	 * Shorthand to add an event with a given concept:name
+	 * @param name the name of the event (representing the event type)
+	 * @param trace the {@link XTrace} to add to
+	 * @return {@link XEvent} the newly created and added event.
+	 */
 	public static XEvent addEvent(String name, XTrace trace) {
 		XEvent e = XFactoryRegistry.instance().currentDefault().createEvent();
 		XConceptExtension.instance().assignName(e, name);
@@ -126,6 +170,12 @@ public class TestUtils {
 		return e;
 	}
 	
+	/**
+	 * Exports the results of an experiment into the experimentResults folder, into a file with a given name.
+	 * @param csvContent String the file content to be exported.
+	 * @param fileName String the file name
+	 * @throws IOException
+	 */
 	public static void saveCSV(String csvContent, String fileName) throws IOException{
 		File resultsFolder = new File("./experimentResults");
 		if (!resultsFolder.exists()){
@@ -145,12 +195,10 @@ public class TestUtils {
 		PluginContext context = new DummyConsolePluginContext();
 		return context;
 	}
-	static public class DummyConsolePluginContext implements PluginContext{
-
-		private Progress progress;
-		
-		private ProvidedObjectManager objectManager;
 	
+	static public class DummyConsolePluginContext implements PluginContext{
+		private Progress progress;
+		private ProvidedObjectManager objectManager;
 		
 		public DummyConsolePluginContext(){
 			this.progress = new Progress() {
