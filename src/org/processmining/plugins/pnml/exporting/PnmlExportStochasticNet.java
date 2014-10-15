@@ -38,18 +38,20 @@ public class PnmlExportStochasticNet {
 		StochasticNetToPNMLConverter converter = new StochasticNetToPNMLConverter();
 		Marking marking = new Marking();
 		try {
-			if (context != null) {
+			if (context != null) { 
 				marking = context.tryToFindOrConstructFirstObject(Marking.class, InitialMarkingConnection.class,
 						InitialMarkingConnection.MARKING, net);
-			} else {
-				marking = StochasticNetUtils.getInitialMarking(null, net);
-			}
+			} 
 		} catch (ConnectionCannotBeObtained e) {
 			// don't care - stick with empty marking
+		} finally {
+			if (marking == null){
+				marking = StochasticNetUtils.getInitialMarking(null, net);
+			}
 		}
 		GraphLayoutConnection layout;
 		try {
-			if (context != null) {
+			if (context != null && context.getConnectionManager() != null) {
 				layout = context.getConnectionManager().getFirstConnection(GraphLayoutConnection.class, context, net);
 			} else {
 				throw new ConnectionCannotBeObtained("No context available.", GraphLayoutConnection.class);

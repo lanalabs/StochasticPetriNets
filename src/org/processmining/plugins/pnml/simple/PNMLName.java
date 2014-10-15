@@ -4,7 +4,7 @@ import org.simpleframework.xml.Element;
 
 @Element(name="name")
 public class PNMLName {
-	@Element(name="text")
+	@Element(name="text", required=false)
 	private String value;
 	
 	@Element(name="graphics",required=false)

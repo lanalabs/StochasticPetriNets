@@ -142,7 +142,17 @@ public class StochasticNetToPNMLConverter {
 			specific.getProperties().put(PNMLToolSpecific.DISTRIBUTION_PARAMETERS, params.toString());
 			list.add(specific);
 			transition.setToolspecific(list);
+		} else {
+			List<PNMLToolSpecific> list = new ArrayList<PNMLToolSpecific>();
+			PNMLToolSpecific specific = new PNMLToolSpecific();
+			specific.setTool(PNMLToolSpecific.STOCHASTIC_ANNOTATION);
+			specific.setVersion(PNMLToolSpecific.STOCHASTIC_ANNOTATION_VERSION);
+			specific.setProperties(new HashMap<String, String>());
+			specific.getProperties().put(PNMLToolSpecific.INVISIBLE, String.valueOf(t.isInvisible()));
+			list.add(specific);
+			transition.setToolspecific(list);
 		}
+		
 		transition.setGraphics(getGraphics(t,layout));
 		return transition;
 	}
@@ -163,8 +173,8 @@ public class StochasticNetToPNMLConverter {
 	private PNMLGraphics getGraphics(AttributeMapOwner a, GraphLayoutConnection layout) {
 		PNMLGraphics graphics = new PNMLGraphics();
 		Dimension size = layout.getSize(a);
-		size.width = (int) (size.width/PNMLParameter.getScaleForViewInProM());
-		size.height = (int) (size.height/PNMLParameter.getScaleForViewInProM());
+		size.width = Math.max((int)(size.width/PNMLParameter.getScaleForViewInProM()), 40);
+		size.height = Math.max((int) (size.height/PNMLParameter.getScaleForViewInProM()),40);
 		if (layout.getPosition(a)!= null){
 			Point2D position = layout.getPosition(a);
 			graphics.setPosition(new ArrayList<PNMLPoint>());

@@ -192,30 +192,36 @@ public class StochasticNetDeserializer {
 						}
 					}
 					if (stochasticAnnotation != null){
-						int priority = Integer.parseInt(stochasticAnnotation.getProperties().get(PNMLToolSpecific.PRIORITY));
-						double weight = Double.parseDouble(stochasticAnnotation.getProperties().get(PNMLToolSpecific.WEIGHT));
-						boolean invisible = stochasticAnnotation.getProperties().containsKey(PNMLToolSpecific.INVISIBLE)?Boolean.parseBoolean(stochasticAnnotation.getProperties().get(PNMLToolSpecific.INVISIBLE)):false;
-						DistributionType type = DistributionType.fromString(stochasticAnnotation.getProperties().get(PNMLToolSpecific.DISTRIBUTION_TYPE));
-						String parametersString = stochasticAnnotation.getProperties().get(PNMLToolSpecific.DISTRIBUTION_PARAMETERS);
-						String trainingData = stochasticAnnotation.getProperties().get(PNMLToolSpecific.TRAINING_DATA);
-						double[] parameters = null;
-						if (parametersString != null && !parametersString.isEmpty()){
-							String[] stringParameters = parametersString.split(PNMLToolSpecific.VALUES_SEPARATOR);
-							parameters = new double[stringParameters.length];
-							for (int i = 0; i < stringParameters.length; i++){
-								double val = 0;
-								try{
-									val = Double.parseDouble(stringParameters[i]);
-								} catch (NumberFormatException nfe){
-									val = 0;
+						boolean invisible = false;
+						if (stochasticAnnotation.getProperties().containsKey(PNMLToolSpecific.PRIORITY)){
+							int priority = Integer.parseInt(stochasticAnnotation.getProperties().get(PNMLToolSpecific.PRIORITY));
+							double weight = Double.parseDouble(stochasticAnnotation.getProperties().get(PNMLToolSpecific.WEIGHT));
+							invisible = stochasticAnnotation.getProperties().containsKey(PNMLToolSpecific.INVISIBLE)?Boolean.parseBoolean(stochasticAnnotation.getProperties().get(PNMLToolSpecific.INVISIBLE)):false;
+							DistributionType type = DistributionType.fromString(stochasticAnnotation.getProperties().get(PNMLToolSpecific.DISTRIBUTION_TYPE));
+							String parametersString = stochasticAnnotation.getProperties().get(PNMLToolSpecific.DISTRIBUTION_PARAMETERS);
+							String trainingData = stochasticAnnotation.getProperties().get(PNMLToolSpecific.TRAINING_DATA);
+							double[] parameters = null;
+							if (parametersString != null && !parametersString.isEmpty()){
+								String[] stringParameters = parametersString.split(PNMLToolSpecific.VALUES_SEPARATOR);
+								parameters = new double[stringParameters.length];
+								for (int i = 0; i < stringParameters.length; i++){
+									double val = 0;
+									try{
+										val = Double.parseDouble(stringParameters[i]);
+									} catch (NumberFormatException nfe){
+										val = 0;
+									}
+									parameters[i] = val;
 								}
-								parameters[i] = val;
 							}
-						}
-						if (type.equals(DistributionType.IMMEDIATE)){
-							objects.put(key, net.addImmediateTransition(getName(transition), weight, priority));
+							if (type.equals(DistributionType.IMMEDIATE)){
+								objects.put(key, net.addImmediateTransition(getName(transition), weight, priority));
+							} else {
+								objects.put(key, net.addTimedTransition(getName(transition), weight, type, trainingData, parameters));
+							}
 						} else {
-							objects.put(key, net.addTimedTransition(getName(transition), weight, type, trainingData, parameters));
+							objects.put(key, net.addTransition(getName(transition)));
+							invisible = stochasticAnnotation.getProperties().containsKey(PNMLToolSpecific.INVISIBLE)?Boolean.parseBoolean(stochasticAnnotation.getProperties().get(PNMLToolSpecific.INVISIBLE)):false;
 						}
 						((Transition)objects.get(key)).setInvisible(invisible);
 					} else {

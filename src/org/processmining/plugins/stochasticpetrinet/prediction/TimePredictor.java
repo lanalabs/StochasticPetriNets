@@ -63,8 +63,13 @@ public class TimePredictor {
 	public Double computeRiskToMissTargetTime(StochasticNet model, XTrace observedEvents, Date currentTime, Date targetTime, Marking initialMarking, boolean useTime){
 		DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking, useTime);
 		double[] sortedEstimates = stats.getSortedValues();
+		long[] longArray = new long[sortedEstimates.length];
+		for (int i = 0 ; i < sortedEstimates.length; i++)
+		{
+		    longArray[i] = (long) sortedEstimates[i];
+		}
 		
-		return 1 - (StochasticNetUtils.getIndexBinarySearch(sortedEstimates, targetTime.getTime()) / (double)sortedEstimates.length);
+		return 1 - (StochasticNetUtils.getIndexBinarySearch(longArray, targetTime.getTime()) / (double)sortedEstimates.length);
 	}
 
 	
