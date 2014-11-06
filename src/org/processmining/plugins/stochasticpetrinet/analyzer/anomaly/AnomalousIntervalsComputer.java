@@ -37,11 +37,12 @@ public class AnomalousIntervalsComputer {
 			if (t instanceof TimedTransition){
 				List<Pair<Double,Double>> anomalyList = new ArrayList<>();
 				TimedTransition tt = (TimedTransition) t;
-				if (tt.getDistributionType().equals(DistributionType.IMMEDIATE)){
-					Pair<Double,Double> anomaly = new Pair<Double, Double>(PerformanceEnricher.EPSILON, Double.POSITIVE_INFINITY);
-					Pair<Double,Double> anomalyBelow = new Pair<Double, Double>(Double.NEGATIVE_INFINITY, -PerformanceEnricher.EPSILON);
-					anomalyList.add(anomaly);
+				if (tt.getDistributionType().equals(DistributionType.IMMEDIATE) || tt.getDistributionType().equals(DistributionType.DETERMINISTIC)){
+					Double value = tt.getDistribution()==null?0.0 : tt.getDistribution().getNumericalMean();
+					Pair<Double,Double> anomalyBelow = new Pair<Double, Double>(Double.NEGATIVE_INFINITY, value-PerformanceEnricher.EPSILON);
+					Pair<Double,Double> anomaly = new Pair<Double, Double>(value+PerformanceEnricher.EPSILON, Double.POSITIVE_INFINITY);
 					anomalyList.add(anomalyBelow);
+					anomalyList.add(anomaly);
 				} else if (tt.getDistributionType().equals(DistributionType.UNIFORM)) { 
 					// we will have no chance to find any outliers inside the domain of the uniform distribution. Its outliers are below the start and above the end.
 					UniformRealDistribution uniformDist = (UniformRealDistribution) tt.getDistribution();
@@ -65,7 +66,7 @@ public class AnomalousIntervalsComputer {
 	public List<Pair<Double, Double>> getAnomalousIntervalsForDistribution(RealDistribution d, double threshold) {
 		List<Pair<Double,Double>> anomalousRegions = new ArrayList<>();
 		ShiftedDistribution function = new ShiftedDistribution(d, threshold);
-		anomalousRegions = findIntervalsBelowZero(function, 0.0, d.inverseCumulativeProbability(0.999));
+		anomalousRegions = findIntervalsBelowZero(function, 0.0, d.inverseCumulativeProbability(0.9999));
 		return anomalousRegions;
 	}
 		
