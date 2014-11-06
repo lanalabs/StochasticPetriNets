@@ -19,6 +19,8 @@ import org.processmining.models.graphbased.directed.petrinet.elements.TimedTrans
  */
 public interface StochasticNet extends ResetNet, Petrinet{
 
+	public static final String PARAMETER_LABEL = "Stochastic Petri Net";
+	
 	/**  
 	 * Supported parametric and non-parametric distributions
 	 */

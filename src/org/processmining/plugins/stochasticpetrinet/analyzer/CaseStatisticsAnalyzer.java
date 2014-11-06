@@ -44,6 +44,9 @@ public class CaseStatisticsAnalyzer {
 	private StochasticNet stochasticNet;
 	
 	private Map<CaseStatistics, List<ReplayStep>> numberOfIndividualOutliers;
+	/**
+	 * The cutoff values for the loglikelihoods of samples that are considered as outliers in a process
+	 */
 	private Map<Transition, Double> logLikelihoodCutoffs;
 	private Map<Transition, GaussianKernelDistribution> logLikelihoodDistributions;
 	
@@ -401,6 +404,29 @@ public class CaseStatisticsAnalyzer {
 	}
 	
 	private void initList() {
+		updateLikelihoodCutoffs();
+		
+		
+		numberOfIndividualOutliers = new HashMap<CaseStatistics, List<ReplayStep>>();
+		for (CaseStatistics cs : caseStatistics){
+			List<ReplayStep> outlierSteps = new ArrayList<ReplayStep>();
+			for (ReplayStep step : cs.getReplaySteps()){
+				if (step.transition != null && step.transition.getDistribution()!=null){
+					double logLikelihoodOfActivity = Math.log(step.density);
+					double logLikelihoodCutoff = logLikelihoodCutoffs.get(step.transition);
+					if (logLikelihoodOfActivity < logLikelihoodCutoff){
+						// outlier
+						outlierSteps.add(step);
+					}
+				}
+			}
+			numberOfIndividualOutliers.put(cs, outlierSteps);
+		}
+		// order cases by number of outliers first and then rank them in this group by overall likelihood
+		Collections.sort(caseStatistics, new CaseComparator(numberOfIndividualOutliers));
+	}
+
+	public void updateLikelihoodCutoffs() {
 		logLikelihoodCutoffs = new HashMap<Transition, Double>();
 		for (Transition t : stochasticNet.getTransitions()){
 			if (t instanceof TimedTransition){
@@ -441,25 +467,6 @@ public class CaseStatisticsAnalyzer {
 				}
 			}
 		}
-		
-		
-		numberOfIndividualOutliers = new HashMap<CaseStatistics, List<ReplayStep>>();
-		for (CaseStatistics cs : caseStatistics){
-			List<ReplayStep> outlierSteps = new ArrayList<ReplayStep>();
-			for (ReplayStep step : cs.getReplaySteps()){
-				if (step.transition != null && step.transition.getDistribution()!=null){
-					double logLikelihoodOfActivity = Math.log(step.density);
-					double logLikelihoodCutoff = logLikelihoodCutoffs.get(step.transition);
-					if (logLikelihoodOfActivity < logLikelihoodCutoff){
-						// outlier
-						outlierSteps.add(step);
-					}
-				}
-			}
-			numberOfIndividualOutliers.put(cs, outlierSteps);
-		}
-		// order cases by number of outliers first and then rank them in this group by overall likelihood
-		Collections.sort(caseStatistics, new CaseComparator(numberOfIndividualOutliers));
 	}
 	
 	/**

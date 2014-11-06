@@ -280,8 +280,10 @@ public class StochasticNetUtils {
 		String key = transition.getLabel()+"_"+positiveConstraint;
 		RealDistribution distribution = transition.getDistribution();
 		// try to get distribution from cache:
-		if (useCache && distributionCache.containsKey(key)){
+		if (transition.getDistributionType().equals(DistributionType.GAUSSIAN_KERNEL) && useCache && distributionCache.containsKey(key)){
 			sample = distributionCache.get(key).sample();
+		} else if (transition.getDistributionType().equals(DistributionType.IMMEDIATE)){
+			return 0.0;
 		} else {
 			sample = sampleWithConstraint(distribution, key, positiveConstraint);
 		}
@@ -302,7 +304,12 @@ public class StochasticNetUtils {
 		if (Double.isInfinite(positiveConstraint) || positiveConstraint == Double.NEGATIVE_INFINITY){
 			sample = distribution.sample();
 		} else if (distribution instanceof SimpleHistogramDistribution){
+			long nanos = System.nanoTime();
 			sample = ((SimpleHistogramDistribution)distribution).sample(positiveConstraint);
+			nanos = System.nanoTime()-nanos;
+			if (nanos > 10000){
+				System.out.println("Took "+nanos+"ns to sample from histogram");
+			}
 		} else if (distribution instanceof DiracDeltaDistribution){
 			sample = distribution.sample();
 			if (positiveConstraint > sample){

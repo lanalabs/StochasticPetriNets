@@ -13,7 +13,7 @@ import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
 
 @Plugin(name = "Import Stochastic Petri Nets from PNML file", parameterLabels = { "Filename" }, returnLabels = {
-		"Stochastic Petri Net", "Marking", "Marking" }, returnTypes = { StochasticNet.class, Marking.class, Marking.class })
+		StochasticNet.PARAMETER_LABEL, "Marking", "Marking" }, returnTypes = { StochasticNet.class, Marking.class, Marking.class })
 @UIImportPlugin(description = "PNML Stochastic Petri Net files", extensions = { "pnml" })
 public class PnmlImportStochasticNet extends AbstractImportPlugin{
 

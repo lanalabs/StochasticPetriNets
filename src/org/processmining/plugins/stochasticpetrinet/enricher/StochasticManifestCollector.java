@@ -239,7 +239,7 @@ public class StochasticManifestCollector {
 		// performance calculation
 		int[] cases = manifest.getCasePointers();
 		
-		// init table for case-based transition times (to look for dependencies and other analysis)
+		// init table for case-based transition times (to look for dependencies and other analyses)
 		transitionDurationsPerCase = new double[cases.length][];
 		
 		XLog log = manifest.getLog();
@@ -312,9 +312,9 @@ public class StochasticManifestCollector {
 						line = updateMarking(marking, encTrans, timeSpentInMarking / config.getUnitFactor(), currEventTime, i, line);
 						if (trainingDataHeader != null && line != null){
 							if (transitionTrainingDataStrings[encTrans] == null){
-								transitionTrainingDataStrings[encTrans] = new StringBuilder(trainingDataHeader+"\n");
+								transitionTrainingDataStrings[encTrans] = new StringBuilder(trainingDataHeader).append("\n");
 							}
-							transitionTrainingDataStrings[encTrans].append(line+"\n");
+							transitionTrainingDataStrings[encTrans].append(line).append("\n");
 						}
 						
 						currIdx += 2;

@@ -32,7 +32,7 @@ public class PerformanceEnricherPlugin {
 	
 	@Plugin(name = "Enrich Petri Net with performance data", 
 			parameterLabels = { "Manifest" }, 
-			returnLabels = { "Stochastic Petri Net", "Marking" }, 
+			returnLabels = { StochasticNet.PARAMETER_LABEL, "Marking" }, 
 			returnTypes = { StochasticNet.class, Marking.class }, 
 			userAccessible = true,
 			help = "Creates a new copy of the net enriched with performance data.")
@@ -50,7 +50,7 @@ public class PerformanceEnricherPlugin {
 	
 	@Plugin(name = "Enrich Petri Net with performance data (default mapping)", 
 			parameterLabels = { "Petrinet", "Log" }, 
-			returnLabels = { "Stochastic Petri Net", "Marking" }, 
+			returnLabels = { StochasticNet.PARAMETER_LABEL, "Marking" }, 
 			returnTypes = { StochasticNet.class, Marking.class }, 
 			userAccessible = true,
 			help = "Creates a new copy of the net enriched with performance data.")

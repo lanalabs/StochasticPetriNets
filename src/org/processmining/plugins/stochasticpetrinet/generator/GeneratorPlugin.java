@@ -18,7 +18,7 @@ public class GeneratorPlugin {
 
 	@Plugin(name = "Generate block-structured stochastic Petri net", 
 			parameterLabels = {}, 
-			returnLabels = { "Stochastic Petri Net", "Initial Marking", "Final Marking" }, 
+			returnLabels = { StochasticNet.PARAMETER_LABEL, "Initial Marking", "Final Marking" }, 
 			returnTypes = { StochasticNet.class, Marking.class, Marking.class }, 
 			userAccessible = true,
 			help = "Performs a series of random structured insertion operations of new control flow constructs resulting in a random stochastic net that is by generation sound, free-choice and block-structured.")

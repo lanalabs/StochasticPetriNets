@@ -21,8 +21,8 @@ import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 public class ConvertDistributionsPlugin {
 
 		@Plugin(name = "Convert Distributions in stochastic Petri net", 
-			parameterLabels = { "Stochastic Petri Net" }, 
-			returnLabels = { "Stochastic Petri Net", "Marking" }, 
+			parameterLabels = { StochasticNet.PARAMETER_LABEL }, 
+			returnLabels = { StochasticNet.PARAMETER_LABEL, "Marking" }, 
 			returnTypes = { StochasticNet.class, Marking.class }, 
 			userAccessible = true,
 			help = "Creates a new copy of the net enriched with performance data.")

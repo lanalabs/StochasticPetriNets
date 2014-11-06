@@ -215,11 +215,11 @@ public class PNSimulator {
 			if (!config.allowUnbounded && !isOneBounded(currentMarking)){
 				throw new IllegalArgumentException("Petri net is not 1-bounded!");
 			}
-			if (statesToVisit.size() > config.maxEventsInOneTrace*10){
-				throw new IllegalArgumentException("Too many states!");
-			}
-			if (log.size() >config.maxEventsInOneTrace){
-				throw new IllegalArgumentException("Too many states!");
+//			if (statesToVisit.size() > config.maxEventsInOneTraceEventsInOneTrace*10){
+//				throw new IllegalArgumentException("Too many states!");
+//			}
+			if (log.size() >config.numberOfTraces){
+				return;
 			}
 			
 			if (isFinal(currentMarking, endPlaces)){

@@ -129,7 +129,7 @@ public class TimePredictor {
 	 * @param observedEvents
 	 * @return
 	 */
-	private Semantics<Marking,Transition> getCurrentState(StochasticNet model, Marking initialMarking, XTrace observedEvents) {
+	public static Semantics<Marking,Transition> getCurrentState(StochasticNet model, Marking initialMarking, XTrace observedEvents) {
 		Semantics<Marking, Transition> semantics = StochasticNetUtils.getSemantics(model);
 		semantics.initialize(model.getTransitions(), initialMarking);
 		for (XEvent event : observedEvents){
@@ -170,7 +170,7 @@ public class TimePredictor {
 		return semantics;
 	}
 
-	private void addAllEnabledTransitions(
+	private static void addAllEnabledTransitions(
 			Semantics<Marking, Transition> semantics, Collection<Pair<Marking, Transition>> searchState) {
 		for (Transition t : semantics.getExecutableTransitions()){
 //			if (t.isInvisible()){
@@ -193,7 +193,7 @@ public class TimePredictor {
 //		return false;
 //	}
 	
-	private void executeTransition(Semantics<Marking, Transition> semantics, Transition transition, Long time) throws IllegalTransitionException{
+	private static void executeTransition(Semantics<Marking, Transition> semantics, Transition transition, Long time) throws IllegalTransitionException{
 		Marking before = semantics.getCurrentState();
 		semantics.executeExecutableTransition(transition);
 		Marking after = semantics.getCurrentState();

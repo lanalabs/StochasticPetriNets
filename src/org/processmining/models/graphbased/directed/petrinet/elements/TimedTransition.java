@@ -20,6 +20,7 @@ import org.processmining.plugins.stochasticpetrinet.distribution.GaussianKernelD
 import org.processmining.plugins.stochasticpetrinet.distribution.NonConvergenceException;
 import org.processmining.plugins.stochasticpetrinet.distribution.RLogSplineDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
+import org.processmining.plugins.stochasticpetrinet.enricher.StochasticManifestCollector;
 
 /**
  * A timed transition to be used in 
@@ -282,6 +283,10 @@ public class TimedTransition extends Transition{
 		this.priority = priority;
 	}
 
+	/**
+	 * Training Data in the form of RELATIVE_DURATION  {@value StochasticManifestCollector#DELIMITER}  SYSTEM_LOAD  {@value StochasticManifestCollector#DELIMITER}  TIMESTAMP
+	 * @return String
+	 */
 	public String getTrainingData() {
 		return trainingData;
 	}

@@ -36,7 +36,7 @@ public class PerformanceVisualizer {
 	private static ProMJGraphPanel graphPanel;
 	
 	private static JPanel myPanel;
-	@Plugin(name = "Stochastic Petri Net Visualizer", returnLabels = { "Visualized Stochastic Petri Net" }, returnTypes = { JComponent.class }, parameterLabels = { "Stochastic Petri Net" }, userAccessible = false)
+	@Plugin(name = "Stochastic Petri Net Visualizer", returnLabels = { "Visualized Stochastic Petri Net" }, returnTypes = { JComponent.class }, parameterLabels = { StochasticNet.PARAMETER_LABEL }, userAccessible = false)
 	@Visualizer
 	public static JComponent visualize(PluginContext context, StochasticNet sNet) {
 		

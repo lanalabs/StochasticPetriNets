@@ -6,7 +6,9 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
+import org.apache.commons.math3.random.MersenneTwister;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 
 public class SimpleHistogramDistribution extends AbstractRealDistribution{
 	private static final long serialVersionUID = -8306239084071667404L;
@@ -25,6 +27,7 @@ public class SimpleHistogramDistribution extends AbstractRealDistribution{
 	}
 	
 	public SimpleHistogramDistribution(double binwidth) {
+		super(new MersenneTwister());
 		assert(binwidth > 0);
 		this.binwidth = binwidth;
 		binsAndValues = new TreeMap<Integer, Integer>();
@@ -97,42 +100,58 @@ public class SimpleHistogramDistribution extends AbstractRealDistribution{
 	}
 	
 	public double sample(){
-		int nextInt = randomData.nextInt(0, (int) (sampleSize-1));
-		int cumulative = 0;
-		Iterator<Integer> iter = binsAndValues.keySet().iterator();
-		int currentIndex = 0;
-//		cumulative+=binsAndValues.get(currentIndex);
-		while (iter.hasNext() && nextInt>=cumulative){
-			currentIndex = iter.next();
-			cumulative+=binsAndValues.get(currentIndex);
-		}
-		return getValue(currentIndex);
+		int nextInt = random.nextInt((int) (sampleSize-1));
+		return samples[nextInt];
+//		int cumulative = 0;
+//		Iterator<Integer> iter = binsAndValues.keySet().iterator();
+//		int currentIndex = 0;
+////		cumulative+=binsAndValues.get(currentIndex);
+//		while (iter.hasNext() && nextInt>=cumulative){
+//			currentIndex = iter.next();
+//			cumulative+=binsAndValues.get(currentIndex);
+//		}
+//		return getValue(currentIndex);
 	}
 	
 	public double sample(double constraint){
-		Iterator<Integer> iter = binsAndValues.keySet().iterator();
-		int currentIndex = iter.next();
-		int upUntilIndex = 0;
-		while (iter.hasNext() && getValue(currentIndex) < constraint){
-			upUntilIndex += binsAndValues.get(currentIndex);
-			currentIndex = iter.next();
-		}
-		if (getValue(currentIndex)>= constraint){
-			if (upUntilIndex == sampleSize-1){
-				// one sample:
-				return getValue(currentIndex);
-			}
-			int nextInt = randomData.nextInt(upUntilIndex, (int) (sampleSize-1));
-			int cumulative = upUntilIndex+binsAndValues.get(currentIndex);
-//			cumulative+=binsAndValues.get(currentIndex);
-			while (iter.hasNext() && nextInt>=cumulative){
-				currentIndex = iter.next();
-				cumulative+=binsAndValues.get(currentIndex);
-			}
-			return getValue(currentIndex);
-		} else {
+		// find index of constraint and sample above:
+		// assume that samples are ordered.
+		int indexOfConstraint = StochasticNetUtils.getIndexBinarySearch(samples, constraint);
+		
+		if (constraint > samples[samples.length -1]){
 			return constraint;
 		}
+		if (constraint > samples[indexOfConstraint]){
+			indexOfConstraint++;
+		}
+		
+		int randomDraw = indexOfConstraint + random.nextInt(samples.length - indexOfConstraint);
+		return samples[randomDraw];
+		
+//		
+//		Iterator<Integer> iter = binsAndValues.keySet().iterator();
+//		int currentIndex = iter.next();
+//		int upUntilIndex = 0;
+//		while (iter.hasNext() && getValue(currentIndex) < constraint){
+//			upUntilIndex += binsAndValues.get(currentIndex);
+//			currentIndex = iter.next();
+//		}
+//		if (getValue(currentIndex)>= constraint){
+//			if (upUntilIndex == sampleSize-1){
+//				// one sample:
+//				return getValue(currentIndex);
+//			}
+//			int nextInt = randomData.nextInt(upUntilIndex, (int) (sampleSize-1));
+//			int cumulative = upUntilIndex+binsAndValues.get(currentIndex);
+////			cumulative+=binsAndValues.get(currentIndex);
+//			while (iter.hasNext() && nextInt>=cumulative){
+//				currentIndex = iter.next();
+//				cumulative+=binsAndValues.get(currentIndex);
+//			}
+//			return getValue(currentIndex);
+//		} else {
+//			return constraint;
+//		}
 	}
 
 	private double calcNumericalMean() {

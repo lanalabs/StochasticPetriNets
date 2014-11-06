@@ -9,7 +9,7 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 public class LikelihoodAnalyzerPlugin {
 
 	@Plugin(name = "Compute Likelihoods", 
-			parameterLabels = { "Event Log", "Stochastic Petri Net"}, 
+			parameterLabels = { "Event Log", StochasticNet.PARAMETER_LABEL}, 
 			returnLabels = { CaseStatisticsList.PARAMETER_LABEL }, 
 			returnTypes = { CaseStatisticsList.class }, 
 			userAccessible = true,

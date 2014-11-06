@@ -2,6 +2,8 @@ package org.processmining.tests.plugins.stochasticnet;
 
 
 import org.deckfour.xes.model.XLog;
+import org.junit.Assert;
+import org.junit.Test;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
@@ -17,6 +19,29 @@ import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
 
 public class PredictionExperimentTest {
 
+	@Test
+	public void testBinarySearch(){
+		double[] sortedValues = new double[]{1,2,3,4};
+		
+		Assert.assertTrue(StochasticNetUtils.getIndexBinarySearch(sortedValues, 0) == 0);
+		
+		Assert.assertTrue(StochasticNetUtils.getIndexBinarySearch(sortedValues, 1) == 0);
+		
+		Assert.assertTrue(StochasticNetUtils.getIndexBinarySearch(sortedValues, 1.1) == 0);
+		Assert.assertTrue(StochasticNetUtils.getIndexBinarySearch(sortedValues, 2) == 1);
+		
+		Assert.assertTrue(StochasticNetUtils.getIndexBinarySearch(sortedValues, 2.1) == 1);
+		
+		Assert.assertTrue(StochasticNetUtils.getIndexBinarySearch(sortedValues, 3) == 2);
+		
+		
+		Assert.assertTrue(StochasticNetUtils.getIndexBinarySearch(sortedValues, 3.9) == 2);
+		Assert.assertTrue(StochasticNetUtils.getIndexBinarySearch(sortedValues, 4) == 3);
+		
+		Assert.assertTrue(StochasticNetUtils.getIndexBinarySearch(sortedValues, 4.1) == 3);
+		
+	}
+	
 //	@Test
 	public void testExperimentParallel2() throws Exception {
 		Object[] netAndMarking = TestUtils.loadModel("parallel2", true);
