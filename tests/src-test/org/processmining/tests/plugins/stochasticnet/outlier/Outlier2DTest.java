@@ -16,6 +16,7 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.util.Pair;
 import org.deckfour.xes.model.XLog;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
@@ -155,6 +156,7 @@ public class Outlier2DTest {
 		writer.close();
 	}
 	
+	@Ignore
 	@Test
 	public void testSurgeryOutliers() throws Exception{
 		// load model and perform analysis

@@ -455,7 +455,7 @@ public class OptimalSelectionPredictionTest {
 			this.config = config;
 			this.predictionPeriod = predictionPeriod;
 			this.initialMarking = StochasticNetUtils.getInitialMarking(context, model);
-			this.predictor = new TimePredictor();
+			this.predictor = new TimePredictor(true);
 			this.model = model;
 			this.meanDuration = meanDuration;
 			this.traceId = traceId;
@@ -503,7 +503,7 @@ public class OptimalSelectionPredictionTest {
 							
 							event = subTrace.get(subTrace.size()-1);
 					
-							Pair<Double,Double> constrainedPredictionAndConfidence = predictor.predict(model, subTrace, currentTime, initialMarking, true);
+							Pair<Double,Double> constrainedPredictionAndConfidence = predictor.predict(model, subTrace, currentTime, initialMarking);
 							
 							Double predictedValueConstrained = (double) Math.max(constrainedPredictionAndConfidence.getFirst().longValue(),currentTime.getTime());
 							

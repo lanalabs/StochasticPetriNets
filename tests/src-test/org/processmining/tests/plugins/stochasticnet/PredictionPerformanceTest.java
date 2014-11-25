@@ -140,10 +140,10 @@ public class PredictionPerformanceTest {
 		
 		XTrace observedSubTrace = StochasticNetUtils.getSubTrace(trace, monitoringTime);
 		
-		TimePredictor predictor = new TimePredictor();
+		TimePredictor predictor = new TimePredictor(true);
 		// start performance analysis:
 		long beforePrediction = System.currentTimeMillis();
-		Pair<Double,Double> predictedDurationAndConfidence = predictor.predict(net, observedSubTrace, new Date(monitoringTime), initialMarking, true);
+		Pair<Double,Double> predictedDurationAndConfidence = predictor.predict(net, observedSubTrace, new Date(monitoringTime), initialMarking);
 		double confidenceBandLower = predictedDurationAndConfidence.getFirst()-predictedDurationAndConfidence.getSecond()/2;
 		double confidenceBandHigher = predictedDurationAndConfidence.getFirst()+predictedDurationAndConfidence.getSecond()/2;
 		System.out.println("predicted "+predictedDurationAndConfidence.getFirst()+" +- "+predictedDurationAndConfidence.getSecond()/2+" around "+((confidenceBandHigher/predictedDurationAndConfidence.getFirst()-1.)*100)+" % of error..");
