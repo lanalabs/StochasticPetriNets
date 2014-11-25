@@ -16,6 +16,9 @@ public class PNSimulatorConfig {
 	/** The number of traces to simulate */
 	int numberOfTraces;
 	
+	/** Specifies, whether the simulation should actually produce a log, or rather just simulate and return only the last event's time stamp */
+	boolean simulateTraceless;
+	
 	/** The arrival rate (new traces will be created with a Poisson distribution with this arrival rate) */
 	double arrivalRate;
 	
@@ -107,6 +110,7 @@ public class PNSimulatorConfig {
 		this.maxEventsInOneTrace = maxEventsInOneTrace;
 		this.logName = logName;
 		this.executionPolicy = policy;
+		this.simulateTraceless = false;
 	}
 
 	public boolean isDeterministicBoundedStateSpaceExploration() {
@@ -129,4 +133,7 @@ public class PNSimulatorConfig {
 		this.seed = seed;
 	}
 	
+	public void setSimulateTraceless(boolean simulateTraceLess){
+		this.simulateTraceless = simulateTraceLess;
+	}
 }

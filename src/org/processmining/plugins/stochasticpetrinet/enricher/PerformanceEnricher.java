@@ -236,10 +236,10 @@ public class PerformanceEnricher {
 		String message = "";
 		newTimedTransition.setPriority(0);
 		
-		if (newTimedTransition.getLabel().equalsIgnoreCase("D")){
-//			typeToMine = DistributionType.GAUSSIAN_KERNEL;
-			censoredStats = new LinkedList<Double>();
-		}
+//		if (newTimedTransition.getLabel().equalsIgnoreCase("D")){
+////			typeToMine = DistributionType.GAUSSIAN_KERNEL;
+//			censoredStats = new LinkedList<Double>();
+//		}
 		
 		// special cases:
 		if (transitionStats.isEmpty()){

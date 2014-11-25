@@ -289,6 +289,19 @@ public class StochasticManifestCollector {
 						if (idx2Trans[man[currIdx+1]].isInvisible()){
 							synchronousAndInvisibleMoves++;
 							time = 0; // assume that invisible transitions are immediate
+							int encTrans = man[currIdx+1];
+							String line = "";
+							if (trainingDataHeader != null){
+								long firingTimeEstimate = lastFiringTime;
+								if(firingTimeEstimate == Long.MIN_VALUE){
+									// use first event's timestamp as an estimate (we don't exactly know when the process started)
+									firingTimeEstimate = XTimeExtension.instance().extractTimestamp(log.get(i).get(0)).getTime();  
+								}
+								// the training line will be 0 duration; system load ; the last time stamp
+								line = "0"+DELIMITER+((XAttributeDiscrete)log.get(i).get(0).getAttributes().get(LoadAnnotationPlugin.CONTEXT_LOAD)).getValue()+DELIMITER+lastFiringTime;
+								addTrainingDataLine(trainingDataHeader, encTrans, line);
+							}
+							
 						}
 						updateMarking(marking, man[currIdx+1], time, lastFiringTime, i, null);
 						currIdx += 2;
@@ -310,12 +323,7 @@ public class StochasticManifestCollector {
 							line += ((XAttributeDiscrete)currEvent.getAttributes().get(LoadAnnotationPlugin.CONTEXT_LOAD)).getValue();
 						}
 						line = updateMarking(marking, encTrans, timeSpentInMarking / config.getUnitFactor(), currEventTime, i, line);
-						if (trainingDataHeader != null && line != null){
-							if (transitionTrainingDataStrings[encTrans] == null){
-								transitionTrainingDataStrings[encTrans] = new StringBuilder(trainingDataHeader).append("\n");
-							}
-							transitionTrainingDataStrings[encTrans].append(line).append("\n");
-						}
+						addTrainingDataLine(trainingDataHeader, encTrans, line);
 						
 						currIdx += 2;
 						stepsInAlignment++;
@@ -352,6 +360,15 @@ public class StochasticManifestCollector {
 					}
 				}
 			}
+		}
+	}
+
+	protected void addTrainingDataLine(String trainingDataHeader, int encTrans, String line) {
+		if (trainingDataHeader != null && line != null){
+			if (transitionTrainingDataStrings[encTrans] == null){
+				transitionTrainingDataStrings[encTrans] = new StringBuilder(trainingDataHeader).append("\n");
+			}
+			transitionTrainingDataStrings[encTrans].append(line).append("\n");
 		}
 	}
 

@@ -481,16 +481,16 @@ public class StochasticNetUtils {
 	 * @return
 	 */
 	public static double getMeanDuration(StochasticNet net, Marking initialMarking){
-		TimePredictor predictor = new TimePredictor();
+		TimePredictor predictor = new TimePredictor(false);
 		XTrace emptyTrace = XFactoryRegistry.instance().currentDefault().createTrace();
-		Pair<Double, Double> prediction = predictor.predict(net, emptyTrace, new Date(0), initialMarking, false);
+		Pair<Double, Double> prediction = predictor.predict(net, emptyTrace, new Date(0), initialMarking);
 		return prediction.getFirst();
 	}
 	
 	public static double getUpperBoundDuration(StochasticNet net, Marking initialMarking) {
-		TimePredictor predictor = new TimePredictor();
+		TimePredictor predictor = new TimePredictor(false);
 		XTrace emptyTrace = XFactoryRegistry.instance().currentDefault().createTrace();
-		Pair<Double, Double> prediction = predictor.predict(net, emptyTrace, new Date(0), initialMarking, false);
+		Pair<Double, Double> prediction = predictor.predict(net, emptyTrace, new Date(0), initialMarking);
 		return prediction.getFirst()+prediction.getSecond()/2; // add half of the confidence interval to the mean to get a reasonable upper bound
 	}
 	

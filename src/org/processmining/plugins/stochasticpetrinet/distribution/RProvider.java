@@ -2,16 +2,22 @@ package org.processmining.plugins.stochasticpetrinet.distribution;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
+import java.lang.reflect.InvocationTargetException;
 
 import javax.swing.JFileChooser;
 import javax.swing.JOptionPane;
 
 import org.rosuda.JRI.RMainLoopCallbacks;
 import org.rosuda.JRI.Rengine;
+import org.rosuda.REngine.REngine;
+import org.rosuda.REngine.REngineException;
+import org.rosuda.REngine.JRI.JRIEngine;
 
 public class RProvider {
 
 	private static Rengine engine;
+	
+	public static String[] REQUIRED_LIBRARIES = {"logspline"};
 	
 	public static synchronized Rengine getEngine(){
 		if (engine == null){
@@ -29,9 +35,35 @@ public class RProvider {
 	            engine = null;
 	            throw new UnsupportedOperationException("Cannot load R");
 	        }
-	        engine.eval("library(\"logspline\")",false);
+	        for (String library : REQUIRED_LIBRARIES){
+	        	engine.eval(String.format("library(\"%s\"",  library),false);	
+	        }
+	        
 		}
 		return engine;
+	}
+	
+	public static synchronized REngine getREngine(){
+		try {
+			if (engine!=null){
+				return new JRIEngine(engine);
+			}
+			if (REngine.getLastEngine()!=null){
+				return REngine.getLastEngine();
+			}
+			return REngine.engineForClass(JRIEngine.class.getName());
+		} catch (ClassNotFoundException e) {
+			e.printStackTrace();
+		} catch (NoSuchMethodException e) {
+			e.printStackTrace();
+		} catch (IllegalAccessException e) {
+			e.printStackTrace();
+		} catch (InvocationTargetException e) {
+			e.printStackTrace();
+		} catch (REngineException e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 
 	public static boolean getJRIAvailable() {

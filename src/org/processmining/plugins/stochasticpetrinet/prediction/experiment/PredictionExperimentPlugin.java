@@ -515,13 +515,13 @@ public class PredictionExperimentPlugin {
 
 	public long getProcessMeanDuration(StochasticNet model, XLog log, Marking initialMarking,
 			PredictionExperimentConfig config) {
-		TimePredictor predictor = new TimePredictor();
+		TimePredictor predictor = new TimePredictor(false);
 		XTrace initialTrace = new XTraceImpl(log.get(0).getAttributes());
 		initialTrace.add(log.get(0).get(0));
 		XEvent startEvent = initialTrace.get(0);
 		Long realStartTime = XTimeExtension.instance().extractTimestamp(startEvent).getTime();
 		Pair<Double, Double> meanAndConfidenceInterval = predictor.predict(model, initialTrace,
-				new Date(realStartTime), initialMarking, false);
+				new Date(realStartTime), initialMarking);
 		long meanDuration = meanAndConfidenceInterval.getFirst().longValue();
 		meanDuration = meanDuration - realStartTime;
 		return meanDuration;
@@ -556,7 +556,7 @@ public class PredictionExperimentPlugin {
 			this.predictionPeriod = predictionPeriod;
 			this.initialMarking = StochasticNetUtils.getInitialMarking(context, model);
 			this.initialGspnMarking = StochasticNetUtils.getInitialMarking(context, gspnModel);
-			this.predictor = new TimePredictor();
+			this.predictor = new TimePredictor(true);
 			this.model = model;
 			this.gspnModel = gspnModel;
 			this.meanDuration = meanDuration;
@@ -612,9 +612,9 @@ public class PredictionExperimentPlugin {
 									PNSimulator.TIME_TIMESTAMP)).getValueMillis();
 
 							Pair<Double, Double> simplePredictionAndConfidence = predictor.predict(gspnModel, subTrace,
-									currentTime, initialGspnMarking, true);
+									currentTime, initialGspnMarking);
 							Pair<Double, Double> constrainedPredictionAndConfidence = predictor.predict(model,
-									subTrace, currentTime, initialMarking, true);
+									subTrace, currentTime, initialMarking);
 
 							Double predictedValueSimple = (double) Math.max(simplePredictionAndConfidence.getFirst()
 									.longValue(), currentTime.getTime());

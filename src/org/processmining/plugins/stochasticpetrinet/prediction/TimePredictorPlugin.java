@@ -33,8 +33,8 @@ public class TimePredictorPlugin {
 	@UITopiaVariant(affiliation = "Hasso Plattner Institute", author = "A. Rogge-Solti", email = "andreas.rogge-solti@hpi.uni-potsdam.de", uiLabel = UITopiaVariant.USEPLUGIN)
 	public Double predict(final UIPluginContext context, StochasticNet model, XTrace observedEvents, Date currentTime){
 		Marking initialMarking = StochasticNetUtils.getInitialMarking(context, model);
-		TimePredictor predictor = new TimePredictor();
-		return predictor.predict(model, observedEvents, currentTime, initialMarking, false).getFirst();	
+		TimePredictor predictor = new TimePredictor(false);
+		return predictor.predict(model, observedEvents, currentTime, initialMarking).getFirst();	
 	}
 	
 	@Plugin(name = "Compute risk by Simulation", 
@@ -46,7 +46,7 @@ public class TimePredictorPlugin {
 	@UITopiaVariant(affiliation = "Wirtschaftsuniversität Wien", author = "A. Rogge-Solti", email = "andreas.rogge-solti@wu.ac.at", uiLabel = UITopiaVariant.USEPLUGIN)
 	public Double computeRisk(final UIPluginContext context, StochasticNet model, XTrace observedEvents, Date currentTime, Date targetTime){
 		Marking initialMarking = StochasticNetUtils.getInitialMarking(context, model);
-		TimePredictor predictor = new TimePredictor();
-		return predictor.predict(model, observedEvents, currentTime, initialMarking, false).getFirst();	
+		TimePredictor predictor = new TimePredictor(false);
+		return predictor.predict(model, observedEvents, currentTime, initialMarking).getFirst();	
 	}
 }

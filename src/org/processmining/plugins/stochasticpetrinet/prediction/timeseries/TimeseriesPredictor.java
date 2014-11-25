@@ -2,90 +2,76 @@ package org.processmining.plugins.stochasticpetrinet.prediction.timeseries;
 
 import java.util.Collection;
 import java.util.Date;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.TreeMap;
 
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
-import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.EfficientStochasticNetSemanticsImpl;
-import org.processmining.plugins.stochasticpetrinet.distribution.RProvider;
-import org.processmining.plugins.stochasticpetrinet.enricher.StochasticManifestCollector;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.prediction.AbstractTimePredictor;
 import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
-import org.rosuda.JRI.Rengine;
+import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
+import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
+import org.processmining.plugins.stochasticpetrinet.simulator.PNTimeSeriesSimulator;
 
-public class TimeseriesPredictor {
+public class TimeseriesPredictor extends AbstractTimePredictor{
 
-	/** reference to the R engine */
-	protected Rengine engine;
 	
 	public TimeseriesPredictor(){
-		engine = RProvider.getEngine();
 	}
 	
-	public void predict(StochasticNet net, XTrace observedEvents, Date currentTime, Marking initialMarking) {
-		EfficientStochasticNetSemanticsImpl  semantics = (EfficientStochasticNetSemanticsImpl) TimePredictor.getCurrentState(net, initialMarking, observedEvents);		
+	protected DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime,
+			Marking initialMarking) {
 		
-		List<Set<Transition>> conflictingTransitions = getConflictingTransitions(semantics);
+		EfficientStochasticNetSemanticsImpl  semantics = (EfficientStochasticNetSemanticsImpl) TimePredictor.getCurrentState(model, initialMarking, observedEvents);		
+		Marking currentMarking = semantics.getCurrentState();
 		
-		Collection<Transition> enabledTransitions = semantics.getEnabledTransitions();
+		// perform a headless simulation
+		PNSimulator simulator = new PNTimeSeriesSimulator();
 		
 		
-		if (!conflictingTransitions.isEmpty()){
-			// resolve conflict at each conflict herd (there might be multiple concurrently enabled conflicting transitions)
-			
-			// TODO: take care of multiple conflicts! - For now, assume only one is there
-			assert conflictingTransitions.size()==1;
-			
-			// resolve conflict by asking categorical time series!
-			Set<Transition> firstConflictingTransitions = conflictingTransitions.get(0);
-		
-			Map<Transition, Double> transitionProbabilities = getTransitionProbabilities(firstConflictingTransitions, semantics);
-			
+		PNSimulatorConfig config = new PNSimulatorConfig(1,model.getTimeUnit());
+		config.setSimulateTraceless(true);
+		Long lastEventTime;
+		if (observedEvents.isEmpty()){
+			lastEventTime = currentTime.getTime();
+		} else {
+			lastEventTime = XTimeExtension.instance().extractTimestamp(observedEvents.get(observedEvents.size()-1)).getTime();
 		}
 		
-		// find next 
-		semantics.getExecutableTransitions();
-	}
-	
-	public Map<Transition, Double> getTransitionProbabilities(Set<Transition> conflictingTransitions, EfficientStochasticNetSemanticsImpl semantics) {
-		Map<Transition, Double> probabilities = new HashMap<>();
-		
-		// collect training data and sort them according to the date
-		Map<Long, String> sortedDecisions = new TreeMap<>();
+		DescriptiveStatistics stats = new DescriptiveStatistics();
+		//long now = System.currentTimeMillis();
 		
 		
-		for (Transition t : conflictingTransitions){
-			assert t instanceof TimedTransition;
-			
-			TimedTransition tt = (TimedTransition) t;
-			String trainingData = tt.getTrainingData();
-			
-			String[] entries = trainingData.split("\n");
-			// ignore header!
-			for (int i = 1; i < entries.length; i++){
-				String[] entryParts = entries[i].split(StochasticManifestCollector.DELIMITER);
-				sortedDecisions.put(Long.valueOf(entryParts[2]), semantics.getTransitionId(t)+StochasticManifestCollector.DELIMITER+entryParts[0]+StochasticManifestCollector.DELIMITER+entryParts[1]);
+		
+		StochasticNetUtils.useCache(true);
+		double errorPercent = 100; // percentage in error of 99% confidence band
+		int i = 0;
+		while (errorPercent > ERROR_BOUND_PERCENT && i <MAX_RUNS){
+			i++;
+			stats.addValue((Long)simulator.simulateOneTrace(model, semantics, config, currentMarking, lastEventTime, currentTime.getTime(), i, false, null));
+			semantics.setCurrentState(currentMarking);
+			if (i % 100 == 0){
+				// update error:
+				errorPercent = getErrorPercent(stats);
 			}
 		}
-		for (Map.Entry<Long, String> entry : sortedDecisions.entrySet()){
-			System.out.println(entry.getKey()+";"+entry.getValue());
-		}
-		
-		return probabilities;
+		return stats;
 	}
+
+	
 
 	private List<Set<Transition>> getConflictingTransitions(Semantics<Marking, Transition> semantics){
 		// assume free choice!

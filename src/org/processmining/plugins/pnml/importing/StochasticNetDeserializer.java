@@ -215,7 +215,7 @@ public class StochasticNetDeserializer {
 								}
 							}
 							if (type.equals(DistributionType.IMMEDIATE)){
-								objects.put(key, net.addImmediateTransition(getName(transition), weight, priority));
+								objects.put(key, net.addImmediateTransition(getName(transition), weight, priority, trainingData));
 							} else {
 								objects.put(key, net.addTimedTransition(getName(transition), weight, type, trainingData, parameters));
 							}
