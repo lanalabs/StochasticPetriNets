@@ -16,6 +16,8 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Transition
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.EfficientStochasticNetSemanticsImpl;
 import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
+import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeSeriesConfiguration;
+import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeSeriesConfiguration.TimeSeriesType;
 import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeseriesPredictor;
 
 public class TimeseriesPredictionTest {
@@ -40,7 +42,7 @@ public class TimeseriesPredictionTest {
 			}
 		}
 		
-		EfficientStochasticNetSemanticsImpl semantics = (EfficientStochasticNetSemanticsImpl) TimePredictor.getCurrentState(net, initialMarking, observedEvents);		
+		EfficientStochasticNetSemanticsImpl semantics = (EfficientStochasticNetSemanticsImpl) TimePredictor.getCurrentStateWithAlignment(net, initialMarking, observedEvents);		
 		
 		Pair<Double, Double> prediction = predictor.predict(net, observedEvents, new Date(), initialMarking);
 		
@@ -76,7 +78,10 @@ public class TimeseriesPredictionTest {
 		StochasticNet net = (StochasticNet) netAndMarking[0];
 		Marking initialMarking = (Marking) netAndMarking[1];
 		
-		TimeseriesPredictor predictor = new TimeseriesPredictor();
+		
+		TimeSeriesConfiguration config = new TimeSeriesConfiguration();
+		config.setTimeSeriesType(TimeSeriesType.NAIVE_METHOD);
+		TimeseriesPredictor predictor = new TimeseriesPredictor(config);
 		
 		XTrace observedEvents = new XTraceImpl(new XAttributeMapImpl());
 		TestUtils.addEvent("Start", observedEvents, 1000);

@@ -173,8 +173,8 @@ public class StochasticNetToPNMLConverter {
 	private PNMLGraphics getGraphics(AttributeMapOwner a, GraphLayoutConnection layout) {
 		PNMLGraphics graphics = new PNMLGraphics();
 		Dimension size = layout.getSize(a);
-		size.width = Math.max((int)(size.width/PNMLParameter.getScaleForViewInProM()), 40);
-		size.height = Math.max((int) (size.height/PNMLParameter.getScaleForViewInProM()),40);
+		size.width = Math.max((int)(size.width/PNMLParameter.getScaleForViewInProM()), 20);
+		size.height = Math.max((int) (size.height/PNMLParameter.getScaleForViewInProM()), 20);
 		if (layout.getPosition(a)!= null){
 			Point2D position = layout.getPosition(a);
 			graphics.setPosition(new ArrayList<PNMLPoint>());

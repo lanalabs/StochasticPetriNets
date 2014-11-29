@@ -503,7 +503,7 @@ public class OptimalSelectionPredictionTest {
 							
 							event = subTrace.get(subTrace.size()-1);
 					
-							Pair<Double,Double> constrainedPredictionAndConfidence = predictor.predict(model, subTrace, currentTime, initialMarking);
+							Pair<Double,Double> constrainedPredictionAndConfidence = predictor.predict(model, subTrace, currentTime, initialMarking, false);
 							
 							Double predictedValueConstrained = (double) Math.max(constrainedPredictionAndConfidence.getFirst().longValue(),currentTime.getTime());
 							

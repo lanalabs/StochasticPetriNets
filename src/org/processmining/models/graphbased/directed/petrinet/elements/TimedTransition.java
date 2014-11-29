@@ -1,5 +1,6 @@
 package org.processmining.models.graphbased.directed.petrinet.elements;
 
+import java.util.Arrays;
 import java.util.List;
 
 import org.apache.commons.math3.distribution.BetaDistribution;
@@ -21,6 +22,11 @@ import org.processmining.plugins.stochasticpetrinet.distribution.NonConvergenceE
 import org.processmining.plugins.stochasticpetrinet.distribution.RLogSplineDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
 import org.processmining.plugins.stochasticpetrinet.enricher.StochasticManifestCollector;
+import org.utils.datastructures.ComparablePair;
+
+import com.google.common.collect.BoundType;
+import com.google.common.collect.SortedMultiset;
+import com.google.common.collect.TreeMultiset;
 
 /**
  * A timed transition to be used in 
@@ -38,6 +44,7 @@ import org.processmining.plugins.stochasticpetrinet.enricher.StochasticManifestC
  * 
  * @author Andreas Rogge-Solti
  *
+ * @version 0.5 (added a transient cached view for easier access to the training data to not repeatedly call String.split() on it)
  */
 public class TimedTransition extends Transition{
 	
@@ -85,6 +92,12 @@ public class TimedTransition extends Transition{
 	 *  and each line represents one entry)
 	 */
 	protected String trainingData;
+	
+	/**
+	 * a sorted view on all the training data that was used to train this transition.
+	 * it is created on request and stays in memory, but is not serialized to disk - ({@link #trainingData} is).
+	 */
+	protected transient SortedMultiset<ComparablePair<Long, List<Object>>> trainingDataCache;
 	
 	/**
 	 * By default generate a timed transition with exponential firing rate lambda=1
@@ -293,6 +306,23 @@ public class TimedTransition extends Transition{
 
 	public void setTrainingData(String trainingData) {
 		this.trainingData = trainingData;
+	}
+	
+	public SortedMultiset<ComparablePair<Long, List<Object>>> getTrainingDataUpTo(long currentTime){
+		if (this.trainingDataCache == null){
+			// init training data cache:
+			SortedMultiset<ComparablePair<Long, List<Object>>> sortedTrainingData = TreeMultiset.<ComparablePair<Long, List<Object>>>create();
+			String[] entries = trainingData.split("\n");
+			// ignore header!
+			for (int i = 1; i < entries.length; i++) {
+				String[] entryParts = entries[i].split(StochasticManifestCollector.DELIMITER);
+				long time = Long.valueOf(entryParts[2]);
+				sortedTrainingData.add(new ComparablePair<>(time, Arrays.<Object>asList(entryParts[0], entryParts[1])));
+			}
+			this.trainingDataCache = sortedTrainingData;
+		}
+		// retrieve subset of training data that fulfills condition
+		return this.trainingDataCache.headMultiset(new ComparablePair<Long, List<Object>>(currentTime, null), BoundType.OPEN);
 	}
 
 }

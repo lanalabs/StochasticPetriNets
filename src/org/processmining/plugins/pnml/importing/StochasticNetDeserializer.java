@@ -11,6 +11,7 @@ import java.util.List;
 import java.util.Map;
 
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.plugin.PluginContext;
@@ -48,8 +49,42 @@ import org.processmining.plugins.pnml.simple.PNMLTransition;
 
 public class StochasticNetDeserializer {
 
-	public StochasticNetDeserializer(){
+	public StochasticNetDeserializer() {
 	}
+
+	class ExecutionPolicyDeterminer implements Runnable {
+		StochasticNet net;
+
+		public ExecutionPolicyDeterminer(StochasticNet net) {
+			this.net = net;
+		}
+
+		public void run() {
+			Object result = JOptionPane.showInputDialog(null, "Select execution policy for net " + net.getLabel(),
+					"Execution policy not specified", JOptionPane.QUESTION_MESSAGE, null, ExecutionPolicy.values(),
+					ExecutionPolicy.RACE_ENABLING_MEMORY);
+			if (result != null) {
+				net.setExecutionPolicy((ExecutionPolicy) result);
+			}
+		}
+	};
+
+	class TimeUnitDeterminer implements Runnable {
+		StochasticNet net;
+
+		public TimeUnitDeterminer(StochasticNet net) {
+			this.net = net;
+		}
+
+		public void run() {
+			Object result = JOptionPane.showInputDialog(null, "Select time unit for net "+net.getLabel(), "Time unit not specified", 
+					JOptionPane.QUESTION_MESSAGE, null, TimeUnit.values(), TimeUnit.MINUTES);
+			if (result != null){
+				net.setTimeUnit((TimeUnit) result);
+			}
+		}
+	};
+	 
 	
 	public Object[] convertToNet(PluginContext context, PNMLRoot pnml, String filename, boolean addConnections) throws UserCancelledException{
 		PNMLNet pnmlNet = null;
@@ -91,68 +126,31 @@ public class StochasticNetDeserializer {
 					}
 					if (toolSpecific.getProperties().containsKey(PNMLToolSpecific.TIME_UNIT)){
 						net.setTimeUnit(TimeUnit.fromString(toolSpecific.getProperties().get(PNMLToolSpecific.TIME_UNIT)));
-					} else {
 						containsTimeUnit = true;
 					}
 				}
 			}
 		}
 		if (!containsExecutionPolicy){
-			if (context instanceof UIPluginContext){
-				Object result = JOptionPane.showInputDialog(null, "Select execution policy for net "+net.getLabel(), "Execution policy not specified", 
-						JOptionPane.QUESTION_MESSAGE, null, ExecutionPolicy.values(), ExecutionPolicy.RACE_ENABLING_MEMORY);
-				if (result != null){
-					net.setExecutionPolicy((ExecutionPolicy) result);
+			if (context instanceof UIPluginContext) {
+				try {
+					SwingUtilities.invokeLater(new ExecutionPolicyDeterminer(net));
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
-//				
-//				ProMPropertiesPanel panel = new ProMPropertiesPanel("Select stochastic net properties");
-//				ProMComboBox<ExecutionPolicy> selectExecutionPolicy = panel.addComboBox("execution policy:", ExecutionPolicy.values());
-//				selectExecutionPolicy.setSelectedItem(ExecutionPolicy.RACE_ENABLING_MEMORY);
-//				
-//				ProMComboBox<TimeUnit> selectTimeUnit = panel.addComboBox("time unit:", TimeUnit.values());
-//				selectTimeUnit.setSelectedItem(TimeUnit.MINUTES);
-//				
-//				JDialog dialog = new JDialog();
-//				dialog.getContentPane().add(panel);
-//				dialog.pack();
-//				dialog.setVisible(true);
-//				dialog.setDefaultCloseOperation(JDialog.HIDE_ON_CLOSE);
-//				JButton cancelButton = new JButton("Cancel");
-//				JButton okButton = new JButton("OK");
-//				
-//				cancelButton.addActionListener(new ActionListener() {
-//					public void actionPerformed(ActionEvent e) {
-//						
-//					}
-//				})
-//				dialog.
-//				try {
-//					Thread.sleep(10000);
-//				} catch (InterruptedException e) {
-//					// TODO Auto-generated catch block
-//					e.printStackTrace();
-//				}
-//				
-//				InteractionResult result = ((UIPluginContext) uiContext.getParentContext()).showWizard("Select import specifications", true, true, panel);
-//				if (result.equals(InteractionResult.FINISHED)){
-//					net.setExecutionPolicy((ExecutionPolicy) selectExecutionPolicy.getSelectedItem());
-//					net.setTimeUnit((TimeUnit) selectTimeUnit.getSelectedItem());
-//				} else {
-//					// aborted by user:
-//					throw new UserCancelledException("User canceled import of net "+net.getLabel()+".");
-//				}
 			} else {
 				net.setExecutionPolicy(ExecutionPolicy.RACE_ENABLING_MEMORY);
 				log(context, "Assuming race enabling memory for net "+net.getLabel());
 			}
 		}
-		if (!containsExecutionPolicy){
+		if (!containsTimeUnit){
 			if (context instanceof UIPluginContext){
-				Object result = JOptionPane.showInputDialog(null, "Select time unit for net "+net.getLabel(), "Time unit not specified", 
-						JOptionPane.QUESTION_MESSAGE, null, TimeUnit.values(), TimeUnit.MINUTES);
-				if (result != null){
-					net.setTimeUnit((TimeUnit) result);
+				try {
+					SwingUtilities.invokeLater(new TimeUnitDeterminer(net));
+				} catch (Exception e) {
+					e.printStackTrace();
 				}
+
 			}  else {
 				net.setTimeUnit(TimeUnit.MINUTES);
 				log(context, "Assuming 'minutes' as the time unit in net "+net.getLabel());
@@ -173,7 +171,6 @@ public class StochasticNetDeserializer {
 			if (position != null){
 				layout.setSize(net, size);
 				layout.setPosition(net, position);
-//				offset.setLocation(offset.getX()+position.getX(),offset.getY()+position.getY());
 			}
 			
 

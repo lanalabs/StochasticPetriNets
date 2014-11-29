@@ -73,6 +73,16 @@ public class PNSimulator {
 	protected long lastFiringTime;
 	
 	protected Marking oneMarking;
+	
+	/** 
+	 * Needs to be explicitly set by the caller.
+	 * Switching this on, creates a significant overhead in filtering the training data to only being from the relative past.
+	 * It is currently the only implemented option, and only used for a rolling cross-validation.
+	 * In this case, we have one training pass to collect all the data and we filter later based on 
+	 * availability of information at prediction time. The reason for this procedure is that events can be scattered throughout the log,
+	 * For example, the last observation at transition A could be in a trace that started later than the current one!
+	 */
+	protected boolean useOnlyPastTrainingData = false;
 
 	public PNSimulator(){
 		transitionRemainingTimes = new HashMap<Transition, Long>();
@@ -727,5 +737,8 @@ public class PNSimulator {
 	protected Date getNextArrivalDate(Date lastTime, TimeUnit unitFactor) {
 		return new Date(lastTime.getTime() + (long) (arrivalDistribution.sample() * unitFactor.getUnitFactorToMillis()));
 	}
-
+	
+	public void setUseOnlyPastTrainingData(boolean useOnlaPastTrainingData){
+		
+	}
 }

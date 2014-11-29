@@ -4,13 +4,19 @@ import java.util.Collection;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.math3.distribution.TDistribution;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.deckfour.xes.classification.XEventAndClassifier;
+import org.deckfour.xes.classification.XEventLifeTransClassifier;
+import org.deckfour.xes.classification.XEventNameClassifier;
 import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.extension.std.XTimeExtension;
+import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.model.XEvent;
+import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
@@ -18,9 +24,12 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Transition
 import org.processmining.models.semantics.IllegalTransitionException;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
+import org.processmining.plugins.connectionfactories.logpetrinet.TransEvClassMapping;
+import org.processmining.plugins.petrinet.replayresult.StepTypes;
+import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 
-public class AbstractTimePredictor {
+public abstract class AbstractTimePredictor {
 
 	/**
 	 * the confidence interval to be used for estimating bounds on the predicted remaining duration 
@@ -37,6 +46,10 @@ public class AbstractTimePredictor {
 	 */
 	public static final int MAX_RUNS = Integer.MAX_VALUE;
 
+	public Pair<Double,Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking) {
+		return predict(model, observedEvents, currentTime, initialMarking, false);
+	}
+	
 	
 	/**
 	 * Does not care about final markings -> simulates net until no transitions are enabled any more...
@@ -45,11 +58,11 @@ public class AbstractTimePredictor {
 	 * @param observedEvents the monitored partial trace (complete, i.e., no visible transition missing) 
 	 * @param currentTime the time of prediction (can be later than the last event's time stamp) 
 	 * @param initialMarking initial marking of the net
-	 * @param useTime indicator, whether to use the current time as constraint
+	 * @param useOnlyPastTrainingData indicator, whether the training data needs to be filtered with the current time as upper bound
 	 * @return {@link Pair} of doubles (the point predictor, and the associated 99 percent confidence interval)
 	 */
-	public Pair<Double,Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking) {
-		DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking);
+	public Pair<Double,Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, boolean useOnlyPastTrainingData) {
+		DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking, useOnlyPastTrainingData);
 //		System.out.println("stopped simulation after "+i+" samples... with error: "+errorPercent+"%.");
 		
 		StochasticNetUtils.useCache(false);
@@ -66,11 +79,11 @@ public class AbstractTimePredictor {
 	 * @param currentTime the time of prediction (can be later than the last event's time stamp) 
 	 * @param targetTime the deadline with respect to which the risk is calculated
 	 * @param initialMarking initial marking of the net
-	 * @param useTime indicator, whether to use the current time as constraint
+	 * @param useOnlyPastTrainingData indicator, whether the training data needs to be filtered with the current time as upper bound
 	 * @return
 	 */
-	public Double computeRiskToMissTargetTime(StochasticNet model, XTrace observedEvents, Date currentTime, Date targetTime, Marking initialMarking){
-		DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking);
+	public Double computeRiskToMissTargetTime(StochasticNet model, XTrace observedEvents, Date currentTime, Date targetTime, Marking initialMarking, boolean useOnlyPastTrainingData){
+		DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking, useOnlyPastTrainingData);
 		double[] sortedEstimates = stats.getSortedValues();
 		long[] longArray = new long[sortedEstimates.length];
 		for (int i = 0 ; i < sortedEstimates.length; i++)
@@ -81,11 +94,17 @@ public class AbstractTimePredictor {
 		return 1 - (StochasticNetUtils.getIndexBinarySearch(longArray, targetTime.getTime()) / (double)sortedEstimates.length);
 	}
 	
-	protected DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime,
-			Marking initialMarking) {
-		// TODO Auto-generated method stub
-		return null;
-	}
+	/**
+	 * Computes some stats by running a Monte Carlo simulation of the process.
+	 * 
+	 * @param model the model that is enriched by some training data
+	 * @param observedEvents the current history of the trace (observed events so far)
+	 * @param currentTime the current time at prediction
+	 * @param initialMarking the initial marking of the model that shows the starting point
+	 * @param useOnlyPastTrainingData indicator that tells us whether to only rely on training data that was observed in the past (relative to the currentTime)  
+	 * @return {@link DescriptiveStatistics} gathered from a set of simulated continuations of the current process
+	 */
+	protected abstract DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, boolean useOnlyPastTrainingData);
 	
 	protected double getConfidenceIntervalWidth(DescriptiveStatistics summaryStatistics, double confidence) {
 		TDistribution tDist = new TDistribution(summaryStatistics.getN() - 1);
@@ -148,7 +167,72 @@ public class AbstractTimePredictor {
 		}
 		return semantics;
 	}
+	
+	public static Semantics<Marking, Transition> getCurrentStateWithAlignment(StochasticNet model, Marking initialMarking, XTrace observedEvents){
+		Semantics<Marking, Transition> semantics = StochasticNetUtils.getSemantics(model);
+		semantics.initialize(model.getTransitions(), initialMarking);
+		
+		XLog log = XFactoryRegistry.instance().currentDefault().createLog();
+//		log.getClassifiers().add(new XEventNameClassifier());
+		log.add(observedEvents);
+		TransEvClassMapping mapping = StochasticNetUtils.getEvClassMapping(model, log);
+		
+		try {
+			
+			SyncReplayResult result = StochasticNetUtils.replayTrace(log, mapping, model, initialMarking, StochasticNetUtils.getFinalMarking(null, model), new XEventAndClassifier(new XEventNameClassifier(), new XEventLifeTransClassifier()));
+			//SyncReplayResult result = StochasticNetUtils.replayTrace(log, mapping, model, initialMarking, StochasticNetUtils.getFinalMarking(null, model), new XEventNameClassifier());
+			List<StepTypes> stepTypes = result.getStepTypes();
+			List<Object> nodeInstances = result.getNodeInstance();
+			
+			// advance the model to the last synchronous move
+			
+			// find the last synchronous move:
+			int lastSynchronousMove = -1;
+			for (int i=0; i<stepTypes.size(); i++) {
+				StepTypes stepType = stepTypes.get(i);
+				if (stepType.equals(StepTypes.LMGOOD)){
+					lastSynchronousMove = i;
+				}
+			}
+					
+			
+			for (int i=0; i<stepTypes.size(); i++) {
+				StepTypes stepType = stepTypes.get(i);
+				if (stepType.equals(StepTypes.L)){
+					// ignore log only moves when unrolling
+				} else {
+					// move on model (or on both) advance model until we reached the last synchronous move
+					if (i<=lastSynchronousMove){
+						Transition nodeInstance = (Transition) nodeInstances.get(i);
+						Collection<Transition> transitions = semantics.getExecutableTransitions();
+						Transition selectedTrans = getTransition(transitions,nodeInstance);
+						try {
+							if (selectedTrans != null){
+								semantics.executeExecutableTransition(selectedTrans);
+							} else {
+								System.err.println("Debug me!");
+							}
+						} catch (IllegalTransitionException e) {
+							e.printStackTrace();
+						}
+					}
+				}
+			}
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+		return semantics;
+	}
 
+
+	private static Transition getTransition(Collection<Transition> transitions, Transition nodeInstance) {
+		for (Transition t : transitions){
+			if (t.getLabel().equals(nodeInstance.getLabel())){
+				return t;
+			}
+		}
+		return null;
+	}
 
 	protected static void addAllEnabledTransitions(
 			Semantics<Marking, Transition> semantics, Collection<Pair<Marking, Transition>> searchState) {
