@@ -44,11 +44,25 @@ public class ARMATimeSeries extends StatefulTimeseriesDistribution {
 	private void initWeightsRandomly() {
 		this.arWeights = new double[n];
 		this.maWeights = new double[m];
+		double sumArWeights = 0;
+		double sumMaWeights = 0;
 		for (int i = 0; i < n; i++){
-			arWeights[i] = rand.nextDouble()-0.5;
+			arWeights[i] = (1.5*rand.nextDouble()-0.75)  / ((i+1)*(i+1));
+			sumArWeights += arWeights[i];
 		}
 		for (int i = 0; i < m; i++){
-			maWeights[i] = rand.nextDouble()-0.5;
+			maWeights[i] = (1.5*rand.nextDouble()-0.75) / ((i+1)*(i+1));
+			sumMaWeights += maWeights[i];
+		}
+		if (sumArWeights > 0.99){
+			for (int i = 0; i < n; i++){
+				arWeights[i] = arWeights[i]/(sumArWeights+0.01);
+			}
+		}
+		if (sumMaWeights > 0.99){
+			for (int i = 0; i < m; i++){
+				maWeights[i] = maWeights[i]/(sumMaWeights+0.01);
+			}
 		}
 	}
 	
@@ -86,7 +100,7 @@ public class ARMATimeSeries extends StatefulTimeseriesDistribution {
 		double sum = 0;
 		while (iter.hasNext() && n < this.n){
 			Double d = iter.next();
-			sum += d*arWeights[n];
+			sum += d*arWeights[n++];
 		}
 		return sum;
 	}
@@ -97,7 +111,7 @@ public class ARMATimeSeries extends StatefulTimeseriesDistribution {
 		double sum = 0;
 		while (iter.hasNext() && m < this.m){
 			Double d = iter.next();
-			sum += d*maWeights[m];
+			sum += d*maWeights[m++];
 		}
 		return sum;
 	}
