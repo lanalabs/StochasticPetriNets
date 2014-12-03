@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.TimeUnit;
 
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -42,6 +43,7 @@ import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.info.XLogInfo;
 import org.deckfour.xes.info.XLogInfoFactory;
 import org.deckfour.xes.info.impl.XLogInfoImpl;
+import org.deckfour.xes.model.XAttributeMap;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
@@ -92,6 +94,10 @@ import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogram
 import org.processmining.plugins.stochasticpetrinet.distribution.TruncatedDistributionFactory;
 import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
 import org.rosuda.JRI.Rengine;
+import org.utils.datastructures.ComparablePair;
+
+import com.google.common.collect.SortedMultiset;
+import com.google.common.collect.TreeMultiset;
 
 public class StochasticNetUtils {
 	
@@ -195,7 +201,7 @@ public class StochasticNetUtils {
 			initialMarking = imc.getObjectWithRole(InitialMarkingConnection.MARKING);
 		} catch (ConnectionCannotBeObtained e) {
 //			e.printStackTrace();
-			System.err.println("Unable to get initial marking connection -> setting a default one (each place without input gets a token).");
+//			System.err.println("Unable to get initial marking connection -> setting a default one (each place without input gets a token).");
 			
 			initialMarking = getDefaultInitialMarking(petriNet);
 		}
@@ -240,7 +246,7 @@ public class StochasticNetUtils {
 			FinalMarkingConnection imc = context.getConnectionManager().getFirstConnection(FinalMarkingConnection.class, context, petriNet);
 			finalMarking = imc.getObjectWithRole(FinalMarkingConnection.MARKING);
 		} catch (ConnectionCannotBeObtained e) {
-			System.err.println("Unable to get final marking connection -> setting a default one.");
+//			System.err.println("Unable to get final marking connection -> setting a default one.");
 			//e.printStackTrace();
 			
 			// creating final marking with a token on each output place. 
@@ -951,7 +957,7 @@ public class StochasticNetUtils {
 					variance = variance <= 0?0.0000001:variance; // ensure numerical stability for deterministic distributions.
 					tt.setDistributionParameters(new double[]{mean,Math.sqrt(variance)});
 					tt.setDistribution(null);
-					tt.initDistribution(0);
+					tt.setDistribution(tt.initDistribution(0));
 				}
 			}
 		}
@@ -976,7 +982,7 @@ public class StochasticNetUtils {
 					double mean = tt.getDistribution().getNumericalMean();
 					tt.setDistributionParameters(new double[]{mean});
 					tt.setDistribution(null);
-					tt.initDistribution(0);
+					tt.setDistribution(tt.initDistribution(0));
 				}
 			}
 		}
@@ -1051,5 +1057,36 @@ public class StochasticNetUtils {
 		}
 		return "";
 	}
+	
+	public static double getMean(Collection<? extends Number> values) {
+		DescriptiveStatistics stats = new DescriptiveStatistics();
+		for (Number n : values){
+			Double d = n.doubleValue();
+			if (!Double.isNaN(d)){
+				stats.addValue(d);
+			}
+		}
+		return stats.getMean();
+	}
+	
+	public static XLog getSortedLog(XLog unsortedLog) {
+		SortedMultiset<ComparablePair<Long, XTrace>> sortedTracesByStartTime = TreeMultiset.<ComparablePair<Long,XTrace>>create();
+		for (XTrace trace : unsortedLog){
+			Date startTime = XTimeExtension.instance().extractTimestamp(trace.get(0));
+			sortedTracesByStartTime.add(new ComparablePair<Long, XTrace>(startTime.getTime(), trace));
+		}
+		XLog sortedLog = XFactoryRegistry.instance().currentDefault().createLog((XAttributeMap) unsortedLog.getAttributes().clone());
+		for (ComparablePair<Long, XTrace> tracePair : sortedTracesByStartTime){
+			XTrace clone = XFactoryRegistry.instance().currentDefault().createTrace((XAttributeMap) tracePair.getSecond().getAttributes().clone());
+			clone.addAll(tracePair.getSecond());
+			sortedLog.add(clone);
+		}
+		return sortedLog;
+	}
 
+	public static String formatMillisToHumanReadableTime(long millis){
+		return String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
+			    TimeUnit.MILLISECONDS.toMinutes(millis) % TimeUnit.HOURS.toMinutes(1),
+			    TimeUnit.MILLISECONDS.toSeconds(millis) % TimeUnit.MINUTES.toSeconds(1));
+	}
 }

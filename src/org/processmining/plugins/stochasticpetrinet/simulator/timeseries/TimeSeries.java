@@ -23,6 +23,9 @@ public abstract class TimeSeries<H> {
 	
 	/** the seasonality of the data (is there seasonality after 7 days?)*/
 	protected int season = 24;
+	 
+	/** A unique key for this time series */
+	protected String key;
 	
 	public TimeSeries(){
 		this.currentObservations = new LimitedQueue<>(lag);
@@ -60,13 +63,24 @@ public abstract class TimeSeries<H> {
 	public Observation<H> getLastObservation(){
 		return currentObservations.getLast();
 	}
+	protected Observation<H> findLastAvailableObservation(){
+		for (int i = 0; i < currentObservations.size(); i++){
+			Observation<H> obs = currentObservations.get(currentObservations.size()-1-i);
+			if (isAvailable(obs.observation)){
+				return obs;
+			}
+		}
+		// only NaNs in the observations!!
+		return null;
+	}
+	
 	
 	public Observation<H> getObservationOfLastSeason(long index){
 		// traverse observations from newest to oldest to get the one which is in the same season
 		for (int i = currentObservations.size() - 1; i > 0; i--){
 			Observation<H> obs = currentObservations.get(i);
 			long seasonId = index % season;
-			if (obs.timestamp % season == seasonId){
+			if (obs.timestamp % season == seasonId && isAvailable(obs.observation)){
 				return obs;
 			}
 		}
@@ -75,6 +89,17 @@ public abstract class TimeSeries<H> {
 				+ "Make sure your lag is larger than one season!\n"
 				+ "Falling back to the latest observation.");
 		return currentObservations.getLast();
+	}
+	
+	protected abstract boolean isAvailable(H observation);
+
+	public void setKey(String key){
+		this.key = getUniqueKey(key);
+	}
+	
+	private static int counter = 0;
+	private static String getUniqueKey(String key){
+		return key.replaceAll("\\s", "")+counter++;
 	}
 	
 	/**

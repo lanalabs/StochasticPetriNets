@@ -5,6 +5,7 @@ import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.TimeUnit;
 
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
@@ -16,6 +17,7 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Transition
 import org.processmining.models.graphbased.directed.petrinet.impl.StochasticNetImpl;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.distribution.timeseries.ARMATimeSeries;
 
 /**
  * Generates block-structured Petri nets with an iterative mechanism.
@@ -299,6 +301,19 @@ public class Generator {
 					}
 				}
 				return StochasticNetUtils.getAsDoubleArray(values);
+			case SINUSOIDAL_SERIES:
+				// amplitude, period, origin, noise
+				double randomAmplitude = 1+random.nextDouble()*9;
+				double randomPeriod = 0.1+random.nextDouble()*7;
+				double randomOrigin = 10+random.nextDouble()*5;
+				double randomNoiseStandardDeviation = 0.1+random.nextDouble()*2.9;
+				return new double[]{randomAmplitude, randomPeriod, randomOrigin, randomNoiseStandardDeviation};
+			case ARMA_SERIES:
+				// n=2, m=3, random noise, 
+				ARMATimeSeries series = new ARMATimeSeries(random.nextInt(3)+1, random.nextInt(3)+1, random.nextDouble()/100+0.0001);
+				series.setCurrentTime(System.currentTimeMillis() - TimeUnit.HOURS.toMillis(10));
+				series.sample();
+				return series.getParameters();
 			default:
 				throw new IllegalArgumentException("type "+type+" not supported yet!");
 		}		

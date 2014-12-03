@@ -15,10 +15,15 @@ public class NaiveMethodTimeSeries extends TimeSeries<Double>{
 
 	protected Prediction<Double> getPrediction(int h, Object... payload) {
 		Prediction<Double> prediction = new Prediction<>();
-		prediction.prediction = getLastObservation().observation;
+		prediction.prediction = findLastAvailableObservation().observation;
+		if (Double.isNaN(prediction.prediction)){
+			System.err.println("Debug me!");
+		}
 		prediction.lower5Percentile = prediction.prediction;
 		prediction.upper95Percentile = prediction.prediction;
 		return prediction;
 	}
-
+	protected boolean isAvailable(Double observation) {
+		return !Double.isNaN(observation);
+	}
 }

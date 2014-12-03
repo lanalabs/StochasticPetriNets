@@ -41,6 +41,7 @@ public class TimePredictor extends AbstractTimePredictor {
 		}
 //		System.out.println("Time between last event and current time: "+(currentTime.getTime()-lastEventTime)+"ms");
 		PNSimulator simulator = new PNSimulator();
+		simulator.setUseOnlyPastTrainingData(useOnlyPastTrainingData);
 		PNSimulatorConfig config = new PNSimulatorConfig(1,model.getTimeUnit());
 		config.setSimulateTraceless(true); // do not create traces, as the generation of unique ids is just too slow.
 		

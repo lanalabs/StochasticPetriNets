@@ -21,10 +21,7 @@ public abstract class RTimeSeries<H> extends TimeSeries<H>{
 	 */
 	public static final int MAX_SIZE = 1000;
 	
-	protected String key;
-	
-	public RTimeSeries(String key){
-		this.key = key;
+	public RTimeSeries(){
 	}
 	
 	/**
@@ -46,7 +43,5 @@ public abstract class RTimeSeries<H> extends TimeSeries<H>{
 				e.printStackTrace();
 			}
 		}
-	}
-
-	
+	}	
 }

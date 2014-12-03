@@ -16,7 +16,9 @@ public class AverageMethodTimeSeries extends TimeSeries<Double>{
 	protected void fit(LimitedQueue<Observation<Double>> currentObservations) {
 		stats = new DescriptiveStatistics();
 		for (Observation<Double> obs : currentObservations){
-			stats.addValue(obs.observation);
+			if (!Double.isNaN(obs.observation)){
+				stats.addValue(obs.observation);
+			}
 		}
 	}
 
@@ -28,4 +30,7 @@ public class AverageMethodTimeSeries extends TimeSeries<Double>{
 		return prediction;
 	}
 
+	protected boolean isAvailable(Double observation) {
+		return !Double.isNaN(observation);
+	}
 }

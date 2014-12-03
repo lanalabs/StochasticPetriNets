@@ -81,7 +81,7 @@ public class Outlier2DTest {
 				Pair<Double,Double> parameter = parameters.remove(0);
 				tt.setDistributionParameters(new double[]{parameter.getKey(),parameter.getValue()});
 				tt.setDistribution(null);
-				tt.initDistribution(0);
+				tt.setDistribution(tt.initDistribution(0));
 			}
 		}
 		

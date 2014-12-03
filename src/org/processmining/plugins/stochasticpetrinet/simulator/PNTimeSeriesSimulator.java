@@ -12,13 +12,17 @@ import java.util.Map;
 import java.util.TreeSet;
 
 import org.apache.commons.math3.distribution.NormalDistribution;
+import org.apache.commons.math3.distribution.RealDistribution;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.EfficientStochasticNetSemanticsImpl;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
 import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeSeriesConfiguration;
+import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeSeriesConfiguration.MissingDataHandling;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.Observation;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.Prediction;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.TimeSeries;
@@ -40,15 +44,8 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 	
 	public static final int CACHE_SIZES = 1000; 
 	
-//	/** reference to the R engine */
-//	protected Rengine engine;
-//	
-//	protected REngine rEngine;
-	
-
-
 	/** maps from the prediction time point (long since start of epoch) to a cache storing the predictions for each transition */
-	private org.utils.datastructures.LimitedTreeMap<Long, Map<Transition, Prediction<Double>>> cachedPredictedDurations;
+	private org.utils.datastructures.LimitedTreeMap<Long, Map<Transition, RealDistribution>> cachedPredictedDurations;
 	
 	/** maps from the prediction time point (long since start of epoch) to a cache storing the predictions for each transition */
 	private org.utils.datastructures.LimitedTreeMap<Long, Map<String, Map<Transition, Double>>> cachedConflictingProbabilities;
@@ -56,24 +53,13 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 	private Map<Transition, TimeSeries<Double>> cachedTransitionTimeSeries;
 	private Map<Transition, TimeSeries<Double>> cachedTransitionDecisionTimeSeries;
 	
-//	Set<AvailableScripts> loadedScripts;
-//	Set<AvailableScripts> loadedScriptsJRI;
-	
-//	private Map<Transition, String> transitionDurationFits;
-//	private Map<String, String> conflictFits;
 		
 	public PNTimeSeriesSimulator(TimeSeriesConfiguration config){
 		super();
-//		engine = RProvider.getEngine();
-//		rEngine = RProvider.getREngine();
-//		loadedScripts = new HashSet<AvailableScripts>();
-//		loadedScriptsJRI = new HashSet<AvailableScripts>();
 		cachedTransitionTimeSeries = new HashMap<>();
 		cachedTransitionDecisionTimeSeries = new HashMap<>();
 		cachedPredictedDurations = new org.utils.datastructures.LimitedTreeMap<>(CACHE_SIZES);
 		cachedConflictingProbabilities = new org.utils.datastructures.LimitedTreeMap<>(CACHE_SIZES);
-//		transitionDurationFits = new HashMap<>();
-//		conflictFits = new HashMap<>();
 		this.config = config;
 	}
 	
@@ -114,24 +100,9 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 					TimeSeries<Double> timeSeries = cachedTransitionDecisionTimeSeries.get(t);
 					if (timeSeries == null) {
 						timeSeries = config.createNewTimeSeries(tt);
+						timeSeries.setKey(tt.getLabel());
 						cachedTransitionDecisionTimeSeries.put(t, timeSeries);
 					}
-
-					// TODO: improve this performance wise (the parsing of the training data can be avoided by 
-					//       incrementally adding new observations to time series
-
-					// aggregate by counts:
-//					String trainingData = tt.getTrainingData();
-//					Map<Long, List<Object>> sortedDecisions = new TreeMap<>();
-//					String[] entries = trainingData.split("\n");
-//					// ignore header!
-//					for (int i = 1; i < entries.length; i++) {
-//						String[] entryParts = entries[i].split(StochasticManifestCollector.DELIMITER);
-//						long time = Long.valueOf(entryParts[2]);
-//						sortedDecisions.put(time, Arrays.<Object>asList(config.getIndexForTime(time),
-//								semantics.getTransitionId(t), entryParts[0], entryParts[1]));
-//					}
-					
 					
 					// TODO: avoid reiterating all the training data somehow.
 					SortedMultiset<ComparablePair<Long, List<Object>>> trainingDataSoFar =  tt.getTrainingDataUpTo(currentTime.getTime());
@@ -156,36 +127,45 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 									return 1;
 								}
 							});
-					// go through all elements of the map
-					List<Observation<Double>> observations = new ArrayList<>();
-
-					Iterator<Long> iter = count.keySet().iterator();
-					Long current = iter.next();
-					Long next = iter.hasNext()?iter.next():null;
-					do {
-						Observation<Double> observedCount = new Observation<>();
-						observedCount.timestamp = current; // no real time stamp but rather the time index in the time series
-						if (count.containsKey(current)) {
-							observedCount.observation = Double.valueOf(count.get(current));
-						} else {
-							// replace with last observation
-							observedCount.observation = observations.get(observations.size() - 1).observation;
-						}
-						observations.add(observedCount);
-
-						if (next != null && current + 1 < next) {
-							current++;
-						} else {
-							current = next;
-							next = iter.hasNext() ? iter.next() : null;
-						}
-					} while (current != null);
-					timeSeries.resetTo(observations);
-
-					// forecast horizon:
-					int h = (int) (index - observations.get(observations.size() - 1).timestamp);
-					Prediction<Double> prediction = timeSeries.predict(h);
-					probabilities.put(t, prediction.prediction);
+					
+					if (count.size() == 1){
+						probabilities.put(t, Double.valueOf(count.values().iterator().next()));
+					} else {
+						// go through all elements of the map
+						List<Observation<Double>> observations = new ArrayList<>();
+	
+						Iterator<Long> iter = count.keySet().iterator();
+						Long current = iter.next();
+						Long next = iter.hasNext()?iter.next():null;
+						
+						double mean = StochasticNetUtils.getMean(count.values());
+						
+						do {
+							Observation<Double> observedCount = new Observation<>();
+							observedCount.timestamp = current; // no real time stamp but rather the time index in the time series
+							if (count.containsKey(current)) {
+								observedCount.observation = Double.valueOf(count.get(current));
+							} else {
+								// missing value! 
+								// replace with last observation
+								observedCount.observation = handleMissingValue(observations, config.getMissingDataHandling(), mean);
+							}
+							observations.add(observedCount);
+	
+							if (next != null && current + 1 < next) {
+								current++;
+							} else {
+								current = next;
+								next = iter.hasNext() ? iter.next() : null;
+							}
+						} while (current != null && current < index);
+						timeSeries.resetTo(observations);
+	
+						// forecast horizon:
+						int h = (int) (index - observations.get(observations.size() - 1).timestamp);
+						Prediction<Double> prediction = timeSeries.predict(h);
+						probabilities.put(t, prediction.prediction);
+					}
 				}
 				if (!cachedConflictingProbabilities.containsKey(index)) {
 					cachedConflictingProbabilities.put(index, new HashMap<String, Map<Transition, Double>>());
@@ -195,6 +175,21 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 		}
 		return probabilities;
 	}
+	
+	private Double handleMissingValue(List<Observation<Double>> observations, MissingDataHandling missingDataHandling, double mean) {
+		switch(missingDataHandling){
+			case KEEP_AS_NAN:
+				return Double.NaN;
+			case REPLACE_WITH_LAST_OBSERVATION:
+				return observations.get(observations.size() - 1).observation;
+			case REPLACE_WITH_MEAN:
+			default:
+				return mean;
+		}
+	}
+
+
+
 //				
 //					Map<Long, String> sortedDecisions = new LimitedTreeMap<>(CACHE_SIZES);
 //					
@@ -389,9 +384,10 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 //			String fitName = null;
 			
 			long index = config.getIndexForTime(startOfTransition);
-			Prediction<Double> prediction;
+			//Prediction<Double> prediction;
+			RealDistribution predictionDist;
 			if (cachedPredictedDurations.containsKey(index) && cachedPredictedDurations.get(index).containsKey(timedT)){
-				prediction = cachedPredictedDurations.get(index).get(timedT);
+				predictionDist = cachedPredictedDurations.get(index).get(timedT);
 			} else {
 				TimeSeries<Double> transitionSeries = getTimeSeriesForTransition(timedT);
 				
@@ -430,45 +426,70 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 						return (Double)item.get(1);
 					}
 				});
-				// go through all elements of the map
-				List<Observation<Double>> observations = new ArrayList<>();
-
-				Iterator<Long> iter = avgs.keySet().iterator();
-				Long current = iter.next();
-				Long next = iter.hasNext()?iter.next():null;
-				do {
-					Observation<Double> observedAverage = new Observation<>();
-					observedAverage.timestamp = current; // no real time stamp but rather the time index in the time series
-					if (avgs.containsKey(current)) {
-						observedAverage.observation = Double.valueOf(avgs.get(current));
-					} else {
-						// replace with last observation
-						observedAverage.observation = observations.get(observations.size() - 1).observation;
-					}
-					observations.add(observedAverage);
-
-					if (next != null && current + 1 < next) {
-						current++;
-					} else {
-						current = next;
-						next = iter.hasNext() ? iter.next() : null;
-					}
-				} while (current != null);
-				transitionSeries.resetTo(observations);
 				
-				
-				Observation<Double> lastObservation = transitionSeries.getLastObservation();
-//				long lastIndex = config.getIndexForTime(lastObservation.timestamp);
-				long lastIndex = lastObservation.timestamp;
-				long thisIndex = config.getIndexForTime(startOfTransition);
-				int horizon = (int) (thisIndex - lastIndex);
-				prediction = transitionSeries.predict(horizon);
-				if (!cachedPredictedDurations.containsKey(index)){
-					cachedPredictedDurations.put(index, new HashMap<Transition, Prediction<Double>>());
+				if (avgs.size() == 1){
+					DescriptiveStatistics stats = new DescriptiveStatistics();
+					for (ComparablePair<Long, List<Object>> pair : trainingDataSoFar){
+						stats.addValue(Double.valueOf(pair.getSecond().get(0).toString())); // duration
+					}
+					Prediction<Double> prediction = new Prediction<>();
+					prediction.prediction = avgs.values().iterator().next();
+					if (!(Math.abs(prediction.prediction - stats.getMean()) < 0.001)){
+						System.err.println("average computation failed! Should be: "+stats.getMean()+", but is: "+prediction.prediction);
+					}
+					prediction.lower5Percentile = stats.getPercentile(2.5);
+					prediction.upper95Percentile = stats.getPercentile(97.5);
+					predictionDist = getDistributionForPrediction(prediction);
+					
+				} else {
+					// go through all elements of the map
+					List<Observation<Double>> observations = new ArrayList<>();
+					
+					double mean = StochasticNetUtils.getMean(avgs.values());
+	
+					Iterator<Long> iter = avgs.keySet().iterator();
+					if (avgs.size()==0){
+						System.out.println("debug me!");
+					}
+					Long current = iter.next();
+					Long next = iter.hasNext()?iter.next():null;
+					do {
+						Observation<Double> observedAverage = new Observation<>();
+						observedAverage.timestamp = current; // no real time stamp but rather the time index in the time series
+						if (avgs.containsKey(current)) {
+							observedAverage.observation = Double.valueOf(avgs.get(current));
+						} else {
+							// replace with last observation
+							observedAverage.observation = handleMissingValue(observations, config.getMissingDataHandling(), mean);
+						}
+						observations.add(observedAverage);
+	
+						if (next != null && current + 1 < next) {
+							current++;
+						} else {
+							current = next;
+							next = iter.hasNext() ? iter.next() : null;
+						}
+					} while (current != null && current < index);
+					transitionSeries.resetTo(observations);
+					
+					
+					Observation<Double> lastObservation = transitionSeries.getLastObservation();
+	//				long lastIndex = config.getIndexForTime(lastObservation.timestamp);
+					long lastIndex = lastObservation.timestamp;
+					long thisIndex = config.getIndexForTime(startOfTransition);
+					int horizon = (int) (thisIndex - lastIndex);
+					Prediction<Double> prediction = transitionSeries.predict(horizon);
+					predictionDist = getDistributionForPrediction(prediction);
 				}
-				cachedPredictedDurations.get(index).put(timedT, prediction);
+				if (!cachedPredictedDurations.containsKey(index)){
+					cachedPredictedDurations.put(index, new HashMap<Transition, RealDistribution>());
+				}
+				cachedPredictedDurations.get(index).put(timedT, predictionDist);
 			}
-			return sampleFromPredictionWithConstraint(prediction, positiveConstraint);
+			StochasticNetUtils.setCacheEnabled(false);
+			return StochasticNetUtils.sampleWithConstraint(predictionDist, "", positiveConstraint);
+
 			
 				
 //				if (transitionDurationFits.containsKey(timedT)){
@@ -616,13 +637,12 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 	
 	}
 
-	private double sampleFromPredictionWithConstraint(Prediction<Double> prediction, double positiveConstraint) {
-		if (prediction.upper95Percentile - prediction.lower5Percentile < 0.0001){
-			return positiveConstraint < prediction.prediction ? prediction.prediction : positiveConstraint;
+
+	private RealDistribution getDistributionForPrediction(Prediction<Double> prediction) {
+		if (prediction.upper95Percentile-prediction.lower5Percentile < 0.00001){
+			return new DiracDeltaDistribution(prediction.prediction);
 		}
-		NormalDistribution dist = new NormalDistribution(prediction.prediction, (prediction.upper95Percentile-prediction.lower5Percentile) / 2 ); // 95% equals to roughly 2 sigma in an assumed normal distribution
-		StochasticNetUtils.setCacheEnabled(false);
-		return StochasticNetUtils.sampleWithConstraint(dist, "", positiveConstraint);
+		return new NormalDistribution(prediction.prediction, (prediction.upper95Percentile-prediction.lower5Percentile)/2);
 	}
 
 

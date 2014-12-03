@@ -21,4 +21,7 @@ public class SeasonalNaiveMethodTimeSeries extends TimeSeries<Double>{
 		prediction.upper95Percentile = prediction.prediction;
 		return prediction;
 	}
+	protected boolean isAvailable(Double observation) {
+		return !Double.isNaN(observation);
+	}
 }

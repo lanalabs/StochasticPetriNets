@@ -21,6 +21,8 @@ import org.processmining.plugins.stochasticpetrinet.distribution.GaussianKernelD
 import org.processmining.plugins.stochasticpetrinet.distribution.NonConvergenceException;
 import org.processmining.plugins.stochasticpetrinet.distribution.RLogSplineDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
+import org.processmining.plugins.stochasticpetrinet.distribution.timeseries.ARMATimeSeries;
+import org.processmining.plugins.stochasticpetrinet.distribution.timeseries.SinusoidalSeries;
 import org.processmining.plugins.stochasticpetrinet.enricher.StochasticManifestCollector;
 import org.utils.datastructures.ComparablePair;
 
@@ -122,41 +124,42 @@ public class TimedTransition extends Transition{
 		this.priority = priority;
 		this.distributionType = type;
 		this.distributionParameters = parameters;
-		initDistribution(Double.MAX_VALUE);
+		this.distribution = initDistribution(Double.MAX_VALUE);
 	}
 
-	public void initDistribution(double maxValue) {
+	public RealDistribution initDistribution(double maxValue) {
+		RealDistribution dist = null;
 		if (distribution == null){
 			switch(distributionType){
 				case BETA:
 					checkParameterLengthForDistribution(2, "alpha", "beta");
-					distribution = new BetaDistribution(distributionParameters[0], distributionParameters[1]);
+					dist = new BetaDistribution(distributionParameters[0], distributionParameters[1]);
 					break;
 				case DETERMINISTIC:
-					distribution = new DiracDeltaDistribution(distributionParameters[0]);
+					dist = new DiracDeltaDistribution(distributionParameters[0]);
 					break;
 				case NORMAL:
 					checkParameterLengthForDistribution(2, "mean", "standardDeviation");
-					distribution = new NormalDistribution(distributionParameters[0], distributionParameters[1]);
+					dist = new NormalDistribution(distributionParameters[0], distributionParameters[1]);
 					break;
 				case LOGNORMAL:
 					checkParameterLengthForDistribution(2, "scale", "shape");
-					distribution = new LogNormalDistribution(distributionParameters[0], distributionParameters[1]);
+					dist = new LogNormalDistribution(distributionParameters[0], distributionParameters[1]);
 					break;
 				case EXPONENTIAL:
 					checkParameterLengthForDistribution(1, "lamda");
-					distribution = new ExponentialDistribution(distributionParameters[0]);
+					dist = new ExponentialDistribution(distributionParameters[0]);
 					break;
 				case GAMMA:
 					checkParameterLengthForDistribution(2, "shape","scale");
-					distribution = new GammaDistribution(distributionParameters[0], distributionParameters[1]);
+					dist = new GammaDistribution(distributionParameters[0], distributionParameters[1]);
 					break;
 				case IMMEDIATE:
 					checkParameterLengthForDistribution(0);
 					break;
 				case UNIFORM:
 					checkParameterLengthForDistribution(2, "lowerBound", "upperBound");
-					distribution = new UniformRealDistribution(distributionParameters[0], distributionParameters[1]);
+					dist = new UniformRealDistribution(distributionParameters[0], distributionParameters[1]);
 					break;
 				case GAUSSIAN_KERNEL:
 					fitGaussianKernels();
@@ -165,17 +168,17 @@ public class TimedTransition extends Transition{
 					if (distributionParameters.length < 1){
 						throw new IllegalArgumentException("Cannot create a nonparametric distribution without sample values!");
 					}
-					distribution = new SimpleHistogramDistribution();
-					((SimpleHistogramDistribution)distribution).addValues(distributionParameters);
+					dist = new SimpleHistogramDistribution();
+					((SimpleHistogramDistribution)dist).addValues(distributionParameters);
 					break;
 				case LOGSPLINE:
 					if (distributionParameters.length < 10){
 						throw new IllegalArgumentException("Cannot create a logspline distribution with less than 10 sample values!");
 					}
 					try {
-						distribution = new RLogSplineDistribution(maxValue);
-						((RLogSplineDistribution)distribution).addValues(distributionParameters);
-						distribution.getNumericalMean();
+						dist = new RLogSplineDistribution(maxValue);
+						((RLogSplineDistribution)dist).addValues(distributionParameters);
+						dist.getNumericalMean();
 					} catch (NonConvergenceException e){
 						System.out.println("LogSpline fit not converged! Falling back to Gaussian Kernel density estimation");
 						distributionType = DistributionType.GAUSSIAN_KERNEL;
@@ -202,8 +205,56 @@ public class TimedTransition extends Transition{
 					for (int i = 3; i < distributionParameters.length; i++){
 						nPoints[i-3] = distributionParameters[i]; 
 					}
-					distribution = new BernsteinExponentialApproximation(nPoints, a, b, c);
+					dist = new BernsteinExponentialApproximation(nPoints, a, b, c);
 					break;
+				case SINUSOIDAL_SERIES:
+					if (distributionParameters.length != 4){
+						throw new IllegalArgumentException("Sinusoidal series needs exactly 4 parameters:\n"
+								+ "- amplitude (double)\n"
+								+ "- period (double)\n"
+								+ "- origin (double)\n"
+								+ "- noise (double)");
+					}
+					dist = new SinusoidalSeries(distributionParameters[0], distributionParameters[1], 
+														distributionParameters[2], distributionParameters[3]);
+					break;
+				case ARMA_SERIES:
+					if (distributionParameters.length < 3){
+						throw new IllegalArgumentException("ARMA processes need at least 3 arguments:\n"
+								+ "- the order n of the AR part,\n"
+								+ "- the order m of the MA part,\n"
+								+ "- the noise standard deviation");
+					}
+					int n = (int) distributionParameters[0];
+					int m = (int) distributionParameters[1];
+					double noiseSd = distributionParameters[2];
+					long lastTime = (long) distributionParameters[3];
+					dist = new ARMATimeSeries(n, m, noiseSd);
+					((ARMATimeSeries)dist).setLastTime(lastTime);
+					if (distributionParameters.length < 4+n+m){
+						throw new IllegalArgumentException("ARMA processes of order n:"+n+", and m:"+m+" need at least "+(n+m)+" additional parameters beside the 4 arguments:\n"
+								+ "- the order n of the AR part,\n"
+								+ "- the order m of the MA part,\n"
+								+ "- the noise standard deviation\n"
+								+ "- the last time index in the series");
+					} else {
+						double[] arWeights = new double[n];
+						double[] maWeights = new double[m];
+						for (int i = 0; i < n; i++){
+							arWeights[i] = distributionParameters[i+4];
+						}
+						for (int i = 0; i < m; i++){
+							maWeights[i] = distributionParameters[i+4+n];
+						}
+						((ARMATimeSeries)dist).setArWeights(arWeights);
+						((ARMATimeSeries)dist).setMaWeights(maWeights);
+						// rest of the parameters are values and errors
+						int startIndex = 4+n+m;
+						int valuesRemaining = (distributionParameters.length-startIndex)/2;
+						for (int i = 0; i < valuesRemaining; i++){
+							((ARMATimeSeries)dist).addValue(distributionParameters[startIndex+i], distributionParameters[startIndex+valuesRemaining+i]);
+						}
+					}
 				case UNDEFINED:
 					// do nothing
 					break;
@@ -211,6 +262,7 @@ public class TimedTransition extends Transition{
 					throw new IllegalArgumentException(distributionType.toString()+" distributions not supported yet!");
 			}
 		}
+		return dist;
 	}
 
 	public void fitGaussianKernels() {
@@ -281,7 +333,7 @@ public class TimedTransition extends Transition{
 			distributionParameters = new double[]{1};
 		}
 		distribution = null;
-		initDistribution(0);
+		distribution = initDistribution(0);
 	}
 
 	public void setDistribution(RealDistribution dist){

@@ -135,7 +135,7 @@ public class PerformanceEnricher {
 			
 			feedbackMessage += addTimingInformationToTransition(newTimedTransition, transitionStats, censoredStats, mineConfig, performanceCollector.getMeanTraceFitness(), performanceCollector.getMaxTraceDuration());
 			
-			newTimedTransition.initDistribution(performanceCollector.getMaxTraceDuration());
+			newTimedTransition.setDistribution(newTimedTransition.initDistribution(performanceCollector.getMaxTraceDuration()));
 			newTimedTransition.setTrainingData(trainingData);
 		}
 		// weights of the transitions are calculated based on firing ratios on each marking.

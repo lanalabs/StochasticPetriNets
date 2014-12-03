@@ -33,6 +33,8 @@ public interface StochasticNet extends ResetNet, Petrinet{
 		IMMEDIATE, 
 		// a deterministic transition (e.g. takes always exactly 5 time units)
 		DETERMINISTIC,
+		// time series distribution
+		SINUSOIDAL_SERIES, ARMA_SERIES,	
 		// undefined
 		UNDEFINED;
 

@@ -12,6 +12,8 @@ public class PNMLToolSpecific {
 	public static final String STOCHASTIC_ANNOTATION = "StochasticPetriNet";
 	public static final String STOCHASTIC_ANNOTATION_VERSION = "0.2";
 	
+	public static final String PROM = "ProM";
+	
 	public static final String TIME_UNIT = "timeUnit";
 	public static final String EXECUTION_POLICY = "executionPolicy";
 	public static final String PRIORITY = "priority";
@@ -27,6 +29,9 @@ public class PNMLToolSpecific {
 	@Attribute
 	protected String version;
 	
+	@Attribute(required=false)
+	protected String activity;
+	
 	@ElementMap(entry="property", key="key", attribute=true, inline=true, required=false)
 	private Map<String, String> properties;
 	
@@ -41,6 +46,12 @@ public class PNMLToolSpecific {
 	}
 	public void setVersion(String version) {
 		this.version = version;
+	}
+	public String getActivity() {
+		return activity;
+	}
+	public void setActivity(String activity) {
+		this.activity = activity;
 	}
 	
 	public Map<String,String> getProperties(){

@@ -67,7 +67,10 @@ public class TimeseriesPredictor extends AbstractTimePredictor{
 				errorPercent = getErrorPercent(stats);
 			}
 		}
-		System.out.println("Took " + (System.currentTimeMillis() - now) + "ms to sample one case.");
+		long timeTaken = System.currentTimeMillis() - now;
+		if (timeTaken > 100){
+			System.out.println("Took " + timeTaken + "ms to sample one case.");
+		}
 		return stats;
 	}
 	

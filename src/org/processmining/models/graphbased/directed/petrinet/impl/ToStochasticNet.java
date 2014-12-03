@@ -68,7 +68,7 @@ public class ToStochasticNet {
 				target.setPriority(tt.getPriority());
 				target.setWeight(tt.getWeight());
 				target.setTrainingData(tt.getTrainingData());
-				target.initDistribution(0);
+				target.setDistribution(target.initDistribution(0));
 			}
 		}
 		
@@ -110,7 +110,7 @@ public class ToStochasticNet {
 						target.setPriority(tt.getPriority());
 						target.setWeight(tt.getWeight());
 						target.setTrainingData(tt.getTrainingData());
-						target.initDistribution(0);
+						target.setDistribution(target.initDistribution(0));
 						break;
 					default :
 						switch (type) {
@@ -131,7 +131,7 @@ public class ToStochasticNet {
 								target.setPriority(tt.getPriority());
 								target.setWeight(tt.getWeight());
 								target.setTrainingData(tt.getTrainingData());
-								target.initDistribution(0);
+								target.setDistribution(target.initDistribution(0));
 								break;
 							default :
 								throw new IllegalArgumentException("Type " + type + " not supported yet for conversion");

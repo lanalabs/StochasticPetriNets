@@ -9,6 +9,7 @@ import java.util.List;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.AutoArimaTimeSeries;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.AverageMethodTimeSeries;
+import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.DriftMethodTimeSeries;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.NaiveMethodTimeSeries;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.SeasonalNaiveMethodTimeSeries;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.TimeSeries;
@@ -27,11 +28,21 @@ public class TimeSeriesConfiguration {
 					return SeasonalNaiveMethodTimeSeries.class;
 				case NAIVE_METHOD:
 					return NaiveMethodTimeSeries.class;
+				case DRIFT_METHOD:
+					return DriftMethodTimeSeries.class;
 				case AVERAGE_METHOD:
 				default:
 					return AverageMethodTimeSeries.class;
 			}
 		}
+	}
+
+	/**
+	 * Different strategies to try for handling missing data (replacement almost always introduces a bias (mean replacement underestimates the variance)
+	 * It might be better to keep them as missing values and let R figure out how to deal with them... (using the 
+	 */
+	public enum MissingDataHandling{
+		REPLACE_WITH_LAST_OBSERVATION, REPLACE_WITH_MEAN, KEEP_AS_NAN;
 	}
 	
 	private List<AvailableScripts> scripts;
@@ -43,6 +54,8 @@ public class TimeSeriesConfiguration {
 	private Calendar aggregation; 
 	
 	private TimeSeriesType type;
+	
+	private MissingDataHandling missingDataHandling;
 	
 	public TimeSeriesConfiguration(){
 		this.scripts = new ArrayList<>();
@@ -58,10 +71,11 @@ public class TimeSeriesConfiguration {
 		aggregation.add(Calendar.HOUR_OF_DAY, 1); // hourly data by default 
 		
 		type = TimeSeriesType.AVERAGE_METHOD;
+		missingDataHandling = MissingDataHandling.KEEP_AS_NAN;
 	}
 	
 	public enum AvailableScripts{
-		METRIC_SCRIPT, CATEGORICAL_SCRIPT;
+		METRIC_SCRIPT, CATEGORICAL_SCRIPT, AUTO_ARIMA_SCRIPT;
 		
 		public String getPath(){
 			switch(this){
@@ -69,6 +83,8 @@ public class TimeSeriesConfiguration {
 					return "scripts/metric_prediction.r";
 				case CATEGORICAL_SCRIPT:
 					return "scripts/categorical_prediction.r";
+				case AUTO_ARIMA_SCRIPT:
+					return "scripts/auto_arima.r";
 			}
 			return "unspecified Path!!";
 		}
@@ -78,6 +94,14 @@ public class TimeSeriesConfiguration {
 		this.type = type;
 	}
 	
+	public MissingDataHandling getMissingDataHandling() {
+		return missingDataHandling;
+	}
+
+	public void setMissingDataHandling(MissingDataHandling missingDataHandling) {
+		this.missingDataHandling = missingDataHandling;
+	}
+
 	public List<AvailableScripts> getScriptsToLoad(){
 		return scripts;
 	}

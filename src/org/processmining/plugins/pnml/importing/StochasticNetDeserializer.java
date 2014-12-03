@@ -178,6 +178,8 @@ public class StochasticNetDeserializer {
 			for (Object o : page.getList()){
 				String key = null;
 				if (o instanceof PNMLTransition){
+					boolean invisible = false;
+					
 					PNMLTransition transition = (PNMLTransition) o;
 					key = transition.getId();
 					PNMLToolSpecific stochasticAnnotation = null;
@@ -185,11 +187,16 @@ public class StochasticNetDeserializer {
 						for (PNMLToolSpecific spec : transition.getToolspecific()){
 							if(spec.getProperties() != null && PNMLToolSpecific.STOCHASTIC_ANNOTATION.equals(spec.getTool())){
 								stochasticAnnotation = spec;
+							} else if (PNMLToolSpecific.PROM.equals(spec.getTool())){
+								String activity = spec.getActivity();
+								if (activity != null && activity.equals("$invisible$")){
+									invisible = true;
+								}
 							}
 						}
 					}
 					if (stochasticAnnotation != null){
-						boolean invisible = false;
+						
 						if (stochasticAnnotation.getProperties().containsKey(PNMLToolSpecific.PRIORITY)){
 							int priority = Integer.parseInt(stochasticAnnotation.getProperties().get(PNMLToolSpecific.PRIORITY));
 							double weight = Double.parseDouble(stochasticAnnotation.getProperties().get(PNMLToolSpecific.WEIGHT));
@@ -218,12 +225,12 @@ public class StochasticNetDeserializer {
 							}
 						} else {
 							objects.put(key, net.addTransition(getName(transition)));
-							invisible = stochasticAnnotation.getProperties().containsKey(PNMLToolSpecific.INVISIBLE)?Boolean.parseBoolean(stochasticAnnotation.getProperties().get(PNMLToolSpecific.INVISIBLE)):false;
+							invisible |= stochasticAnnotation.getProperties().containsKey(PNMLToolSpecific.INVISIBLE)?Boolean.parseBoolean(stochasticAnnotation.getProperties().get(PNMLToolSpecific.INVISIBLE)):false;
 						}
-						((Transition)objects.get(key)).setInvisible(invisible);
 					} else {
 						objects.put(key, net.addTransition(getName(transition)));
 					}
+					((Transition)objects.get(key)).setInvisible(invisible);
 				}
 				if (o instanceof PNMLPlace){
 					PNMLPlace place = (PNMLPlace) o;

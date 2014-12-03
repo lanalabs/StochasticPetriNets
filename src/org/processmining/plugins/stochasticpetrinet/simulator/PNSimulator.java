@@ -5,6 +5,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
@@ -12,7 +13,9 @@ import java.util.SortedMap;
 import java.util.TreeMap;
 
 import org.apache.commons.math3.distribution.ExponentialDistribution;
+import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
@@ -40,6 +43,12 @@ import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.StochasticNetSemanticsImpl;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.distribution.GaussianKernelDistribution;
+import org.processmining.plugins.stochasticpetrinet.distribution.timeseries.StatefulTimeseriesDistribution;
+import org.utils.datastructures.ComparablePair;
+import org.utils.datastructures.LimitedTreeMap;
+
+import com.google.common.collect.SortedMultiset;
 
 /**
  * Very plain simulator only used for evaluation of the evaluation of the mining of stochastic Petri nets 
@@ -83,9 +92,13 @@ public class PNSimulator {
 	 * For example, the last observation at transition A could be in a trace that started later than the current one!
 	 */
 	protected boolean useOnlyPastTrainingData = false;
+	
+	/** maps from the prediction time point (long since start of epoch) to a cache storing the predictions for each transition */
+	private org.utils.datastructures.LimitedTreeMap<Integer, Map<Transition, RealDistribution>> cachedDurations;
 
 	public PNSimulator(){
 		transitionRemainingTimes = new HashMap<Transition, Long>();
+		cachedDurations = new LimitedTreeMap<>(1000);
 	}
 	
 	/**
@@ -274,8 +287,12 @@ public class PNSimulator {
 								long lastEventTime = XTimeExtension.instance().extractTimestamp(prefix.get(prefix.size()-1)).getTime();
 								time = Math.max(time, lastEventTime);
 							}
-								
-							time += (long)(config.unitFactor.getUnitFactorToMillis()*StochasticNetUtils.sampleWithConstraint((TimedTransition) t, 0.1));
+							TimedTransition tt = (TimedTransition) t;
+							if (tt.getDistribution() instanceof StatefulTimeseriesDistribution){
+								((StatefulTimeseriesDistribution) tt.getDistribution()).setCurrentTime(time);
+							}
+							
+							time += (long)(config.unitFactor.getUnitFactorToMillis()*StochasticNetUtils.sampleWithConstraint(tt, 0.1));
 							XEvent e = createSimulatedEvent(t.getLabel(), time, XConceptExtension.instance().extractName(clone));
 							clone.add(e);
 						}
@@ -570,7 +587,8 @@ public class PNSimulator {
 						duration = 0;
 						break;
 					default :
-						double sample = sampleDurationForTransition(positiveConstraint, startOfTransition, timedT);
+						double sample;
+						sample = sampleDurationForTransition(positiveConstraint, startOfTransition, timedT);
 						if (sample < positiveConstraint){
 							System.out.println("debug me!");
 						}
@@ -594,7 +612,48 @@ public class PNSimulator {
 	 * @return
 	 */
 	protected double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT) {
-		return StochasticNetUtils.sampleWithConstraint(timedT, positiveConstraint);
+		RealDistribution dist;
+		if (useOnlyPastTrainingData && !(timedT.getDistribution() instanceof StatefulTimeseriesDistribution)){
+			SortedMultiset<ComparablePair<Long, List<Object>>> sortedTrainingData = timedT.getTrainingDataUpTo(startOfTransition);
+			int sizeOfTraningData = sortedTrainingData.size();
+			if (!cachedDurations.containsKey(sizeOfTraningData)){
+				cachedDurations.put(sizeOfTraningData, new HashMap<Transition, RealDistribution>());
+			}
+			if (cachedDurations.get(sizeOfTraningData).containsKey(timedT)){
+				dist = cachedDurations.get(sizeOfTraningData).get(timedT);
+			} else {
+				DescriptiveStatistics stats = new DescriptiveStatistics();
+				for (ComparablePair<Long, List<Object>> pair : sortedTrainingData){
+					stats.addValue(Double.valueOf(pair.getSecond().get(0).toString()));
+				}
+				switch(timedT.getDistributionType()){
+					case EXPONENTIAL:
+						dist = new ExponentialDistribution(stats.getMean());
+						break;
+					case NORMAL:
+						dist = new NormalDistribution(stats.getMean(), stats.getStandardDeviation());
+						break;
+					case GAUSSIAN_KERNEL:
+						dist = new GaussianKernelDistribution();
+						((GaussianKernelDistribution)dist).addValues(stats.getValues());
+						break;
+					case DETERMINISTIC:
+						dist = timedT.getDistribution();
+						break;
+					default:
+						throw new IllegalArgumentException("Distribution type "+timedT.getDistributionType()+" not yet supported for rolling cross validation!"); 
+				}
+				cachedDurations.get(sizeOfTraningData).put(timedT, dist);
+			}
+		} else {
+			dist = timedT.getDistribution();
+		}
+		
+		if (dist instanceof StatefulTimeseriesDistribution){
+			((StatefulTimeseriesDistribution)dist).setCurrentTime(startOfTransition);
+		}
+		StochasticNetUtils.useCache(false);
+		return StochasticNetUtils.sampleWithConstraint(dist,"", positiveConstraint);
 	}
 
 //	private void updatePlaceTimes(Collection<Place> places, Date time, Map<Place, List<Long>> placeTimes) {
@@ -719,7 +778,13 @@ public class PNSimulator {
 		int i = 0;
 		for (Transition transition : transitions){
 			TimedTransition tt = (TimedTransition) transition;
-			weights[i++] = tt.getWeight();
+			double weight;
+			if (useOnlyPastTrainingData){
+			    weight = tt.getTrainingDataUpTo(currentTime.getTime()).size();
+			} else {
+				weight = tt.getWeight();
+			}
+			weights[i++] = weight;
 		}
 		int index = StochasticNetUtils.getRandomIndex(weights, random);
 		return index;
@@ -738,7 +803,7 @@ public class PNSimulator {
 		return new Date(lastTime.getTime() + (long) (arrivalDistribution.sample() * unitFactor.getUnitFactorToMillis()));
 	}
 	
-	public void setUseOnlyPastTrainingData(boolean useOnlaPastTrainingData){
-		
+	public void setUseOnlyPastTrainingData(boolean useOnlyPastTrainingData){
+		this.useOnlyPastTrainingData = useOnlyPastTrainingData;
 	}
 }
