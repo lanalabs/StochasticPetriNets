@@ -997,6 +997,7 @@ public class StochasticNetUtils {
 	 *  
 	 */
 	public static void exportAsDOTFile(Petrinet net, String relativeFolderName, String fileName){
+		String fName = relativeFolderName+fileName+".dot";
 		try {
 			if (relativeFolderName == null || relativeFolderName.isEmpty()){
 				relativeFolderName = ".";
@@ -1004,7 +1005,6 @@ public class StochasticNetUtils {
 			if (!relativeFolderName.endsWith(File.separator)){
 				relativeFolderName += File.separator;
 			}
-			String fName = relativeFolderName+fileName+".dot";
 			String fNamePostScript = relativeFolderName+fileName+".ps";
 			String dotString = ToStochasticNet.convertPetrinetToDOT(net);
 			BufferedWriter writer = new BufferedWriter(new FileWriter(new File(fName)));
@@ -1014,13 +1014,24 @@ public class StochasticNetUtils {
 			
 			Process p = Runtime.getRuntime().exec("dot -Tps "+fName+" -o "+fNamePostScript);
 			p.waitFor();
-			
-			p = Runtime.getRuntime().exec("rm "+fName);
-			p.waitFor();
 		} catch (IOException e) {
 			e.printStackTrace();
+			System.err.println("...continuing");
 		} catch (InterruptedException e) {
 			e.printStackTrace();
+			System.err.println("...continuing");
+		} catch (Exception e){
+			e.printStackTrace();
+			System.err.println("...continuing");
+		} finally {
+			try {
+				Process p = Runtime.getRuntime().exec("rm "+fName);
+				p.waitFor();
+			} catch (IOException e) {
+				e.printStackTrace();
+			} catch (InterruptedException e) {
+				e.printStackTrace();
+			}
 		}
 	}
 	

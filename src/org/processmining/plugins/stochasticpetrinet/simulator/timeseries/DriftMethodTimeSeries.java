@@ -39,7 +39,7 @@ public class DriftMethodTimeSeries extends TimeSeries<Double> {
 	protected Prediction<Double> getPrediction(int h, Object... payload) {
 		double pred;
 		if (T > 1){
-			pred = lastObservation + h*((lastObservation-firstObservation) / (T-1));
+			pred = Math.max(0, lastObservation + h*((lastObservation-firstObservation) / (T-1))); // ensure that we do not predict values below zero!
 		} else {
 			pred = lastObservation;
 		}

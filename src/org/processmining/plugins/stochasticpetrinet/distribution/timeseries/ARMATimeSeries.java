@@ -66,6 +66,8 @@ public class ARMATimeSeries extends StatefulTimeseriesDistribution {
 			for (int i = 1; i <=h; i++){
 				double newError = noiseDistribution.sample();
 				double newVal = newError + getAR() + getMA();
+				if (newVal < 0) newVal = -newVal;
+				if (newError < 0) newError = -newError;
 				
 				errors.add(newError);
 				values.add(newVal);
