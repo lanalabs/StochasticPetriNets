@@ -10,6 +10,7 @@ import org.processmining.models.graphbased.directed.petrinet.elements.TimedTrans
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.AutoArimaTimeSeries;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.AverageMethodTimeSeries;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.DriftMethodTimeSeries;
+import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.LastObservationTimeSeries;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.NaiveMethodTimeSeries;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.SeasonalNaiveMethodTimeSeries;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.TimeSeries;
@@ -18,7 +19,7 @@ public class TimeSeriesConfiguration {
 	
 	
 	public enum TimeSeriesType{
-		AUTO_ARIMA, AVERAGE_METHOD, NAIVE_METHOD, SEASONAL_METHOD, DRIFT_METHOD;
+		AUTO_ARIMA, AVERAGE_METHOD, NAIVE_METHOD, SEASONAL_METHOD, DRIFT_METHOD, LAST_OBSERVATION;
 		
 		public Class<? extends TimeSeries<Double>> getTimeSeriesClass(){
 			switch(this){
@@ -30,6 +31,8 @@ public class TimeSeriesConfiguration {
 					return NaiveMethodTimeSeries.class;
 				case DRIFT_METHOD:
 					return DriftMethodTimeSeries.class;
+				case LAST_OBSERVATION:
+					return LastObservationTimeSeries.class;
 				case AVERAGE_METHOD:
 				default:
 					return AverageMethodTimeSeries.class;

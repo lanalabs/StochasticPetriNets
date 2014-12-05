@@ -23,6 +23,7 @@ import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
 import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeSeriesConfiguration;
 import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeSeriesConfiguration.MissingDataHandling;
+import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.LastObservationTimeSeries;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.Observation;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.Prediction;
 import org.processmining.plugins.stochasticpetrinet.simulator.timeseries.TimeSeries;
@@ -160,7 +161,7 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 							}
 						} while (current != null && current < index);
 						timeSeries.resetTo(observations);
-	
+						
 						// forecast horizon:
 						int h = (int) (index - observations.get(observations.size() - 1).timestamp);
 						Prediction<Double> prediction = timeSeries.predict(h);
@@ -400,6 +401,14 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 					List<Object> list = Arrays.<Object>asList(config.getIndexForTime(pair.getFirst()), Double.valueOf(pair.getSecond().get(0).toString()), Double.valueOf(pair.getSecond().get(1).toString()));
 					sortedDurations.add(list);
 				}
+				
+				if (transitionSeries instanceof LastObservationTimeSeries){
+					// special case: do not aggregate into hourly(or other) intervals, but only return the very last observation as predictor.
+					((LastObservationTimeSeries) transitionSeries).setLastObservation((Double) sortedDurations.get(sortedDurations.size()-1).get(1));
+					return transitionSeries.predict(0).prediction;
+				}
+
+				
 //				// aggregate by average:
 //				String trainingData = timedT.getTrainingData();
 //				Map<Long, List<Object>> sortedDurations = new TreeMap<>();
