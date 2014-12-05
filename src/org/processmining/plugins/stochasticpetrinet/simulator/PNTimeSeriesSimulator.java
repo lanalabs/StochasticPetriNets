@@ -14,6 +14,7 @@ import java.util.TreeSet;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.Semantics;
@@ -379,7 +380,7 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 	/**
 	 * 
 	 */
-	protected double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT) {
+	protected double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT, TimeUnit unitFactor) {
 		if (timedT.getTrainingData() != null){
 //			try{
 //			String fitName = null;
@@ -398,7 +399,7 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 				SortedMultiset<ComparablePair<Long, List<Object>>> trainingDataSoFar =  timedT.getTrainingDataUpTo(startOfTransition);
 				List<List<Object>> sortedDurations = new LinkedList<>();
 				for (ComparablePair<Long, List<Object>> pair : trainingDataSoFar){
-					List<Object> list = Arrays.<Object>asList(config.getIndexForTime(pair.getFirst()), Double.valueOf(pair.getSecond().get(0).toString()), Double.valueOf(pair.getSecond().get(1).toString()));
+					List<Object> list = Arrays.<Object>asList(config.getIndexForTime(pair.getFirst()-(long)(Double.valueOf(pair.getSecond().get(0).toString())* unitFactor.getUnitFactorToMillis())), Double.valueOf(pair.getSecond().get(0).toString()), Double.valueOf(pair.getSecond().get(1).toString()));
 					sortedDurations.add(list);
 				}
 				
@@ -642,7 +643,7 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 //				e.printStackTrace();
 //			}
 		}
-		return super.sampleDurationForTransition(positiveConstraint, startOfTransition, timedT);
+		return super.sampleDurationForTransition(positiveConstraint, startOfTransition, timedT, unitFactor);
 	
 	}
 

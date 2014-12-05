@@ -571,7 +571,8 @@ public class PNSimulator {
 	 * @param t the transition for which the remaining duration (in ms) will be determined 
 	 * @param unitFactor the scaling factor to get from the distribution parameters to milliseconds
 	 * @param startOfTransition long the entry time of the current marking (i.e., usually the last observed event's timestamp) 
-	 * @param positiveConstraint a constraint that might restrict sample values (left-truncates the distribution) 
+	 * @param positiveConstraint a constraint that might restrict sample values (left-truncates the distribution)
+	 * @param the simulation configuration {@link PNSimulatorConfig} 
 	 * @return long milliseconds that the transition has to wait until it will fire. 
 	 */
 	protected long getTransitionRemainingTime(Transition t, TimeUnit unitFactor, long startOfTransition, double positiveConstraint) {
@@ -588,7 +589,7 @@ public class PNSimulator {
 						break;
 					default :
 						double sample;
-						sample = sampleDurationForTransition(positiveConstraint, startOfTransition, timedT);
+						sample = sampleDurationForTransition(positiveConstraint, startOfTransition, timedT, unitFactor);
 						if (sample < positiveConstraint){
 							System.out.println("debug me!");
 						}
@@ -611,7 +612,7 @@ public class PNSimulator {
 	 * 
 	 * @return
 	 */
-	protected double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT) {
+	protected double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT, TimeUnit unitFactor) {
 		RealDistribution dist;
 		if (useOnlyPastTrainingData && !(timedT.getDistribution() instanceof StatefulTimeseriesDistribution)){
 			SortedMultiset<ComparablePair<Long, List<Object>>> sortedTrainingData = timedT.getTrainingDataUpTo(startOfTransition);
