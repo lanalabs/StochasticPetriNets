@@ -105,6 +105,9 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 						timeSeries.setKey(tt.getLabel());
 						cachedTransitionDecisionTimeSeries.put(t, timeSeries);
 					}
+					if (timeSeries instanceof LastObservationTimeSeries){
+						return probabilities;
+					}
 					
 					// TODO: avoid reiterating all the training data somehow.
 					SortedMultiset<ComparablePair<Long, List<Object>>> trainingDataSoFar =  tt.getTrainingDataUpTo(currentTime.getTime());
