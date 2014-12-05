@@ -105,71 +105,73 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 						timeSeries.setKey(tt.getLabel());
 						cachedTransitionDecisionTimeSeries.put(t, timeSeries);
 					}
-					if (timeSeries instanceof LastObservationTimeSeries){
-						return probabilities;
-					}
 					
 					// TODO: avoid reiterating all the training data somehow.
 					SortedMultiset<ComparablePair<Long, List<Object>>> trainingDataSoFar =  tt.getTrainingDataUpTo(currentTime.getTime());
-					List<List<Object>> sortedDecisions = new LinkedList<>();
-					for (ComparablePair<Long, List<Object>> pair : trainingDataSoFar){
-						List<Object> list = Arrays.<Object>asList(config.getIndexForTime(pair.getFirst()), semantics.getTransitionId(t), pair.getSecond().get(0), pair.getSecond().get(1));
-						sortedDecisions.add(list);
-					}
-					
-					Aggregate.Function<List<Object>, Long> groupBy = new Aggregate.Function<List<Object>, Long>() {
-						@Override
-						public Long apply(List<Object> item) {
-							// group by the time index
-							return (Long) (item.get(0));
-						}
-					};
-
-					Map<Long, Integer> count = Aggregate.sum(sortedDecisions, groupBy,
-							new Aggregate.Function<List<Object>, Integer>() {
-								@Override
-								public Integer apply(List<Object> item) {
-									return 1;
-								}
-							});
-					
-					if (count.size() == 1){
-						probabilities.put(t, Double.valueOf(count.values().iterator().next()));
+					if (timeSeries instanceof LastObservationTimeSeries){
+						probabilities.put(tt, (double)trainingDataSoFar.size());
 					} else {
-						// go through all elements of the map
-						List<Observation<Double>> observations = new ArrayList<>();
 	
-						Iterator<Long> iter = count.keySet().iterator();
-						Long current = iter.next();
-						Long next = iter.hasNext()?iter.next():null;
+						List<List<Object>> sortedDecisions = new LinkedList<>();
+						for (ComparablePair<Long, List<Object>> pair : trainingDataSoFar){
+							List<Object> list = Arrays.<Object>asList(config.getIndexForTime(pair.getFirst()), semantics.getTransitionId(t), pair.getSecond().get(0), pair.getSecond().get(1));
+							sortedDecisions.add(list);
+						}
 						
-						double mean = StochasticNetUtils.getMean(count.values());
-						
-						do {
-							Observation<Double> observedCount = new Observation<>();
-							observedCount.timestamp = current; // no real time stamp but rather the time index in the time series
-							if (count.containsKey(current)) {
-								observedCount.observation = Double.valueOf(count.get(current));
-							} else {
-								// missing value! 
-								// replace with last observation
-								observedCount.observation = handleMissingValue(observations, config.getMissingDataHandling(), mean);
+						Aggregate.Function<List<Object>, Long> groupBy = new Aggregate.Function<List<Object>, Long>() {
+							@Override
+							public Long apply(List<Object> item) {
+								// group by the time index
+								return (Long) (item.get(0));
 							}
-							observations.add(observedCount);
+						};
 	
-							if (next != null && current + 1 < next) {
-								current++;
-							} else {
-								current = next;
-								next = iter.hasNext() ? iter.next() : null;
-							}
-						} while (current != null && current < index);
-						timeSeries.resetTo(observations);
+						Map<Long, Integer> count = Aggregate.sum(sortedDecisions, groupBy,
+								new Aggregate.Function<List<Object>, Integer>() {
+									@Override
+									public Integer apply(List<Object> item) {
+										return 1;
+									}
+								});
 						
-						// forecast horizon:
-						int h = (int) (index - observations.get(observations.size() - 1).timestamp);
-						Prediction<Double> prediction = timeSeries.predict(h);
-						probabilities.put(t, prediction.prediction);
+						if (count.size() == 1){
+							probabilities.put(t, Double.valueOf(count.values().iterator().next()));
+						} else {
+							// go through all elements of the map
+							List<Observation<Double>> observations = new ArrayList<>();
+		
+							Iterator<Long> iter = count.keySet().iterator();
+							Long current = iter.next();
+							Long next = iter.hasNext()?iter.next():null;
+							
+							double mean = StochasticNetUtils.getMean(count.values());
+							
+							do {
+								Observation<Double> observedCount = new Observation<>();
+								observedCount.timestamp = current; // no real time stamp but rather the time index in the time series
+								if (count.containsKey(current)) {
+									observedCount.observation = Double.valueOf(count.get(current));
+								} else {
+									// missing value! 
+									// replace with last observation
+									observedCount.observation = handleMissingValue(observations, config.getMissingDataHandling(), mean);
+								}
+								observations.add(observedCount);
+		
+								if (next != null && current + 1 < next) {
+									current++;
+								} else {
+									current = next;
+									next = iter.hasNext() ? iter.next() : null;
+								}
+							} while (current != null && current < index);
+							timeSeries.resetTo(observations);
+							
+							// forecast horizon:
+							int h = (int) (index - observations.get(observations.size() - 1).timestamp);
+							Prediction<Double> prediction = timeSeries.predict(h);
+							probabilities.put(t, prediction.prediction);
+						}
 					}
 				}
 				if (!cachedConflictingProbabilities.containsKey(index)) {
