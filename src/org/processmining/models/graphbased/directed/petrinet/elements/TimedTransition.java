@@ -369,7 +369,7 @@ public class TimedTransition extends Transition{
 			for (int i = 1; i < entries.length; i++) {
 				String[] entryParts = entries[i].split(StochasticManifestCollector.DELIMITER);
 				long time = Long.valueOf(entryParts[2]);
-				sortedTrainingData.add(new ComparablePair<>(time, Arrays.<Object>asList(entryParts[0], entryParts[1])));
+				sortedTrainingData.add(new ComparablePair<>(time, Arrays.<Object>asList(Double.valueOf(entryParts[0]), Double.valueOf(entryParts[1]))));
 			}
 			this.trainingDataCache = sortedTrainingData;
 		}

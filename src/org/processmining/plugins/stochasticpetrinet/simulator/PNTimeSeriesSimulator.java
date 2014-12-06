@@ -402,15 +402,17 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 				// aggregate by average:
 				// TODO: avoid reiterating all the training data somehow.
 				SortedMultiset<ComparablePair<Long, List<Object>>> trainingDataSoFar =  timedT.getTrainingDataUpTo(startOfTransition);
-				List<List<Object>> sortedDurations = new LinkedList<>();
+				LinkedList<List<Object>> sortedDurations = new LinkedList<>();
 				for (ComparablePair<Long, List<Object>> pair : trainingDataSoFar){
-					List<Object> list = Arrays.<Object>asList(config.getIndexForTime(pair.getFirst()-(long)(Double.valueOf(pair.getSecond().get(0).toString())* unitFactor.getUnitFactorToMillis())), Double.valueOf(pair.getSecond().get(0).toString()), Double.valueOf(pair.getSecond().get(1).toString()));
+					List<Object> list = Arrays.<Object>asList(config.getIndexForTime(pair.getFirst()-(long)((Double)pair.getSecond().get(0)* unitFactor.getUnitFactorToMillis())), 
+							pair.getSecond().get(0), 
+							pair.getSecond().get(1));
 					sortedDurations.add(list);
 				}
 				
 				if (transitionSeries instanceof LastObservationTimeSeries){
 					// special case: do not aggregate into hourly(or other) intervals, but only return the very last observation as predictor.
-					((LastObservationTimeSeries) transitionSeries).setLastObservation((Double) sortedDurations.get(sortedDurations.size()-1).get(1));
+					((LastObservationTimeSeries) transitionSeries).setLastObservation((Double) sortedDurations.getLast().get(1));
 					return transitionSeries.predict(0).prediction;
 				}
 

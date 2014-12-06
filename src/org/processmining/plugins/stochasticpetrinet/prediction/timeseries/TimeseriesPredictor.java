@@ -68,7 +68,7 @@ public class TimeseriesPredictor extends AbstractTimePredictor{
 			}
 		}
 		long timeTaken = System.currentTimeMillis() - now;
-		if (timeTaken > 100){
+		if (timeTaken > 1000){
 			System.out.println("Took " + timeTaken + "ms to sample one case.");
 		}
 		return stats;
