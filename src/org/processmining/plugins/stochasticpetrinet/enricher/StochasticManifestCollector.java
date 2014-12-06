@@ -164,6 +164,8 @@ public class StochasticManifestCollector {
 	 * Captures the average fitness of the log and the model.
 	 */
 	private DescriptiveStatistics fitnessStatistic;
+
+	private boolean debugMessageShown;
 	
 	public StochasticManifestCollector(ManifestEvClassPattern manifest, PerformanceEnricherConfig config){
 		this.manifest = manifest;
@@ -176,6 +178,8 @@ public class StochasticManifestCollector {
 		this.markingBasedSelections = new HashMap<String, int[]>();
 		this.caseStatisticsPerTrace = new HashMap<Integer, CaseStatistics>();
 		this.fitnessStatistic = new DescriptiveStatistics();
+		
+		this.debugMessageShown = false;
 		
 		// init transitions
 		PetrinetGraph net = manifest.getNet();
@@ -241,6 +245,8 @@ public class StochasticManifestCollector {
 		
 		// init table for case-based transition times (to look for dependencies and other analyses)
 		transitionDurationsPerCase = new double[cases.length][];
+		
+		this.debugMessageShown  = false;
 		
 		XLog log = manifest.getLog();
 		if (enrichedLog != null){
@@ -497,8 +503,10 @@ public class StochasticManifestCollector {
 						caseStats.setLogLikelihood(currentLogLikelihoodValue);
 //						logLikelihoodPerTrace.put(caseId, caseStats);
 					}
-					if (density == 0){
-						System.out.println("debug me!");
+					if (density == 0 && !debugMessageShown){
+						// the model is not 
+						System.out.println("Probability 0! The model is not representing the data. It will be impossible to compute likelihood of the data given the model.");
+						debugMessageShown = true;
 					}
 					currentStep.density = density;
 					currentStep.transition = timedTransition;

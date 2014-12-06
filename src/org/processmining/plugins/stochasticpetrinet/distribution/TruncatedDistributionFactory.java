@@ -12,7 +12,11 @@ public class TruncatedDistributionFactory {
 
 	public static RealDistribution getConstrainedWrapper(RealDistribution dist, double constraint) {
 		if (dist instanceof ExponentialDistribution){
-			return new MemorylessTruncatedWrapper(dist,constraint);
+			if (constraint <= 0.0){
+				return dist;
+			} else {
+				return new MemorylessTruncatedWrapper(dist,constraint);
+			}
 		} else if (dist instanceof UniformRealDistribution){
 			UniformRealDistribution uniformDist = (UniformRealDistribution) dist;
 			if (uniformDist.getSupportLowerBound() < constraint){

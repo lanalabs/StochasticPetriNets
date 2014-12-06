@@ -625,7 +625,7 @@ public class PNSimulator {
 			} else {
 				DescriptiveStatistics stats = new DescriptiveStatistics();
 				for (ComparablePair<Long, List<Object>> pair : sortedTrainingData){
-					stats.addValue(Double.valueOf(pair.getSecond().get(0).toString()));
+					stats.addValue((Double)pair.getSecond().get(0));
 				}
 				switch(timedT.getDistributionType()){
 					case EXPONENTIAL:
