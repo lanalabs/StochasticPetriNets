@@ -310,6 +310,7 @@ public class Generator {
 				return new double[]{randomAmplitude, randomPeriod, randomOrigin, randomNoiseStandardDeviation};
 			case ARMA_SERIES:
 				// n=2, m=3, random noise, 
+				//ARMATimeSeries series = new ARMATimeSeries(random.nextInt(4), random.nextInt(4), random.nextDouble()+0.5);
 				ARMATimeSeries series = new ARMATimeSeries(random.nextInt(4), random.nextInt(4), random.nextDouble()+0.5);
 				//create a random walk
 //				ARMATimeSeries series = new ARMATimeSeries(1, 0, random.nextDouble()+0.0001);

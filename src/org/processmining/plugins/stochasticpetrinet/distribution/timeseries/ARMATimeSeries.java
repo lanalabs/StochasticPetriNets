@@ -47,19 +47,19 @@ public class ARMATimeSeries extends StatefulTimeseriesDistribution {
 		double sumArWeights = 0;
 		double sumMaWeights = 0;
 		for (int i = 0; i < n; i++){
-			arWeights[i] = (1.5*rand.nextDouble()-0.75)  / ((i+1)*(i+1));
+			arWeights[i] = (rand.nextDouble()-0.5)  / (1.5*(i+1));
 			sumArWeights += arWeights[i];
 		}
 		for (int i = 0; i < m; i++){
-			maWeights[i] = (1.5*rand.nextDouble()-0.75) / ((i+1)*(i+1));
+			maWeights[i] = (2*rand.nextDouble()-1) / (1.5*(i+1));
 			sumMaWeights += maWeights[i];
 		}
-		if (sumArWeights > 0.99){
+		if (sumArWeights > 0.99 || sumArWeights < -0.99){
 			for (int i = 0; i < n; i++){
 				arWeights[i] = arWeights[i]/(sumArWeights+0.01);
 			}
 		}
-		if (sumMaWeights > 0.99){
+		if (sumMaWeights > 0.99 || sumMaWeights < -0.99){
 			for (int i = 0; i < m; i++){
 				maWeights[i] = maWeights[i]/(sumMaWeights+0.01);
 			}
@@ -78,7 +78,7 @@ public class ARMATimeSeries extends StatefulTimeseriesDistribution {
 		if (lastTime < currentTime){
 			int h = (int) (currentTime - lastTime);
 			for (int i = 1; i <=h; i++){
-				double newError = noiseDistribution.sample();
+				double newError = noiseDistribution.sample()*5;
 				double newVal = newError + getAR() + getMA();
 				if (newVal < 0) newVal = -newVal;
 				if (newError < 0) newError = -newError;
