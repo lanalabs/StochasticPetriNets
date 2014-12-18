@@ -287,12 +287,15 @@ public class PNSimulator {
 								long lastEventTime = XTimeExtension.instance().extractTimestamp(prefix.get(prefix.size()-1)).getTime();
 								time = Math.max(time, lastEventTime);
 							}
-							TimedTransition tt = (TimedTransition) t;
-							if (tt.getDistribution() instanceof StatefulTimeseriesDistribution){
-								((StatefulTimeseriesDistribution) tt.getDistribution()).setCurrentTime(time);
+							if (t instanceof TimedTransition){
+								TimedTransition tt = (TimedTransition) t;
+								if (tt.getDistribution() instanceof StatefulTimeseriesDistribution){
+									((StatefulTimeseriesDistribution) tt.getDistribution()).setCurrentTime(time);
+								}
+								time += (long)(config.unitFactor.getUnitFactorToMillis()*StochasticNetUtils.sampleWithConstraint(tt, 0.1));
+							} else {
+								time += random.nextDouble()*config.unitFactor.getUnitFactorToMillis();
 							}
-							
-							time += (long)(config.unitFactor.getUnitFactorToMillis()*StochasticNetUtils.sampleWithConstraint(tt, 0.1));
 							XEvent e = createSimulatedEvent(t.getLabel(), time, XConceptExtension.instance().extractName(clone));
 							clone.add(e);
 						}

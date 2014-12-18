@@ -207,6 +207,8 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 				} else {
 					// other transitions with higher priority disable the current transition!
 				}
+			} else {
+				highestPriorityTransitions.add(t);
 			}
 		}
 		return highestPriorityTransitions;
