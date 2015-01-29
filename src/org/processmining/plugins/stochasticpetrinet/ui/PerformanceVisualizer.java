@@ -95,7 +95,7 @@ public class PerformanceVisualizer {
 							plot.add(transition.getDistribution());
 							plots.add(plot);
 							plotForTransition.setUnit(((StochasticNet)transition.getGraph()).getTimeUnit().toString());
-							plotForTransition.setTrainingData(transition.getTrainingData());
+//							plotForTransition.setTrainingData(transition.getTrainingData());
 							plotForTransition.setPlots(plots);
 						} else {
 							plotForTransition.displayMessage("no timing information available for: "+node.getLabel());
