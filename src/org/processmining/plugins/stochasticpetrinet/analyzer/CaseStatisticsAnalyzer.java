@@ -8,6 +8,8 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import javax.swing.JOptionPane;
+
 import org.apache.commons.math3.analysis.integration.TrapezoidIntegrator;
 import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
@@ -444,6 +446,12 @@ public class CaseStatisticsAnalyzer {
 						}
 					} else {
 						RealDistribution d = tt.getDistribution();
+						if (d == null){
+							String tName = tt.getLabel()==null ? tt.getId().toString() : tt.getLabel();
+							String error = "Transition "+tName+" has no distribution! Can't compute anomaly intervals.";
+							JOptionPane.showMessageDialog(null, error,"Model assumption error", JOptionPane.ERROR_MESSAGE);
+							throw new IllegalArgumentException(error);
+						}
 						double[] samples = d.sample(SAMPLE_SIZE);
 						loglikelihoods = new double[samples.length];
 						for (int i = 0; i < samples.length; i++){

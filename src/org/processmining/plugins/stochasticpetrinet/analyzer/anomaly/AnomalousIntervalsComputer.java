@@ -27,36 +27,43 @@ public class AnomalousIntervalsComputer {
 
 	public Map<Transition, List<Pair<Double,Double>>> getAnomalousIntervals(PluginContext context, StochasticNet net, double outlierRate){
 
-		CaseStatisticsAnalyzer analyzer = new CaseStatisticsAnalyzer(net, StochasticNetUtils.getInitialMarking(context, net), new CaseStatisticsList());
-		analyzer.setOutlierRate(outlierRate);
-		analyzer.updateLikelihoodCutoffs();
-
-		Map<Transition, List<Pair<Double,Double>>> anomalousTransitionIntervals = new HashMap<>();
-		
-		for(Transition t : net.getTransitions()){
-			if (t instanceof TimedTransition){
-				List<Pair<Double,Double>> anomalyList = new ArrayList<>();
-				TimedTransition tt = (TimedTransition) t;
-				if (tt.getDistributionType().equals(DistributionType.IMMEDIATE) || tt.getDistributionType().equals(DistributionType.DETERMINISTIC)){
-					Double value = tt.getDistribution()==null?0.0 : tt.getDistribution().getNumericalMean();
-					Pair<Double,Double> anomalyBelow = new Pair<Double, Double>(Double.NEGATIVE_INFINITY, value-PerformanceEnricher.EPSILON);
-					Pair<Double,Double> anomaly = new Pair<Double, Double>(value+PerformanceEnricher.EPSILON, Double.POSITIVE_INFINITY);
-					anomalyList.add(anomalyBelow);
-					anomalyList.add(anomaly);
-				} else if (tt.getDistributionType().equals(DistributionType.UNIFORM)) { 
-					// we will have no chance to find any outliers inside the domain of the uniform distribution. Its outliers are below the start and above the end.
-					UniformRealDistribution uniformDist = (UniformRealDistribution) tt.getDistribution();
-					anomalyList.add(new Pair<Double,Double>(Double.NEGATIVE_INFINITY, uniformDist.getSupportLowerBound()));
-					anomalyList.add(new Pair<Double,Double>(uniformDist.getSupportUpperBound(), Double.POSITIVE_INFINITY));
-				} else {
-					RealDistribution d = tt.getDistribution();
-					double threshold = analyzer.getLogLikelihoodCutoff(tt);
-					anomalyList = getAnomalousIntervalsForDistribution(d, threshold);
+		try {
+			CaseStatisticsAnalyzer analyzer = new CaseStatisticsAnalyzer(net, StochasticNetUtils.getInitialMarking(context, net), new CaseStatisticsList());
+			analyzer.setOutlierRate(outlierRate);
+			analyzer.updateLikelihoodCutoffs();
+	
+			Map<Transition, List<Pair<Double,Double>>> anomalousTransitionIntervals = new HashMap<>();
+			
+			for(Transition t : net.getTransitions()){
+				if (t instanceof TimedTransition){
+					List<Pair<Double,Double>> anomalyList = new ArrayList<>();
+					TimedTransition tt = (TimedTransition) t;
+					if (tt.getDistributionType().equals(DistributionType.IMMEDIATE) || tt.getDistributionType().equals(DistributionType.DETERMINISTIC)){
+						Double value = tt.getDistribution()==null?0.0 : tt.getDistribution().getNumericalMean();
+						Pair<Double,Double> anomalyBelow = new Pair<Double, Double>(Double.NEGATIVE_INFINITY, value-PerformanceEnricher.EPSILON);
+						Pair<Double,Double> anomaly = new Pair<Double, Double>(value+PerformanceEnricher.EPSILON, Double.POSITIVE_INFINITY);
+						anomalyList.add(anomalyBelow);
+						anomalyList.add(anomaly);
+					} else if (tt.getDistributionType().equals(DistributionType.UNIFORM)) { 
+						// we will have no chance to find any outliers inside the domain of the uniform distribution. Its outliers are below the start and above the end.
+						UniformRealDistribution uniformDist = (UniformRealDistribution) tt.getDistribution();
+						anomalyList.add(new Pair<Double,Double>(Double.NEGATIVE_INFINITY, uniformDist.getSupportLowerBound()));
+						anomalyList.add(new Pair<Double,Double>(uniformDist.getSupportUpperBound(), Double.POSITIVE_INFINITY));
+					} else {
+						RealDistribution d = tt.getDistribution();
+						double threshold = analyzer.getLogLikelihoodCutoff(tt);
+						anomalyList = getAnomalousIntervalsForDistribution(d, threshold);
+					}
+					anomalousTransitionIntervals.put(t, anomalyList);
 				}
-				anomalousTransitionIntervals.put(t, anomalyList);
+			}
+			return anomalousTransitionIntervals;
+		} catch (IllegalArgumentException iae){
+			if (context != null){
+				context.getFutureResult(0).cancel(true);
 			}
 		}
-		return anomalousTransitionIntervals;
+		return null;
 	}
 
 
