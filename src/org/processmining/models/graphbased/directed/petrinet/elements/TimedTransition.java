@@ -162,7 +162,7 @@ public class TimedTransition extends Transition{
 					dist = new UniformRealDistribution(distributionParameters[0], distributionParameters[1]);
 					break;
 				case GAUSSIAN_KERNEL:
-					fitGaussianKernels();
+					dist = fitGaussianKernels();
 					break;
 				case HISTOGRAM:
 					if (distributionParameters.length < 1){
@@ -182,7 +182,7 @@ public class TimedTransition extends Transition{
 					} catch (NonConvergenceException e){
 						System.out.println("LogSpline fit not converged! Falling back to Gaussian Kernel density estimation");
 						distributionType = DistributionType.GAUSSIAN_KERNEL;
-						fitGaussianKernels();
+						dist = fitGaussianKernels();
 					}
 //					catch (TooManyEvaluationsException e){
 //						System.out.println("Could not compute the mean of the logspline! Falling back to Gaussian Kernel density estimation");
@@ -265,12 +265,13 @@ public class TimedTransition extends Transition{
 		return dist;
 	}
 
-	public void fitGaussianKernels() {
+	public RealDistribution fitGaussianKernels() {
 		if (distributionParameters.length < 1){
 			throw new IllegalArgumentException("Cannot create a nonparametric distribution without sample values!");
 		}
-		distribution = new GaussianKernelDistribution();
-		((GaussianKernelDistribution)distribution).addValues(distributionParameters);
+		RealDistribution dist = new GaussianKernelDistribution();
+		((GaussianKernelDistribution)dist).addValues(distributionParameters);
+		return dist;
 	}
 
 	private void checkParameterLengthForDistribution(int parameters, String... names) {
