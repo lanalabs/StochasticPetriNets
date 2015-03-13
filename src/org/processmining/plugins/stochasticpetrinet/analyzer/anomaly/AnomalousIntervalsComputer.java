@@ -73,7 +73,8 @@ public class AnomalousIntervalsComputer {
 	public List<Pair<Double, Double>> getAnomalousIntervalsForDistribution(RealDistribution d, double threshold) {
 		List<Pair<Double,Double>> anomalousRegions = new ArrayList<>();
 		ShiftedDistribution function = new ShiftedDistribution(d, threshold);
-		anomalousRegions = findIntervalsBelowZero(function, 0.0, d.inverseCumulativeProbability(0.9999));
+		anomalousRegions = findIntervalsBelowZero(function, d.inverseCumulativeProbability(0.00001), d.inverseCumulativeProbability(0.9999));
+//		anomalousRegions = findIntervalsBelowZero(function, 0.0, d.inverseCumulativeProbability(0.9999));
 		return anomalousRegions;
 	}
 		
