@@ -438,7 +438,7 @@ public class IbmToStochasticNetConverter {
 	}
 
 	private static String getNodeName(IbmNode node){
-		return node.getName()+"("+node.getNodeName()+")";
+		return node.getName()+"#"+node.getNodeName();
 	}
 	
 	private static Place getNextPlace(Object element, Petrinet net){
