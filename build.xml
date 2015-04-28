@@ -143,6 +143,7 @@
 							<dependency name="TransitionSystems"/>
 							<dependency name="Widgets"/>
 							<dependency name="BasicUtils"/>
+							<dependency name="ApacheUtils"/>
 						</package>
 					</packages>
 				</echoxml>
