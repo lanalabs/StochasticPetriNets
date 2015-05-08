@@ -40,7 +40,6 @@
 	<classpathentry kind="lib" path="tests/libs-external/cobertura.jar"/>
 	<classpathentry kind="lib" path="tests/libs-external/junit-4.8.1.jar" sourcepath="/home/andi/.m2/repository/junit/junit/4.8.1/junit-4.8.1-sources.jar"/>
 	<classpathentry kind="lib" path="packagelib/PetriNets.jar"/>
-	<classpathentry kind="lib" path="packagelib/PetriNets-lib/exp4j-0.3.8.jar"/>
 	<classpathentry kind="lib" path="packagelib/Widgets.jar"/>
 	<classpathentry kind="lib" path="packagelib/TransitionSystems.jar"/>
 	<classpathentry kind="lib" path="lib/simple-xml-2.7.jar"/>
@@ -59,5 +58,6 @@
 	<classpathentry kind="lib" path="stdlib/jfreechart-1.0.14.jar"/>
 	<classpathentry kind="lib" path="lib/reflections-0.9.9-RC1.jar"/>
 	<classpathentry kind="lib" path="stdlib/commons-math-3.1.jar"/>
+	<classpathentry kind="lib" path="packagelib/ApacheUtils-lib/exp4j-0.3.8.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
