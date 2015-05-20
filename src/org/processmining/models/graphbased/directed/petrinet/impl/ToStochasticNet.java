@@ -40,17 +40,28 @@ public class ToStochasticNet {
 	
 	public static Object[] fromPetriNetExternal(PluginContext context, PetrinetGraph net, Marking marking){
 		StochasticNetImpl newNet = new StochasticNetImpl(net.getLabel());
+		return cloneFromNet(context, net, marking, newNet);
+	}
+
+	public static Object[] asPetriNet(PluginContext context, StochasticNet net, Marking marking){
+		PetrinetImpl newNet = new PetrinetImpl(net.getLabel());
+		return cloneFromNet(context, net, marking, newNet);
+	}
+	
+	protected static Object[] cloneFromNet(PluginContext context, PetrinetGraph net, Marking marking,
+			AbstractResetInhibitorNet newNet) {
 		Map<DirectedGraphElement, DirectedGraphElement> mapping = newNet.cloneFrom(net);
 
 		Marking newMarking = ToResetInhibitorNet.cloneMarking(marking, mapping);
 		
 		if (context != null){
-			context.addConnection(new InitialMarkingConnection(newNet, newMarking));
+			context.addConnection(new InitialMarkingConnection((PetrinetGraph)newNet, newMarking));
 		}
-		
-
 		return new Object[] { newNet, newMarking };
 	}
+	
+	
+	
 	public static Object[] fromStochasticNet(PluginContext context, StochasticNet net, Marking marking){
 		StochasticNetImpl newNet = new StochasticNetImpl(net.getLabel());
 		newNet.setExecutionPolicy(net.getExecutionPolicy());

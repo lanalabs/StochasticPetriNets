@@ -6,6 +6,7 @@ import javax.swing.JPanel;
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.Plugin;
+import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.impl.ToStochasticNet;
@@ -41,5 +42,18 @@ public class ConvertDistributionsPlugin {
 		}
 		Marking marking = StochasticNetUtils.getInitialMarking(context, net);
 		return ToStochasticNet.convertStochasticNetToType(context, net, marking, type);
+	}
+		
+	@Plugin(name = "Remove stochastic information from Petri net", 
+				parameterLabels = { StochasticNet.PARAMETER_LABEL }, 
+				returnLabels = { "Petri net", "Marking" }, 
+				returnTypes = { Petrinet.class, Marking.class }, 
+				userAccessible = true,
+				help = "Creates a new copy of the net stripped of performance data.")
+
+	@UITopiaVariant(affiliation = "Vienna University of Economics and Business", author = "A. Rogge-Solti", email = "andreas.rogge-solti@wu.ac.at", uiLabel = UITopiaVariant.USEPLUGIN)
+	public static Object[] stripStochasticInformation(PluginContext context, StochasticNet net){
+		Marking marking = StochasticNetUtils.getInitialMarking(context, net);
+		return ToStochasticNet.asPetriNet(context, net, marking);
 	}
 }
