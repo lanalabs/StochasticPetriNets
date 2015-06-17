@@ -24,6 +24,7 @@ import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.deckfour.xes.model.impl.XAttributeBooleanImpl;
+import org.deckfour.xes.model.impl.XAttributeContinuousImpl;
 import org.deckfour.xes.model.impl.XAttributeLiteralImpl;
 import org.deckfour.xes.model.impl.XAttributeMapImpl;
 import org.deckfour.xes.model.impl.XAttributeTimestampImpl;
@@ -47,6 +48,7 @@ import org.processmining.plugins.stochasticpetrinet.distribution.GaussianKernelD
 import org.processmining.plugins.stochasticpetrinet.distribution.timeseries.StatefulTimeseriesDistribution;
 import org.utils.datastructures.ComparablePair;
 import org.utils.datastructures.LimitedTreeMap;
+import org.utils.datastructures.Triple;
 
 import com.google.common.collect.SortedMultiset;
 
@@ -66,6 +68,7 @@ public class PNSimulator {
 	public static final String CONCEPT_SIMULATED = "concept:simulated";
 	public static final String CONCEPT_INSTANCE = "concept:instance";
 	public static final String CONCEPT_NAME = "concept:name";
+	public static final String SIMULATED_LOG_PROBABILITY = "simulated:logProbability";
 
 	protected Random random = new Random(new Date().getTime());
 
@@ -95,6 +98,7 @@ public class PNSimulator {
 	
 	/** maps from the prediction time point (long since start of epoch) to a cache storing the predictions for each transition */
 	private org.utils.datastructures.LimitedTreeMap<Integer, Map<Transition, RealDistribution>> cachedDurations;
+	private double logProbabilityOfCurrentTrace;
 
 	public PNSimulator(){
 		transitionRemainingTimes = new HashMap<Transition, Long>();
@@ -186,6 +190,7 @@ public class PNSimulator {
 					semantics.initialize(petriNet.getTransitions(), initialMarking);
 					
 					XTrace trace = (XTrace) simulateOneTrace(petriNet, semantics, config, initialMarking, traceStart.getTime(), traceStart.getTime(), i, false, finalMarking);
+					trace.getAttributes().put(SIMULATED_LOG_PROBABILITY, new XAttributeContinuousImpl(SIMULATED_LOG_PROBABILITY, this.logProbabilityOfCurrentTrace));
 					log.add(trace);
 				}
 			} else {
@@ -194,8 +199,8 @@ public class PNSimulator {
 				long time = System.currentTimeMillis();
 				
 				XTrace trace = createTrace(1, config);
-				LinkedList<Pair<Pair<XTrace,Marking>,Long>> statesToVisit = new LinkedList<Pair<Pair<XTrace,Marking>,Long>>();
-				statesToVisit.add(new Pair<Pair<XTrace, Marking>,Long>(new Pair<XTrace,Marking>(trace, initialMarking),time));
+				LinkedList<Triple<XTrace, Marking, Long>> statesToVisit = new LinkedList<>();
+				statesToVisit.add(new Triple<>(trace, initialMarking,time));
 				semantics.initialize(petriNet.getTransitions(), initialMarking);
 				Marking endPlaces = getEndPlaces(petriNet);
 				if (petriNet.getLabel().equals("s00000633##s00004419")){
@@ -222,15 +227,14 @@ public class PNSimulator {
 		return endPlaces;
 	}
 
-	protected void addAllDifferentTracesToLog(XLog log, LinkedList<Pair<Pair<XTrace, Marking>,Long>> statesToVisit,
+	protected void addAllDifferentTracesToLog(XLog log, LinkedList<Triple<XTrace, Marking,Long>> statesToVisit,
 			Semantics<Marking, Transition> semantics, Map<String,Set<Integer>> numberOfDecisionTransitions, PNSimulatorConfig config, Marking endPlaces) {
 		
 		while (!statesToVisit.isEmpty()){
-			Pair<Pair<XTrace, Marking>,Long> currentStateWithTime = statesToVisit.removeFirst();
-			Pair<XTrace, Marking> currentState = currentStateWithTime.getFirst();
-			long time = currentStateWithTime.getSecond();
-			XTrace prefix = currentState.getFirst();
-			Marking currentMarking = currentState.getSecond();
+			Triple<XTrace, Marking, Long> currentStateWithTime = statesToVisit.removeFirst();
+			XTrace prefix = currentStateWithTime.getFirst();
+			Marking currentMarking = currentStateWithTime.getSecond();
+			long time = currentStateWithTime.getThird();
 			
 //			if (prefix.size() > config.maxEventsInOneTrace*10){
 //				throw new IllegalArgumentException("Petri net contains a potential lifelock!");
@@ -260,6 +264,8 @@ public class PNSimulator {
 				if (executableTransitions.size() == 0){
 					throw new IllegalArgumentException("Petri net contains a deadlock!");
 				}
+				Map<Transition, Double> transitionProbabilities = getTransitionProbabilities(executableTransitions, semantics);
+				
 				for (Transition t : executableTransitions){
 //					String markingTransitionCombination = currentMarking.toString()+"_"+t.getLabel()+t.getId();
 //					if (!numberOfDecisionTransitions.containsKey(markingTransitionCombination)){
@@ -273,8 +279,10 @@ public class PNSimulator {
 							numberOfTimesAlreadyInTrace++;
 						}
 					}
-					
-					if (numberOfTimesAlreadyInTrace >= 2){
+					// TODO: deal with very large state spaces!!
+					// sampling needs some correction mechanism (maybe use LoLA to estimate state space)
+					// should be able to use that information in a smart way.
+					if (numberOfTimesAlreadyInTrace >= 20){
 						// old version: numberOfDecisionTransitions.get(markingTransitionCombination).size() > 5
 						
 						// do not explore this transition further...
@@ -282,6 +290,7 @@ public class PNSimulator {
 //						numberOfDecisionTransitions.get(markingTransitionCombination).add(prefix.size());
 						semantics.setCurrentState(currentMarking);
 						XTrace clone = (XTrace) prefix.clone();
+						StochasticNetUtils.updateLogProbability(clone, Math.log(transitionProbabilities.get(t)));
 						if (!t.isInvisible()){
 							if (!prefix.isEmpty()){
 								long lastEventTime = XTimeExtension.instance().extractTimestamp(prefix.get(prefix.size()-1)).getTime();
@@ -304,11 +313,74 @@ public class PNSimulator {
 						} catch (IllegalTransitionException e1) {
 							e1.printStackTrace();
 						}
-						statesToVisit.addLast(new Pair<Pair<XTrace,Marking>,Long>(new Pair<XTrace, Marking>(clone, semantics.getCurrentState()),time));
+						statesToVisit.addLast(new Triple<XTrace,Marking,Long>(clone, semantics.getCurrentState(),time));
 					}
 				}
 			}
 		}
+	}
+
+	/**
+	 * Retrieves the transition probabilities (normalized (sums to one) -> one must be chosen).
+	 * Only considers these cases:
+	 * <ol>
+	 * <li> no timed transitions: uniform choice </li>
+	 * <li> mixed transitions: unrealistic case uniform choice </li>
+	 * <li> only timed transitions:
+	 *    <ul>
+	 *      <li><b>only immediate transitions:</b> weight ratio </li>
+	 *      <li><b>only timed transitions:</b> wiring rate ratio </li>
+	 *      <li><b>immediate and timed transitions:</b> only immediate are allowed to fire!<br>
+	 *       immediate transitions -> weight ratio <br>
+	 *       timed transitions -> 0</li>
+	 *    </ul>
+	 *   </li>
+	 * </ol>
+	 * 
+	 * @param executableTransitions collection of transitions
+	 * @param semantics {@link Semantics}
+	 * @return 
+	 */
+	private Map<Transition, Double> getTransitionProbabilities(Collection<Transition> transitions, Semantics<Marking,Transition> semantics) {
+		Map<Transition, Double> transitionProbabilities = new HashMap<>();
+		// default: equal probabilities
+		for (Transition transition : transitions){
+			transitionProbabilities.put(transition, 1./transitions.size());
+		}
+		
+		if (transitionsContainTimingInfo(transitions)){
+			// sanity check of the semantics, to make sure that only immediate transitions, or timed transitions are competing for the right to fire next!
+			boolean allImmediate = getOnlyImmediateTransitions(transitions, true);
+			boolean allTimed = getOnlyImmediateTransitions(transitions, false);
+			
+			Pair<Double,Double> cumulativeWeightAndRate = getCumulativeWeightAndRate(transitions); 
+			
+			if (allImmediate){
+				for (Transition t : transitions){
+					transitionProbabilities.put(t, StochasticNetUtils.getWeight(t) / cumulativeWeightAndRate.getFirst());
+				}
+			} else if (allTimed){
+				for (Transition t : transitions){
+					transitionProbabilities.put(t, StochasticNetUtils.getFiringRate(t) / cumulativeWeightAndRate.getFirst());
+				}
+			} else { // mixed -> should not be the case, as semantics should take care of this case and not return both as executable!  
+				System.out.println("Debug me: why are mixed (immediate/timed) transitions here?");
+			}
+		} 
+		return transitionProbabilities;
+	}
+
+	private Pair<Double, Double> getCumulativeWeightAndRate(Collection<Transition> transitions) {
+		double cumulativeWeight = 0;
+		double cumulativeRate = 0;
+		
+		for (Transition t : transitions){
+			if(t instanceof TimedTransition){
+				cumulativeWeight += ((TimedTransition) t).getWeight();
+				cumulativeRate += 1./((TimedTransition) t).getDistribution().getNumericalMean();
+			}
+		}
+		return new Pair<>(cumulativeWeight, cumulativeRate);
 	}
 
 	protected boolean isOneBounded(Marking currentMarking) {
@@ -345,11 +417,13 @@ public class PNSimulator {
 		Collection<Transition> transitions = semantics.getExecutableTransitions();
 		int eventsProduced = 0;
 
+		this.logProbabilityOfCurrentTrace = 0;
+		
 		Marking currentMarking = semantics.getCurrentState();
 		while (transitions.size() > 0 && eventsProduced++ < config.maxEventsInOneTrace && !currentMarking.equals(finalMarking)) {
 //			System.out.println("events produced: "+eventsProduced);
 			try {
-				Pair<Transition, Long> transitionAndDuration = pickTransition(semantics, transitions, petriNet, config, lastFiringTime, constraint, useTimeConstraint);
+				Triple<Transition, Long, Double> transitionAndDuration = pickTransition(semantics, transitions, petriNet, config, lastFiringTime, constraint, useTimeConstraint);
 				long firingTime = lastFiringTime+transitionRemainingTimes.get(transitionAndDuration.getFirst());
 				
 				// fire first transition the list:
@@ -372,7 +446,7 @@ public class PNSimulator {
 					}
 				}
 				insertEvent(i, trace, transitionAndDuration, firingTime, config);
-				
+				this.logProbabilityOfCurrentTrace += Math.log(transitionAndDuration.getThird());
 				// before proceeding with the next transition, we update the enabled transitions: 
 				transitions = afterwardsEnabledTransitions;
 				currentMarking = semantics.getCurrentState();
@@ -383,8 +457,11 @@ public class PNSimulator {
 		}
 		return getReturnObject(trace,lastFiringTime, config);
 	}
+	public double getLogProbabilityOfLastTrace(){
+		return this.logProbabilityOfCurrentTrace;
+	}
 
-	protected Object getReturnObject(XTrace trace, long lastFiringTime2, PNSimulatorConfig config) {
+	protected Object getReturnObject(XTrace trace, long lastFiringTime, PNSimulatorConfig config) {
 		if (config.simulateTraceless){
 			return lastFiringTime;
 		} else {
@@ -403,7 +480,7 @@ public class PNSimulator {
 		}
 	}
 
-	protected void insertEvent(int i, XTrace trace, Pair<Transition, Long> transitionAndDuration, long firingTime, PNSimulatorConfig config) {
+	protected void insertEvent(int i, XTrace trace, Triple<Transition, Long, Double> transitionAndDuration, long firingTime, PNSimulatorConfig config) {
 		if (config.simulateTraceless){
 			// do nothing
 		} else if (!transitionAndDuration.getFirst().isInvisible()){
@@ -413,7 +490,7 @@ public class PNSimulator {
 	}
 	
 	public void updateTransitionMemoriesAfterFiring(PNSimulatorConfig config, Collection<Transition> transitionsEnabledInMarking,
-			Pair<Transition, Long> transitionAndDuration, long elapsedTimeInCurrentMarking, Collection<Transition> afterwardsEnabledTransitions, Semantics<Marking,Transition> semantics) {
+			Triple<Transition, Long, Double> transitionAndDuration, long elapsedTimeInCurrentMarking, Collection<Transition> afterwardsEnabledTransitions, Semantics<Marking,Transition> semantics) {
 		transitionRemainingTimes.remove(transitionAndDuration.getFirst());
 		switch (config.executionPolicy) {
 			case GLOBAL_PRESELECTION :
@@ -682,7 +759,7 @@ public class PNSimulator {
  	 * 
  	 * @return The transition that is picked as the next one to fire with its duration in the current marking 
 	 */
-	protected Pair<Transition, Long> pickTransition(Semantics<Marking,Transition> semantics, Collection<Transition> transitions, PetrinetGraph petriNet, PNSimulatorConfig config, long startOfTransition, long constraint, boolean usePositiveTimeContraint) {
+	protected Triple<Transition, Long, Double> pickTransition(Semantics<Marking,Transition> semantics, Collection<Transition> transitions, PetrinetGraph petriNet, PNSimulatorConfig config, long startOfTransition, long constraint, boolean usePositiveTimeContraint) {
 		if (petriNet instanceof StochasticNet && transitionsContainTimingInfo(transitions)){
 			// sanity check of the semantics, to make sure that only immediate transitions, or timed transitions are competing for the right to fire next!
 			boolean allImmediate = getOnlyImmediateTransitions(transitions, true);
@@ -691,23 +768,30 @@ public class PNSimulator {
 			
 			// either transitions are all immediate -> pick one randomly according to their relative weights... 
 			if (allImmediate){
-				int index = pickTransitionAccordingToWeights(transitions, new Date(constraint), semantics);
-				Transition t = getTransitionWithIndex(transitions,index);
+				Pair<Integer, Double> indexAndProbability = pickTransitionAccordingToWeights(transitions, new Date(constraint), semantics);
+				Transition t = getTransitionWithIndex(transitions,indexAndProbability.getFirst());
 				transitionRemainingTimes.put(t,0l);
-				return new Pair<Transition, Long>(t, 0l);
+				return new Triple<Transition, Long, Double>(t, 0l, indexAndProbability.getSecond());
 			} // or they are all timed -> pick according to firing semantics...
 			else if (allTimed){
+				double probability = 1;
 				// select according to selection policy:
 				if (config.executionPolicy.equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
-					int index = pickTransitionAccordingToWeights(transitions, new Date(constraint), semantics);
+					Pair<Integer, Double> indexAndProbability = pickTransitionAccordingToWeights(transitions, new Date(constraint), semantics);
 					// restrict the set of enabled transitions to the randomly picked one:
-					Transition t = getTransitionWithIndex(transitions,index);
+					Transition t = getTransitionWithIndex(transitions,indexAndProbability.getFirst());
 					transitions = new LinkedList<Transition>();
 					transitions.add(t);
+					probability = indexAndProbability.getSecond();
 				}
+				
+				// compute mean durations (indirectly proportional to firing rates) and assume exponential distributions for computing the probability (we don't want to do costly integration now)
+				double cumulativeRates = 0;
+				
 				// select according to race policy:
 				// they are all timed: (truly concurrent or racing for shared tokens)
-				SortedMap<Long,Transition> times = new TreeMap<Long, Transition>();
+				SortedMap<Long,Transition> times = new TreeMap<>();
+				Map<Transition, Double> firingRates = new HashMap<>();
 				for (Transition transition :transitions){
 					if (usePositiveTimeContraint){
 						// calculate minimum transition time that is necessary for transition to be satisfying the constraint (resulting in time bigger than traceStart)
@@ -732,9 +816,14 @@ public class PNSimulator {
 						// only allow positive durations:
 						times.put(getTransitionRemainingTime(transition, config.unitFactor, startOfTransition, 0), transition);
 					}
+					double rate = getFiringrate(transition);
+					firingRates.put(transition, rate);
+					cumulativeRates += rate;
+					
 				}
 				Transition nextTransition = times.get(times.firstKey());
-				return new Pair<Transition, Long>(nextTransition, transitionRemainingTimes.get(nextTransition));
+				probability *= firingRates.get(nextTransition) / cumulativeRates;
+				return new Triple<Transition, Long, Double>(nextTransition, transitionRemainingTimes.get(nextTransition), probability);
 			} else {
 				// semantics should make sure, that only the transitions of the highest priority are enabled in the current marking!
 				throw new IllegalArgumentException("Stochastic semantics bug! There should either be only immediate or only timed activities enabled!");
@@ -743,8 +832,17 @@ public class PNSimulator {
 			// pick randomly:
 			int randomPick = random.nextInt(transitions.size());
 			Transition t = getTransitionWithIndex(transitions, randomPick);
-			return new Pair<Transition, Long>(t,getTransitionRemainingTime(t,config.unitFactor, startOfTransition, 0));
+			return new Triple<Transition, Long, Double>(t,getTransitionRemainingTime(t,config.unitFactor, startOfTransition, 0), 1.0/transitions.size());
 		}
+	}
+
+	private double getFiringrate(Transition transition) {
+		double rate = 1.;
+		if (transition instanceof TimedTransition){
+			TimedTransition tt = (TimedTransition) transition;
+			rate = 1.0 / tt.getDistribution().getNumericalMean(); 
+		}
+		return rate;
 	}
 
 	protected boolean transitionsContainTimingInfo(Collection<Transition> transitions) {
@@ -777,8 +875,9 @@ public class PNSimulator {
 		return allSame;
 	}
 
-	public int pickTransitionAccordingToWeights(Collection<Transition> transitions, Date currentTime, Semantics<Marking, Transition> semantics) {
+	public Pair<Integer, Double> pickTransitionAccordingToWeights(Collection<Transition> transitions, Date currentTime, Semantics<Marking, Transition> semantics) {
 		double[] weights = new double[transitions.size()];
+		double cumulativeWeights = 0;
 		int i = 0;
 		for (Transition transition : transitions){
 			TimedTransition tt = (TimedTransition) transition;
@@ -789,9 +888,11 @@ public class PNSimulator {
 				weight = tt.getWeight();
 			}
 			weights[i++] = weight;
+			cumulativeWeights += weight;
 		}
 		int index = StochasticNetUtils.getRandomIndex(weights, random);
-		return index;
+		double probability = weights[index] / cumulativeWeights;
+		return new Pair<Integer,Double>(index,probability);
 	}
 
 	protected Transition getTransitionWithIndex(Collection<Transition> transitions, int index) {

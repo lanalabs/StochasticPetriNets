@@ -50,14 +50,19 @@ public class EntropyCalculatorExact extends AbstractEntropyCalculator{
 		
 		for (XTrace trace : simulatedLog){
 			Outcome o = new Outcome(trace, level, eventClasses, encoding);
+			double probability = Math.exp(StochasticNetUtils.getLogProbability(trace));
 			if (!outcomesAndCounts.containsKey(o)){
-				outcomesAndCounts.put(o, 1.);
+				outcomesAndCounts.put(o, probability);
 			} else {
-				outcomesAndCounts.put(o, outcomesAndCounts.get(o)+1);
+				outcomesAndCounts.put(o, outcomesAndCounts.get(o)+probability);
 			}
 		}
 		
 		return outcomesAndCounts;
+	}
+
+	protected String getNameInfo() {
+		return "exact";
 	}
 
 

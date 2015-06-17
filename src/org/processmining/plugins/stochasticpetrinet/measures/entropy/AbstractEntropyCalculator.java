@@ -20,7 +20,7 @@ public abstract class AbstractEntropyCalculator  implements MeasureProvider<Entr
 		for (Double count : outcomesAndCounts.values()){
 			sumOfCounts += count;
 		}
-		EntropyMeasure measure = new EntropyMeasure(level);
+		EntropyMeasure measure = new EntropyMeasure(level, getNameInfo());
 		
 		double value = 0;
 		for (Double count : outcomesAndCounts.values()){
@@ -30,6 +30,8 @@ public abstract class AbstractEntropyCalculator  implements MeasureProvider<Entr
 		measure.setValue(value);
 		return measure;
 	}
+
+	protected abstract String getNameInfo();
 
 	public void setAbstractionLevel(AbstractionLevel level) {
 		this.level = level;

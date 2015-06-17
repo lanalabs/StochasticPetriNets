@@ -21,6 +21,8 @@ public class PerformanceEnricherConfig {
 	
 	private boolean collectingLoadData;
 	
+	private TimeConstraints constraints;
+	
 	public PerformanceEnricherConfig(DistributionType distType, TimeUnit timeUnit, ExecutionPolicy executionPolicy, File correlationMatrixFile){
 		this(distType,timeUnit,executionPolicy,correlationMatrixFile, true);
 	}
@@ -76,4 +78,13 @@ public class PerformanceEnricherConfig {
 	public void setCollectingLoadData(boolean collectingLoadData) {
 		this.collectingLoadData = collectingLoadData;
 	}
+
+	public TimeConstraints getConstraints() {
+		return constraints;
+	}
+
+	public void setConstraints(TimeConstraints constraints) {
+		this.constraints = constraints;
+	}
+	
 }

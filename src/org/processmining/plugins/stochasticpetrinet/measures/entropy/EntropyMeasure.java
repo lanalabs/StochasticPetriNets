@@ -10,12 +10,15 @@ public class EntropyMeasure extends AbstractMeasure<Double>{
 
 	private AbstractionLevel level;
 	
-	public EntropyMeasure(AbstractionLevel level){
+	private String info;
+	
+	public EntropyMeasure(AbstractionLevel level, String info){
 		this.level = level;
+		this.info = info;
 	}
 	
 	public String getName() {
-		return "Entropy "+level.getName();
+		return "Entropy "+level.getName()+"("+info+")";
 	}
 	
 }

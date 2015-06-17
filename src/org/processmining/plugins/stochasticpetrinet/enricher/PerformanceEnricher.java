@@ -1,5 +1,7 @@
 package org.processmining.plugins.stochasticpetrinet.enricher;
 
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
 import java.util.Arrays;
@@ -13,6 +15,7 @@ import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
 
+import javax.swing.JButton;
 import javax.swing.JComboBox;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
@@ -74,7 +77,7 @@ public class PerformanceEnricher {
 	
 	public Object[] transform(PluginContext context, Manifest manifest){
 		// ask for preferences:
-		PerformanceEnricherConfig mineConfig = getTypeOfDistributionForNet(context);
+		PerformanceEnricherConfig mineConfig = getTypeOfDistributionForNet(context, manifest.getNet());
 		try {
 			if (mineConfig != null){
 				return transform(context, manifest, mineConfig);
@@ -362,8 +365,12 @@ public class PerformanceEnricher {
 		return message;
 	}
 
-	public static PerformanceEnricherConfig getTypeOfDistributionForNet(PluginContext context) {
+	public static PerformanceEnricherConfig getTypeOfDistributionForNet(final PluginContext context, PetrinetGraph net) {
 		ProMPropertiesPanel panel = new ProMPropertiesPanel("Stochastic Net properties:");
+		
+		final TimeConstraintsPanel constraintPanel = getConstraintPanel(net);
+		final TimeConstraints constraints = new TimeConstraints();
+		
 		DistributionType[] supportedTypes = new DistributionType[]{DistributionType.NORMAL, DistributionType.LOGNORMAL, DistributionType.EXPONENTIAL, DistributionType.GAUSSIAN_KERNEL, DistributionType.BERNSTEIN_EXPOLYNOMIAL,DistributionType.HISTOGRAM};
 		if (StochasticNetUtils.splinesSupported()){
 			supportedTypes = Arrays.copyOf(supportedTypes, supportedTypes.length+1);
@@ -375,6 +382,19 @@ public class PerformanceEnricher {
 		}
 		JComboBox distTypeSelection = panel.addComboBox("Type of distributions", supportedTypes);
 		JComboBox timeUnitSelection = panel.addComboBox("Time unit in model", TimeUnit.values());
+		JButton advancedTimeConstraintButton = new JButton("advanced settings");
+		advancedTimeConstraintButton.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				InteractionResult result = ((UIPluginContext) context).showConfiguration("Advanced time settings", constraintPanel);
+				if (result.equals(InteractionResult.CANCEL)){
+					// do nothing
+				} else {
+					constraintPanel.updateConstraints(constraints);
+				}
+				
+			}
+		});
+		panel.add("", advancedTimeConstraintButton);
 		JComboBox executionPolicySelection = panel.addComboBox("Execution policy", StochasticNet.ExecutionPolicy.values());
 		ProMTextField correlationFileField = panel.addTextField("Correlation Matrix Output", "");
 		if (context instanceof UIPluginContext){
@@ -404,6 +424,10 @@ public class PerformanceEnricher {
 		} else {
 			return null;
 		}
+	}
+
+	private static TimeConstraintsPanel getConstraintPanel(PetrinetGraph net) {
+		return new TimeConstraintsPanel("Temporal Constraints for the Enrichment", net);
 	}
 
 	private boolean containsOnlyZeros(List<Double> transitionStats) {

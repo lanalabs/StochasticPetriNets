@@ -68,4 +68,8 @@ public class EntropyCalculatorApproximate extends AbstractEntropyCalculator {
 	public void setN(int n){
 		this.n = n;
 	}
+
+	protected String getNameInfo() {
+		return "approximate";
+	}
 }

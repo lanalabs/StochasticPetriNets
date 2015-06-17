@@ -47,6 +47,7 @@ import org.deckfour.xes.model.XAttributeMap;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
+import org.deckfour.xes.model.impl.XAttributeContinuousImpl;
 import org.deckfour.xes.model.impl.XTraceImpl;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
@@ -93,6 +94,7 @@ import org.processmining.plugins.stochasticpetrinet.distribution.RProvider;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.TruncatedDistributionFactory;
 import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
+import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.rosuda.JRI.Rengine;
 import org.utils.datastructures.ComparablePair;
 
@@ -1079,6 +1081,62 @@ public class StochasticNetUtils {
 		}
 		return stats.getMean();
 	}
+
+	/**
+	 * The log of probability values is always less than or equal to zero.
+	 * This method updates the probability of a trace by adding the log probabilities.
+	 * That is, the probabilities get multiplied with each new event that occurred for the trace.
+	 * @param trace {@link XTrace} trace that stores the log-probability value in an attribute.
+	 * @param logProbability
+	 */
+	public static void updateLogProbability(XTrace trace, double logProbability){
+		if (!trace.getAttributes().containsKey(PNSimulator.SIMULATED_LOG_PROBABILITY)){
+			trace.getAttributes().put(PNSimulator.SIMULATED_LOG_PROBABILITY, new XAttributeContinuousImpl(PNSimulator.SIMULATED_LOG_PROBABILITY, logProbability));
+		} else {
+			double val =  ((XAttributeContinuousImpl)trace.getAttributes().get(PNSimulator.SIMULATED_LOG_PROBABILITY)).getValue();
+			((XAttributeContinuousImpl)trace.getAttributes().get(PNSimulator.SIMULATED_LOG_PROBABILITY)).setValue(val+logProbability);
+		}
+	}
+	/**
+	 * Retrieves the log-probability of a trace that is stored in its attributes.
+	 * @param trace
+	 * @return
+	 */
+	public static double getLogProbability(XTrace trace){
+		if (!trace.getAttributes().containsKey(PNSimulator.SIMULATED_LOG_PROBABILITY)){
+			return 0; // the zero corresponds to a probability of 1 (the default value.
+		} else {
+			return ((XAttributeContinuousImpl)trace.getAttributes().get(PNSimulator.SIMULATED_LOG_PROBABILITY)).getValue();
+		}
+	}
+	
+	/**
+	 * Returns the weight of a transition. 
+	 * By default a transition has a weight of one.
+	 * @param transition
+	 * @return
+	 */
+	public static double getWeight(Transition transition){
+		if (transition instanceof TimedTransition){
+			return ((TimedTransition) transition).getWeight();
+		} 
+		return 1.0;
+	}
+	
+	public static double getFiringRate(Transition transition){
+		if (transition instanceof TimedTransition){
+			TimedTransition tt = (TimedTransition) transition;
+			if (tt.getDistributionType().equals(DistributionType.IMMEDIATE)){
+				System.out.println("Debug me: Should not ask for the rate of an immediate transition!");
+			} 
+			if (tt.getDistribution() != null){
+				return 1./tt.getDistribution().getNumericalMean();
+			}
+		}
+		// by default return 1:
+		return 1;
+	}
+	
 	
 	public static XLog getSortedLog(XLog unsortedLog) {
 		SortedMultiset<ComparablePair<Long, XTrace>> sortedTracesByStartTime = TreeMultiset.<ComparablePair<Long,XTrace>>create();

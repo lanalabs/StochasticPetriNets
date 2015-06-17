@@ -14,6 +14,7 @@ import java.util.TreeSet;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
@@ -673,17 +674,20 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 		return timeseries;
 	}
 
-	public int pickTransitionAccordingToWeights(Collection<Transition> transitions, Date currentTime, Semantics<Marking, Transition> semantics) {
+	public Pair<Integer, Double> pickTransitionAccordingToWeights(Collection<Transition> transitions, Date currentTime, Semantics<Marking, Transition> semantics) {
 		if (semantics instanceof EfficientStochasticNetSemanticsImpl){
 			EfficientStochasticNetSemanticsImpl effiSemantics = (EfficientStochasticNetSemanticsImpl) semantics;
 			Map<Transition, Double> transitionProbabilities = getTransitionProbabilities(currentTime, 1, transitions, effiSemantics);	
 			double[] probabilities = new double[transitionProbabilities.size()];
+			double cumulativeProbabilities = 0;
 			int i = 0;
 			for (Transition t : transitions){
 				probabilities[i] = transitionProbabilities.get(t);
+				cumulativeProbabilities += probabilities[i]; 
 				i++;
 			}
-			return StochasticNetUtils.getRandomIndex(probabilities, random);
+			int index = StochasticNetUtils.getRandomIndex(probabilities, random);
+			return new Pair<Integer, Double>(index, probabilities[index] / cumulativeProbabilities);
 		} else {
 			throw new RuntimeException("Please make sure to use the EfficientStochasticNetSemanticsImpl for time series prediction!");
 		}
