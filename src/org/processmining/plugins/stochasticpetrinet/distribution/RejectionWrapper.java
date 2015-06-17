@@ -21,7 +21,7 @@ public class RejectionWrapper extends AnotherAbstractRealDistribution{
 	/** the constraint, such that the distribution is truncated below this constraint */
 	protected double constraint;
 	/** scaling function, such that the truncated distribution will integrate to 1 */
-	protected double scale;
+	protected double scale = Double.NaN;
 
 	public RejectionWrapper(RealDistribution dist){
 		this(dist,0);
@@ -29,18 +29,23 @@ public class RejectionWrapper extends AnotherAbstractRealDistribution{
 	public RejectionWrapper(RealDistribution dist, double constraint){
 		this.wrappedDist = dist;
 		this.constraint = constraint;
-		// rescale the density, such that it integrates to 1:
-		this.scale = 1.0/(1.0-wrappedDist.cumulativeProbability(constraint));
 	}
 	
 	public double density(double x) {
 		if (x < constraint){
 			return 0;
 		} else {
-			return scale * wrappedDist.density(x);
+			return getScale() * wrappedDist.density(x);
 		}
 	}
 	
+	private double getScale() {
+		if (Double.isNaN(scale)){
+			// rescale the density, such that it integrates to 1:
+			this.scale = 1.0/(1.0-wrappedDist.cumulativeProbability(constraint));
+		}
+		return scale;
+	}
 	public double getSupportLowerBound() {
 		return constraint > wrappedDist.getSupportLowerBound()?constraint:wrappedDist.getSupportLowerBound();
 	}

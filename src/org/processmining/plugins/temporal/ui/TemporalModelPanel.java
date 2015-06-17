@@ -22,12 +22,13 @@ import org.processmining.plugins.temporal.model.TemporalModel;
 import org.processmining.plugins.temporal.model.TemporalNode;
 
 public class TemporalModelPanel extends JPanel{
+	private static final long serialVersionUID = -5125356835996951952L;
 	
 	private static final int NODE_SIZE = 20;
 	private Map<TemporalNode, Point2D.Double> nodePositions;
 	private Map<TemporalNode, Point2D.Double> nodeInertias;
 	
-	private static final double NORMAL_DISTANCE = 30;
+	private static final double NORMAL_DISTANCE = 2*NODE_SIZE;
 	
 	private double maxDist;
 	
@@ -75,18 +76,19 @@ public class TemporalModelPanel extends JPanel{
 		}
 			
 		public void run() {
-			while(panel.isVisible() && counter++ < 1000){
+			boolean changed = true;
+			while(panel.isVisible() && counter++ < 1000 && changed){
 				try {
 					if (panel.isPaused()){
 						Thread.sleep(10000);
 					} else {
-						panel.updatePositions();
+						changed = panel.updatePositions();
 						Thread.sleep(5);
 					}
 				} catch (InterruptedException e) {
 				}
 			}
-			panel.setPaused(true);
+			System.out.println("finished Layouting after "+counter+" iterations.");
 		}
 	}
 	
@@ -149,24 +151,37 @@ public class TemporalModelPanel extends JPanel{
 		}
 	}
 
-	private void initPositions(){
+	public void initPositions(){
 		// assign positions randomly to nodes:
 		for (TemporalNode node : model.getNodes().values()){
-			nodePositions.put(node, new Point2D.Double(random.nextDouble()*WIDTH, random.nextDouble()*HEIGHT));
+			if (node.getEventClass().equals(TemporalModel.START_CLASS)){
+				// the start node is fixed.
+				nodePositions.put(node, new Point2D.Double(NODE_SIZE, HEIGHT/2));
+			} else {
+				nodePositions.put(node, new Point2D.Double(random.nextDouble()*WIDTH, random.nextDouble()*HEIGHT));
+			}
 			nodeInertias.put(node, new Point2D.Double(0,0));
+			
 		}
+		revalidate();
+		repaint();
 	}
 
 	public void paint(Graphics g) {
 		super.paint(g);
 		Graphics2D g2 = (Graphics2D) g;
+		g2.setColor(Color.WHITE);
+		g2.fillRect(0, 0, WIDTH, HEIGHT);
 		// draw nodes:
 		for (TemporalNode node : nodePositions.keySet()){
 			int i = position.get(node);
 			for (TemporalNode target : nodePositions.keySet()){
 				int j = position.get(target);
-				if (forceMatrix[i][j] != 0){
+				if (i<j && forceMatrix[i][j] > 0){
 					drawArrow(g2, node, target, weightMatrix[i][j]);
+				}
+				if (i>j && forceMatrix[i][j] < 0){
+					drawArrow(g2, target, node, weightMatrix[i][j]);
 				}
 			}
 				
@@ -178,22 +193,28 @@ public class TemporalModelPanel extends JPanel{
 		Double position = nodePositions.get(node);
 		Double targetPosition = nodePositions.get(target);
 		g2.setStroke(new BasicStroke((float)(d*2)));
-		g2.setColor(Color.gray);
+		g2.setColor(Color.getHSBColor(0f, 0f, (float)(1-d)));
 		g2.drawLine((int)position.x, (int)position.y, (int)targetPosition.x, (int)targetPosition.y);
 		g2.drawOval((int)(targetPosition.x-(targetPosition.x-position.x)*0.05), (int)(targetPosition.y-(targetPosition.y-position.y)*0.05), 3, 3);
 		g2.setStroke(new BasicStroke(1));
 	}
 
-	public void updatePositions(){
+	/**
+	 * Updates all positions of the nodes according to the temporal forces 
+	 * @return whether the positions changed
+	 */
+	public boolean updatePositions(){
 		double scale = (NORMAL_DISTANCE * zoom) / maxDist ;
-		double dampening = 0.01;
+		double dampening = 0.1;
 		
 		int startNodeIndex = position.get(model.getStartNode());
+		
+		boolean changed = false;
 		
 		for (TemporalNode node : model.getNodes().values()){
 			int i = position.get(node);
 			Point2D.Double pos = nodePositions.get(node);
-			
+			Point2D.Double oldPos = new Point2D.Double(pos.x,pos.y);
 			Point2D.Double force = new Point2D.Double(0, 0);
 			
 			
@@ -201,6 +222,10 @@ public class TemporalModelPanel extends JPanel{
 			if (node.getEventClass().equals(TemporalModel.START_CLASS)){
 				pos.setLocation(NODE_SIZE, HEIGHT/2); // the start node is fixed.
 			} else {
+				// add force to relative position on the x-axis
+				double idealXPos = model.getRelativePositionInTrace(node)*WIDTH;
+				force.setLocation((idealXPos - pos.getX()), 0);
+				
 				// add force from neighboring nodes
 				for (TemporalNode previousNode : model.getNodes().values()){
 					int j = position.get(previousNode);
@@ -209,17 +234,25 @@ public class TemporalModelPanel extends JPanel{
 						double dist = predecessorPos.distance(pos);
 						
 						double rawForce = (forceMatrix[j][i] * weightMatrix[j][i] - forceMatrix[i][j] * weightMatrix[i][j]) ;
-						
-						double idealDist = Math.max(NORMAL_DISTANCE, scale * rawForce);
-						
+
+						double idealDist = dist;
+						if (Math.abs(rawForce) < 0.01){
+							// no force to be applied, unless...
+							if (dist < NORMAL_DISTANCE){
+								// push away a bit
+								idealDist = NORMAL_DISTANCE;
+							}
+						} else {
+							idealDist = Math.max(NORMAL_DISTANCE, scale * rawForce);
+						}
 	//					System.out.println("idealDist of node "+node.getName()+" to predecessor node "+previousNode.getName()+": "+idealDist+" (dist: "+dist+")");
 						
 						double newForce = (idealDist - dist)/idealDist;
-						if (newForce <-0.5){
-							newForce = -0.5;
+						if (newForce <-5){
+							newForce = -5;
 						}
-						if (newForce > 2){
-								newForce = 2;
+						if (newForce > 5){
+								newForce = 5;
 						}
 						Point2D.Double vector = new Point2D.Double(pos.x-predecessorPos.x, pos.y-predecessorPos.y);
 						
@@ -235,7 +268,7 @@ public class TemporalModelPanel extends JPanel{
 				Point2D.Double targetPosition = new Point2D.Double(relativePointInTime*WIDTH, 0.5*HEIGHT);
 				
 				Point2D.Double timeVector = new Point2D.Double(targetPosition.x-pos.x, targetPosition.y -pos.y);
-				force.setLocation(force.x+timeVector.x*0.1, force.y+timeVector.y*0.1);
+				force.setLocation(force.x+timeVector.x*0.9, force.y+timeVector.y*0.01);
 				
 				
 				// update inertia by adding the force
@@ -243,11 +276,18 @@ public class TemporalModelPanel extends JPanel{
 				inertia.setLocation((inertia.x+force.x) * dampening, (inertia.y+force.y)*dampening);
 				
 				pos.setLocation(pos.x+inertia.x, pos.y+inertia.y);
+//				if (model.getLatestNode().equals(node)){
+//					pos.setLocation(idealXPos, pos.y);
+//				}
+			}
+			if (oldPos.distance(pos) > 0.001){
+				changed = true;
 			}
 			
 		}
 		this.invalidate();
 		this.repaint();
+		return changed;
 	}
 
 	private void drawNode(Graphics2D g2, TemporalNode node) {
@@ -272,13 +312,10 @@ public class TemporalModelPanel extends JPanel{
 		return paused;
 	}
 	
-	public void setPaused(boolean paused) {
-		if (!paused){
-			UpdateThread updater = new UpdateThread(this);
-			updateThread = new Thread(updater);
-			updateThread.start();
-		}
-		this.paused = paused;
+	public void runLayout() {
+		UpdateThread updater = new UpdateThread(this);
+		updateThread = new Thread(updater);
+		updateThread.start();
 	}
 
 }

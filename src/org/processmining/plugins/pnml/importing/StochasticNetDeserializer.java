@@ -46,6 +46,7 @@ import org.processmining.plugins.pnml.simple.PNMLPoint;
 import org.processmining.plugins.pnml.simple.PNMLRoot;
 import org.processmining.plugins.pnml.simple.PNMLToolSpecific;
 import org.processmining.plugins.pnml.simple.PNMLTransition;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 
 public class StochasticNetDeserializer {
 
@@ -276,6 +277,11 @@ public class StochasticNetDeserializer {
 				}
 			}
 		}
+		
+		if (initialMarking.isEmpty()){
+			initialMarking = StochasticNetUtils.getInitialMarking(context, net);
+		}
+		
 		if (addConnections && context != null){
 			InitialMarkingConnection conn = new InitialMarkingConnection(net, initialMarking);
 			context.addConnection(conn);

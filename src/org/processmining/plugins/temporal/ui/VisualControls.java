@@ -10,8 +10,8 @@ public class VisualControls extends JPanel implements ActionListener{
 	private static final long serialVersionUID = -1867934291671926306L;
 	private TemporalModelPanel panel;
 	
-	private JButton updateButton;
-	private JButton pauseButton;
+	private JButton resetButton;
+	private JButton layoutButton;
 	private JButton zInButton;
 	private JButton zOutButton;
 	
@@ -24,15 +24,15 @@ public class VisualControls extends JPanel implements ActionListener{
 		zInButton.addActionListener(this);
 		zOutButton = new JButton("Zoom out");
 		zOutButton.addActionListener(this);
-		updateButton = new JButton("update");
-		updateButton.addActionListener(this);
-		pauseButton = new JButton("pause");
-		pauseButton.addActionListener(this);
+		resetButton = new JButton("reset");
+		resetButton.addActionListener(this);
+		layoutButton = new JButton("layout");
+		layoutButton.addActionListener(this);
 		
 		this.add(zInButton);
 		this.add(zOutButton);
-		this.add(updateButton);
-		this.add(pauseButton);
+		this.add(resetButton);
+		this.add(layoutButton);
 		
 	}
 
@@ -41,15 +41,10 @@ public class VisualControls extends JPanel implements ActionListener{
 			panel.zoom(true);
 		} else if (e.getSource().equals(zOutButton)){
 			panel.zoom(false);
-		} else if (e.getSource().equals(updateButton)){
-			panel.updatePositions();
-		} else if (e.getSource().equals(pauseButton)){
-			panel.setPaused(!panel.isPaused());
-			if (panel.isPaused()){
-				pauseButton.setText("continue");	
-			} else {
-				pauseButton.setText("pause");
-			}	
+		} else if (e.getSource().equals(resetButton)){
+			panel.initPositions();
+		} else if (e.getSource().equals(layoutButton)){
+			panel.runLayout();	
 		}
 	}
 

@@ -255,6 +255,14 @@ public class Generator {
 		}
 	}
 
+	/**
+	 * returns random parameters of distributions, such that 
+	 * the mean is between 1 and 10 and 
+	 * the variance is around 2
+	 * 
+	 * @param type
+	 * @return
+	 */
 	public double[] getRandomParameters(DistributionType type){
 //		// parametric continuous distributions
 //				BETA, EXPONENTIAL, NORMAL, LOGNORMAL, GAMMA, STUDENT_T, UNIFORM, WEIBULL,
@@ -272,21 +280,36 @@ public class Generator {
 			case BETA:
 				return new double[]{random.nextDouble()*10+0.5,random.nextDouble()*10+0.5};
 			case UNIFORM:
-				double lowerBound = 10*random.nextDouble();
-				double upperBound = 20*random.nextDouble()+lowerBound;
+				double lowerBound = random.nextDouble();
+				double upperBound = (Math.sqrt(12)*(0.9+random.nextDouble()))+lowerBound;
 				return new double[]{lowerBound,upperBound};
 			case EXPONENTIAL:
+				double var = random.nextDouble()+1.5;
+				return new double[]{Math.sqrt(var)};
 			case DETERMINISTIC:
 				return new double[]{0.01+(random.nextDouble()*10)};
 			case NORMAL:
-				double mean = random.nextInt(20)+5; // uniform 1-11
-				double sd = Math.min((int)mean/3.0, 1+(random.nextDouble()*5)); // between uniform 1-6 and mean/3 
+				double mean = random.nextDouble()*3+1; // uniform 1-10
+				double sd = 0.30+(2*random.nextDouble()); 
 				return new double[]{mean,sd};
 			case LOGNORMAL:
-				double logMean = Math.log(random.nextDouble()*10+1);
-				double logSd = 0.1+random.nextDouble()*2;
+				// meanlog 			  sdlog  
+				// 1.33927791068597, 0.28160530554971 
+				// meanlog            sdlog 
+				// 1.34072542813359  0.27664373206155
+				double logMean = 1.0+(random.nextDouble()*0.004-0.002); 
+				double logSd = 0.45+(random.nextDouble()*0.04-0.02);
 				return new double[]{logMean,logSd};
 			case GAUSSIAN_KERNEL:
+				mean = random.nextDouble()*5+1; // uniform 1-10
+				sd = Math.abs(1.2+(0.24*random.nextDouble())); 
+				// use a sample from the normal dist
+				int samples = random.nextInt(50)+50;
+				double[] params = new double[samples];
+				for(int i = 0; i < samples; i++){
+					params[i] = random.nextGaussian()*sd+mean;
+				}
+				return params;
 			case HISTOGRAM:
 			case LOGSPLINE:
 				List<Double> values = new ArrayList<Double>();

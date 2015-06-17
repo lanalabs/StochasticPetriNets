@@ -18,8 +18,10 @@ public class MeasurePlugin {
 			help = "Asks the user to select a bunch of measures to .")
 	@UITopiaVariant(affiliation = "Hasso Plattner Institute", author = "A. Rogge-Solti", email = "andreas.rogge-solti@wu.ac.at", uiLabel = UITopiaVariant.USEPLUGIN)
 	public ComputedMeasures getMeasure(UIPluginContext context, Petrinet net){
-		MeasureConfig config = new MeasureConfig();
-		
+		return getMeasure(context, net, new MeasureConfig());
+	}
+	
+	public ComputedMeasures getMeasure(UIPluginContext context, Petrinet net, MeasureConfig config){
 		// compute all combinations by default:
 		List<AbstractMeasure<? extends Number>> measures = new LinkedList<>();
 		for (MeasureProvider provider : config.getMeasureProviders()){

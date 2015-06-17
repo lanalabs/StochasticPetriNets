@@ -9,7 +9,6 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
-import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
 
@@ -28,7 +27,8 @@ public class TimePredictor extends AbstractTimePredictor {
 	
 	protected DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime,
 			Marking initialMarking, boolean useOnlyPastTrainingData) {
-		Semantics<Marking,Transition> semantics = getCurrentStateWithAlignment(model, initialMarking, observedEvents);
+		//Semantics<Marking,Transition> semantics = getCurrentStateWithAlignment(model, initialMarking, observedEvents);
+		Semantics<Marking,Transition> semantics = getCurrentState(model, initialMarking, observedEvents);
 		if (semantics.getCurrentState() == null){
 			System.out.println("Debug me!");
 		}
@@ -48,18 +48,22 @@ public class TimePredictor extends AbstractTimePredictor {
 		DescriptiveStatistics stats = new DescriptiveStatistics();
 		//long now = System.currentTimeMillis();
 		
-		StochasticNetUtils.useCache(true);
+//		StochasticNetUtils.useCache(true);
 		double errorPercent = 100; // percentage in error of 99% confidence band
 		int i = 0;
+//		double error = 1000000;
+//		while (error > ABS_ERROR_THRESHOLD && i < MAX_RUNS){
 		while (errorPercent > ERROR_BOUND_PERCENT && i <MAX_RUNS){
 			i++;
 			stats.addValue((Long)simulator.simulateOneTrace(model, semantics, config, currentMarking, lastEventTime, currentTime.getTime(), i, useTimeContraint, null));
 			semantics.setCurrentState(currentMarking);
-			if (i % 100 == 0){
+			if (i % 300 == 0){
 				// update error:
 				errorPercent = getErrorPercent(stats);
+//				error = getError(stats);
 			}
 		}
+		System.out.println("i "+i);
 		return stats;
 	}		
 }

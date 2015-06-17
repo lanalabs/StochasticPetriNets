@@ -12,16 +12,26 @@ import org.processmining.plugins.stochasticpetrinet.measures.MeasureProvider;
 public abstract class AbstractEntropyCalculator  implements MeasureProvider<EntropyMeasure>{
 
 	private AbstractionLevel level;
+	
+	protected boolean logResults = true;
 		
 	public final EntropyMeasure getMeasure(UIPluginContext context, Petrinet net) {
 		Map<Outcome,Double> outcomesAndCounts = getOutcomesAndCounts(context, net, StochasticNetUtils.getInitialMarking(context, net), level);
 		
+		EntropyMeasure measure = getEntropyForOutcomes(outcomesAndCounts);
+		return measure;
+	}
+
+	public void setLogResults(boolean logResults){
+		this.logResults = logResults;
+	}
+	
+	protected EntropyMeasure getEntropyForOutcomes(Map<Outcome, Double> outcomesAndCounts) {
+		EntropyMeasure measure = new EntropyMeasure(level, getNameInfo());
 		double sumOfCounts = 0;
 		for (Double count : outcomesAndCounts.values()){
 			sumOfCounts += count;
 		}
-		EntropyMeasure measure = new EntropyMeasure(level, getNameInfo());
-		
 		double value = 0;
 		for (Double count : outcomesAndCounts.values()){
 			double p = count / sumOfCounts;

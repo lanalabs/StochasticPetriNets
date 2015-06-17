@@ -29,7 +29,7 @@ public class TruncatedDistributionFactory {
 			} else {
 				return dist;
 			}
-		} else if (dist.cumulativeProbability(constraint) < 0.9){
+		} else if (dist.cumulativeProbability(constraint) < 0.95){
 			return new RejectionWrapper(dist,constraint);
 		} else {
 			try{

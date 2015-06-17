@@ -30,6 +30,9 @@ import java.util.concurrent.TimeUnit;
 import javax.swing.JLabel;
 import javax.swing.JOptionPane;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.distribution.UniformRealDistribution;
@@ -49,6 +52,8 @@ import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.deckfour.xes.model.impl.XAttributeContinuousImpl;
 import org.deckfour.xes.model.impl.XTraceImpl;
+import org.json.simple.JSONObject;
+import org.json.simple.JSONValue;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.packages.PackageManager;
@@ -107,7 +112,7 @@ public class StochasticNetUtils {
 	public static final String TIME_ATTRIBUTE_KEY = "time:timestamp";
 	
 	private static int cacheSize = 100;
-	private static boolean cacheEnabled = true;
+	private static boolean cacheEnabled = false;
 	
 	private static Map<PetrinetGraph, Marking> initialMarkings = new LinkedHashMap<PetrinetGraph, Marking>() {
 		@Override
@@ -169,7 +174,8 @@ public class StochasticNetUtils {
 			// search for event which starts with transition name
 			for (XEventClass ec : ecLog.getClasses()) {
 				String[] ecBaseParts = ec.getId().split("\\+|"+SEPARATOR_STRING);
-				String transitionLabel = trans.getLabel().split(SEPARATOR_STRING)[0]; 
+				String label = trans.getLabel()==null?"":trans.getLabel();
+				String transitionLabel = label.split(SEPARATOR_STRING)[0]; 
 				String ecBaseName = ecBaseParts[0];
 				if (ecBaseName.equals(transitionLabel) || (ecBaseName+"+complete").equals(transitionLabel)) {
 					// found the one
@@ -282,11 +288,11 @@ public class StochasticNetUtils {
 	 * @param positiveConstraint sample should be bigger than this value (results in truncated distribution)
 	 * @return
 	 */
-	public synchronized static double sampleWithConstraint(TimedTransition transition, double positiveConstraint) {
+	public static double sampleWithConstraint(TimedTransition transition, double positiveConstraint) {
 //		long now = System.currentTimeMillis();
 		double sample = positiveConstraint;
-		String key = transition.getLabel()+"_"+positiveConstraint;
 		RealDistribution distribution = transition.getDistribution();
+		String key = transition.getLabel()+"_"+transition.getDistributionType()+"_"+positiveConstraint;
 		// try to get distribution from cache:
 		if (transition.getDistributionType().equals(DistributionType.GAUSSIAN_KERNEL) && useCache && distributionCache.containsKey(key)){
 			sample = distributionCache.get(key).sample();
@@ -307,7 +313,7 @@ public class StochasticNetUtils {
 	 * @param positiveConstraint sample should be bigger than this value (results in truncated distribution)
 	 * @return
 	 */
-	public synchronized static double sampleWithConstraint(RealDistribution distribution, String cacheLabel, double positiveConstraint) {
+	public static double sampleWithConstraint(RealDistribution distribution, String cacheLabel, double positiveConstraint) {
 		double sample;
 		if (Double.isInfinite(positiveConstraint) || positiveConstraint == Double.NEGATIVE_INFINITY){
 			sample = distribution.sample();
@@ -315,8 +321,8 @@ public class StochasticNetUtils {
 			long nanos = System.nanoTime();
 			sample = ((SimpleHistogramDistribution)distribution).sample(positiveConstraint);
 			nanos = System.nanoTime()-nanos;
-			if (nanos > 10000){
-				System.out.println("Took "+nanos+"ns to sample from histogram");
+			if (nanos > 100000){
+				System.out.println("Took "+(nanos/1000)+"ms to sample from histogram");
 			}
 		} else if (distribution instanceof DiracDeltaDistribution){
 			sample = distribution.sample();
@@ -334,7 +340,18 @@ public class StochasticNetUtils {
 			} else {
 				sample = distribution.sample();
 			}
+		} else if (distribution instanceof ExponentialDistribution){
+			double constraint = Math.max(0, positiveConstraint);
+			sample = distribution.sample() + constraint;
 		} else {
+			// be optimistic and try to sample 100 times:
+			for (int i = 0; i < 100; i++){
+				sample = distribution.sample();
+				if (sample > positiveConstraint){
+					return sample;
+				}
+			}
+			// fall back to old method
 			RealDistribution wrapper = TruncatedDistributionFactory.getConstrainedWrapper(distribution,positiveConstraint);
 			if (useCache){
 				// store distribution in cache
@@ -472,6 +489,11 @@ public class StochasticNetUtils {
 	 * @return
 	 */
 	public static double getMeanDuration(XLog log) {
+		DescriptiveStatistics stats = getDurationsStats(log);
+		return stats.getMean();
+	}
+	
+	public static DescriptiveStatistics getDurationsStats(XLog log) {
 		DescriptiveStatistics stats = new DescriptiveStatistics();
 		for (XTrace t : log){
 			XEvent firstEvent = t.get(0);
@@ -479,7 +501,7 @@ public class StochasticNetUtils {
 			double duration = XTimeExtension.instance().extractTimestamp(lastEvent).getTime()-XTimeExtension.instance().extractTimestamp(firstEvent).getTime();
 			stats.addValue(duration);
 		}
-		return stats.getMean();
+		return stats;
 	}
 	/**
 	 * Gets the mean duration of the model by a simple simulation.
@@ -1157,5 +1179,120 @@ public class StochasticNetUtils {
 		return String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
 			    TimeUnit.MILLISECONDS.toMinutes(millis) % TimeUnit.HOURS.toMinutes(1),
 			    TimeUnit.MILLISECONDS.toSeconds(millis) % TimeUnit.MINUTES.toSeconds(1));
+	}
+	
+	public static String toLoLaFromPetrinnet(Petrinet net){
+		return toLoLaFromPetrinet(net, getInitialMarking(null, net));
+	}
+	
+	public static String toLoLaFromPetrinet(Petrinet net, Marking marking){
+		StringBuilder builder = new StringBuilder();
+		
+		Map<Place, String> placeNames = new HashMap<>();
+
+		// the places
+		builder.append("PLACE\n ");
+		int i = 0;
+		boolean first = true;
+		for (Place p : net.getPlaces()){
+			String name = p.getLabel();
+			while (placeNames.containsValue(name)){
+				name = p.getLabel()+i++;
+			}
+			placeNames.put(p, name);
+			if (!first){
+				builder.append(",");
+			} else {
+				builder.append(" ");
+				first = false;
+			}
+			builder.append(name);
+			
+		}
+		builder.append(";\n");
+		
+		// the marking:
+		builder.append("MARKING ");
+		boolean firstElement = true;
+		for (Place p : marking.baseSet()){
+			if (firstElement){
+				firstElement = false;
+
+			} else {
+				builder.append(",");
+			}
+			builder.append(placeNames.get(p)).append(":").append(marking.occurrences(p));
+		}
+		builder.append(";\n");
+		
+		// the transitions
+		Map<Transition, String> transitionNames = new HashMap<>();
+		for (Transition t :net.getTransitions()){
+			String name = t.getLabel();
+			i = 0;
+			while (transitionNames.containsValue(name)){
+				name = t.getLabel()+i++;
+			}
+			transitionNames.put(t, name);
+			builder.append("TRANSITION ").append(name).append("\n");
+			builder.append("  CONSUME ");
+			if (t.getGraph().getInEdges(t).size() > 0){
+				int inEdges = 0;
+				for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : t.getGraph().getInEdges(t)){
+					if (inEdges > 0){
+						builder.append(",");
+					}
+					builder.append(placeNames.get((Place)edge.getSource())).append(":1");
+					inEdges ++;
+				}
+			}
+			builder.append(";\n");
+			
+			builder.append("  PRODUCE ");
+			if (t.getGraph().getOutEdges(t).size() > 0){
+				int outEdges = 0;
+				for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : t.getGraph().getOutEdges(t)){
+					if (outEdges > 0){
+						builder.append(",");
+					}
+					builder.append(placeNames.get((Place)edge.getTarget())).append(":1");
+					outEdges ++;
+				}
+			}
+			builder.append(";\n");
+		}
+		return builder.toString();
+	}
+	
+	public static Long getReachableStateSpaceSize(Petrinet net) throws InterruptedException, IOException{
+		return getReachableStateSpaceSize(net, getInitialMarking(null, net));
+	}
+	
+	public static Long getReachableStateSpaceSize(Petrinet net, Marking marking) throws InterruptedException, IOException{
+		String loLaString = toLoLaFromPetrinet(net, marking);
+		// call LoLA and wait until it is finished
+		
+		File processFile = File.createTempFile("lolaIn", ".lola");
+		processFile.deleteOnExit();
+		
+		FileUtils.writeStringToFile(processFile, loLaString);
+
+		File outputFile = File.createTempFile("lolaOut", ".json");
+		outputFile.deleteOnExit();
+		
+		ProcessBuilder b = new ProcessBuilder("lola", processFile.getAbsolutePath(), "--quiet" ,"--check=full", "--json="+ outputFile.getAbsolutePath());
+
+		Process processLoLA = b.start();
+		IOUtils.copy(processLoLA.getInputStream(), System.out);
+		IOUtils.copy(processLoLA.getErrorStream(), System.err);
+		processLoLA.waitFor();
+//		processLoLA.getOutputStream().close();
+//		processLoLA.getErrorStream().close();
+		
+		Object result = JSONValue.parse(FileUtils.readFileToString(outputFile));
+		JSONObject resultObject = (JSONObject) result;
+		JSONObject analysisObject = (JSONObject) resultObject.get("analysis");
+		JSONObject statsObject = (JSONObject) analysisObject.get("stats");
+		return (Long) statsObject.get("states");
 	}
 }

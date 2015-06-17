@@ -36,9 +36,14 @@ public class GaussianKernelDistribution extends AnotherAbstractRealDistribution 
 	 * The precision parameter determines the interval size for kernels for improved efficiency.
 	 * We do not store n kernels for n observations, but group kernels falling into a particular interval 
 	 * into one with the weight factor capturing the number of occurrences. 
+	 * 
+	 * Change: Make this dynamic depending on the range of values (make it 
 	 */
 	protected double precision;
 		
+	/** Grid over the data */
+	public static final int NUMBER_OF_BINS = 1000;
+	
 	/**
 	 * This map stores the number of occurrences of values in defined intervals. 
 	 * The interval size is regulated by the {@link #precision} argument
@@ -96,6 +101,9 @@ public class GaussianKernelDistribution extends AnotherAbstractRealDistribution 
 	
 	protected void updateKernels(){
 		Collections.sort(sampleValues);
+		
+		precision = (getReasonableUpperBound() - getReasonableLowerBound()) / NUMBER_OF_BINS;
+		
 		kernelPointsAndWeights = new TreeMap<Long, Double>();
 		for (double val : sampleValues){
 			Long position = Math.round(val / precision);

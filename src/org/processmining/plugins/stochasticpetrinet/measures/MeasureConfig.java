@@ -20,6 +20,10 @@ public class MeasureConfig {
 		this(getAbstractionLevelsDynamically());
 	}
 
+	public MeasureConfig(MeasureProvider...providers){
+		this(getAbstractionLevelsDynamically(), providers);
+	}
+	
 	/**
 	 * Creates a configuration with only a given abstraction level
 	 * @param level

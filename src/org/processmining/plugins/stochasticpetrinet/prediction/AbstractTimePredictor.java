@@ -2,9 +2,11 @@ package org.processmining.plugins.stochasticpetrinet.prediction;
 
 import java.util.Collection;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.math3.distribution.TDistribution;
@@ -41,10 +43,14 @@ public abstract class AbstractTimePredictor {
 	 */
 	public static final double ERROR_BOUND_PERCENT = 3;
 	
+	public static final double ABS_ERROR_THRESHOLD = 10000;
+	
 	/**
 	 * If we wanted to restrict the number of simulated runs, we could do it here
 	 */
 	public static final int MAX_RUNS = Integer.MAX_VALUE;
+	
+	private static final Map<Integer, Map<Double, Double>> confidenceCache = new HashMap<>();
 
 	public Pair<Double,Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking) {
 		return predict(model, observedEvents, currentTime, initialMarking, false);
@@ -65,7 +71,7 @@ public abstract class AbstractTimePredictor {
 		DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking, useOnlyPastTrainingData);
 //		System.out.println("stopped simulation after "+i+" samples... with error: "+errorPercent+"%.");
 		
-		StochasticNetUtils.useCache(false);
+//		StochasticNetUtils.useCache(false);
 		//System.out.println("Simulated 1000 traces in "+(System.currentTimeMillis()-now)+"ms ("+(useTime?"constrained":"unconstrained")+")");
 		return new Pair<Double,Double>(stats.getMean(),getConfidenceIntervalWidth(stats, CONFIDENCE_INTERVAL));
 	}
@@ -90,8 +96,8 @@ public abstract class AbstractTimePredictor {
 		{
 		    longArray[i] = (long) sortedEstimates[i];
 		}
-		
-		return 1 - (StochasticNetUtils.getIndexBinarySearch(longArray, targetTime.getTime()) / (double)sortedEstimates.length);
+		// use discounting to avoid extreme probabilities
+		return 1 - (StochasticNetUtils.getIndexBinarySearch(longArray, targetTime.getTime()) + 0.5) / (sortedEstimates.length + 1);
 	}
 	
 	/**
@@ -107,8 +113,19 @@ public abstract class AbstractTimePredictor {
 	protected abstract DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, boolean useOnlyPastTrainingData);
 	
 	protected double getConfidenceIntervalWidth(DescriptiveStatistics summaryStatistics, double confidence) {
-		TDistribution tDist = new TDistribution(summaryStatistics.getN() - 1);
-		double a = tDist.inverseCumulativeProbability(1-((1-confidence) / 2.));
+		int n = (int) summaryStatistics.getN() - 1;
+		if (!confidenceCache.containsKey(n)){
+			confidenceCache.put(n, new HashMap<Double,Double>());
+		}
+		double a;
+		if (!confidenceCache.get(n).containsKey(confidence)){
+			TDistribution tDist = new TDistribution(summaryStatistics.getN() - 1);
+			a = tDist.inverseCumulativeProbability(1-((1-confidence) / 2.));
+			confidenceCache.get(n).put(confidence, a);
+		} else {
+			a = confidenceCache.get(n).get(confidence);
+		}
+		//tDist.inverseCumulativeProbability(1-((1-confidence) / 2.));
 		return 2 * a * Math.sqrt(summaryStatistics.getVariance() / summaryStatistics.getN());
 	}
 	
@@ -116,6 +133,10 @@ public abstract class AbstractTimePredictor {
 		double mean = stats.getMean();
 		double confidenceIntervalWidth = getConfidenceIntervalWidth(stats, CONFIDENCE_INTERVAL);
 		return (mean/(mean-confidenceIntervalWidth/2.) - 1) * 100;
+	}
+	
+	protected double getError(DescriptiveStatistics stats){
+		return getConfidenceIntervalWidth(stats, CONFIDENCE_INTERVAL)/2;
 	}
 	
 	

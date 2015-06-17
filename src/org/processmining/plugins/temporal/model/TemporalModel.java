@@ -24,12 +24,15 @@ public class TemporalModel {
 	private Map<XEventClass, TemporalNode> nodes;
 	
 	private TemporalNode startNode;
+	private TemporalNode latestNode;
 	
 	private Map<TemporalNode, List<TemporalConnection>> connections;
 	
 	public static final XEventClass START_CLASS = new XEventClass("_Start", -1);
 	
 	private double smoothingFactor = 0.5;
+	
+	private double maxDistanceFromStartNode;
 		
 	public TemporalModel(TimeUnit unit){
 		this.timeUnit = unit;
@@ -53,9 +56,10 @@ public class TemporalModel {
 			
 				long eventTime = XTimeExtension.instance().extractTimestamp(event).getTime();
 				
-				// add temporal relations to all previous nodes:
+				// add temporal relations from start node to node:
 				addRelation(startNode, node, (eventTime - startEventTime)/timeUnit.getUnitFactorToMillis(), 1);				
-				
+
+				// add temporal relations to all previous nodes:
 				for (int j = 0; j < i; j++){
 					XEvent eventBefore = trace.get(j);
 					TemporalNode nodeBefore = getNode(eventBefore, eventClasses);
@@ -64,6 +68,14 @@ public class TemporalModel {
 					// add temporal relations to all previous nodes:
 					addRelation(nodeBefore, node, (eventTime - eventBeforeTime)/timeUnit.getUnitFactorToMillis(), i-j);
 				}
+			}
+		}
+		maxDistanceFromStartNode = 0;
+		for (TemporalConnection conn : connections.get(startNode)){
+			double dist = conn.getStats().getMean();
+			if (dist > maxDistanceFromStartNode){
+				maxDistanceFromStartNode = dist;
+				latestNode = conn.getAfter();
 			}
 		}
 	}
@@ -115,6 +127,23 @@ public class TemporalModel {
 		}
 		return nodes.get(eventClass);
 	}
+	
+	/**
+	 * Average distance of the event from the start node.
+	 * @param node
+	 * @return value between 0 and 1
+	 */
+	public double getRelativePositionInTrace(TemporalNode node){
+		if (node.equals(startNode)){
+			return 0;
+		} 
+		for (TemporalConnection conn : connections.get(startNode)){
+			if (conn.getAfter().equals(node)){
+				return conn.getStats().getMean() / this.maxDistanceFromStartNode;
+			}
+		}
+		return -1;
+	}
 
 	public TimeUnit getTimeUnit() {
 		return timeUnit;
@@ -134,6 +163,10 @@ public class TemporalModel {
 	
 	public TemporalNode getStartNode() {
 		return startNode;
+	}
+
+	public TemporalNode getLatestNode() {
+		return latestNode;
 	}
 	
 }
