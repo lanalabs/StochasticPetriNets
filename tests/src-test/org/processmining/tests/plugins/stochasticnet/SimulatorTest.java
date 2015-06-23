@@ -12,6 +12,7 @@ import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.junit.Assert;
 import org.junit.Test;
+import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
@@ -21,6 +22,7 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Transition
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.StochasticNetSemanticsImpl;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.converter.ConvertDistributionsPlugin;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
 
@@ -202,6 +204,39 @@ public class SimulatorTest {
 			System.out.print(xTrace.size()+",");
 		}
 	}
+	
+	@Test
+	public void testPNMLModelThomas() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("Thomas_Beispiel",true);
+		StochasticNet net = ((StochasticNet) netAndMarking[0]);
+		Marking marking = (Marking) netAndMarking[1];
+			
+		PNSimulator simulator = new PNSimulator();
+		PNSimulatorConfig simConfig = new PNSimulatorConfig(100,TimeUnit.MINUTES,0,1,100);
+		XLog log = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), simConfig, marking);
+		
+		assertEquals(100, log.size());
+		
+		for(XTrace xTrace : log) {
+			assertNotNull(xTrace);
+			System.out.print(xTrace.size()+",");
+			Assert.assertEquals(10, xTrace.size());
+		}
+		System.out.println(" ");
+		
+		Object[] strippedNetAndMarking = ConvertDistributionsPlugin.stripStochasticInformation(null, net);
+		Petrinet strippedNet = (Petrinet) strippedNetAndMarking[0];
+		Marking strippedMarking = (Marking) strippedNetAndMarking[1];
+		
+		XLog simpleLog = simulator.simulate(null, strippedNet, new StochasticNetSemanticsImpl(), simConfig, strippedMarking);
+		assertEquals(100, simpleLog.size());
+		
+		for(XTrace xTrace : simpleLog) {
+			assertNotNull(xTrace);
+			System.out.print(xTrace.size()+",");
+		}
+	}
+	
 	
 
 	private Map<String, Integer> getEventCounts(XLog logPreselection, String... names) {

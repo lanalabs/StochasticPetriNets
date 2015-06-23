@@ -9,14 +9,11 @@ import java.util.Map;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.model.XTrace;
+import org.junit.Test;
 import org.processmining.framework.util.Pair;
-import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
-import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
-import org.processmining.models.graphbased.directed.petrinet.elements.Place;
-import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.StochasticNetSemantics;
 import org.processmining.models.semantics.petrinet.impl.EfficientStochasticNetSemanticsImpl;
@@ -40,25 +37,27 @@ public class PredictionPerformanceTest {
 //	public static final int[] MODEL_SIZES = new int[]{1,5,10,100,500,1000,2000};
 	
 	// LOG_SPLINE omitted
-	public static final DistributionType[] TYPES_TO_COMPARE = new DistributionType[]{DistributionType.BETA,DistributionType.GAUSSIAN_KERNEL,DistributionType.EXPONENTIAL, DistributionType.NORMAL, DistributionType.UNIFORM,DistributionType.LOGNORMAL};
+	public static final DistributionType[] TYPES_TO_COMPARE = new DistributionType[]{DistributionType.GAUSSIAN_KERNEL,DistributionType.EXPONENTIAL, DistributionType.NORMAL, DistributionType.UNIFORM,DistributionType.LOGNORMAL};
 
 	private static final String SEPARATOR = ";";
 	
-	private static final int REPETITIONS = 20;
+	private static final int REPETITIONS = 30;
 	
-//	@Test
+	@Test
 	public void testPerformance(){
 		Map<DistributionType,Map<Integer, List<Double>>> predictionDurations = new HashMap<StochasticNet.DistributionType, Map<Integer,List<Double>>>();
 		
 		GeneratorConfig config = new GeneratorConfig();
 		config.setContainsLoops(false);
+		config.setImmedateTransitionsInvisible(false);
 		config.setDegreeOfParallelism(20);
-		config.setDegreeOfExclusiveChoices(20);
-		config.setDegreeOfSequences(60);
+		config.setDegreeOfExclusiveChoices(40);
+		config.setDegreeOfSequences(40);
+		config.setCreateDedicatedImmediateStartTransition(true);
 		for (DistributionType type : TYPES_TO_COMPARE){
 			Map<Integer, List<Double>> predictionDurationsForType = new HashMap<Integer, List<Double>>();
 			config.setDistributionType(type);
-			Generator generator = new Generator(0); 
+			Generator generator = new Generator(10); 
 			for (int modelSize : MODEL_SIZES){
 				DescriptiveStatistics stats = new DescriptiveStatistics();
 				for (int rep = 0; rep < REPETITIONS; rep++){
@@ -111,16 +110,18 @@ public class PredictionPerformanceTest {
 		StochasticNet net = (StochasticNet) netAndMarkings[0];
 		Marking initialMarking = (Marking) netAndMarkings[1];
 		Marking finalMarking = (Marking) netAndMarkings[2];
-		// add an immediate transition before first transition:
-		Place initPlace = initialMarking.iterator().next();
-		Transition startTransition = net.addImmediateTransition("t_start");
-		PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> outEdge = net.getOutEdges(initPlace).iterator().next();
-		Transition firstTransition = (Transition) outEdge.getTarget();
-		net.removeArc(initPlace, firstTransition);
-		net.addArc(initPlace, startTransition);
-		Place firstPlace = net.addPlace("firstPlace");
-		net.addArc(startTransition, firstPlace);
-		net.addArc(firstPlace, firstTransition);
+		
+//		// add an immediate transition before first transition:
+//		Place initPlace = initialMarking.iterator().next();
+//		Transition startTransition = net.addImmediateTransition("t_start");
+//		startTransition.setInvisible(config.isImmedateTransitionsInvisible());
+//		PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> outEdge = net.getOutEdges(initPlace).iterator().next();
+//		Transition firstTransition = (Transition) outEdge.getTarget();
+//		net.removeArc(initPlace, firstTransition);
+//		net.addArc(initPlace, startTransition);
+//		Place firstPlace = net.addPlace("firstPlace");
+//		net.addArc(startTransition, firstPlace);
+//		net.addArc(firstPlace, firstTransition);
 		
 		// generate a sample trace:
 		PNSimulator simulator = new PNSimulator();
@@ -133,7 +134,8 @@ public class PredictionPerformanceTest {
 		
 		XTrace trace = (XTrace) simulator.simulateOneTrace(net, semantics, simConfig, initialMarking, traceStart, 0, 1, false, finalMarking);
 		long traceEnd = XTimeExtension.instance().extractTimestamp(trace.get(trace.size()-1)).getTime();
-		long monitoringTime = traceEnd / 2;
+		traceStart = XTimeExtension.instance().extractTimestamp(trace.get(0)).getTime();
+		long monitoringTime = traceStart + (traceEnd - traceStart )/ 2;
 		
 		long afterSimulation = System.currentTimeMillis();
 		System.out.println("Simulating 1 trace took "+(afterSimulation-beforeSimulation)+" ms. ("+modelSize+" transitions, "+type.toString()+")");
@@ -141,6 +143,7 @@ public class PredictionPerformanceTest {
 		XTrace observedSubTrace = StochasticNetUtils.getSubTrace(trace, monitoringTime);
 		
 		TimePredictor predictor = new TimePredictor(true);
+//		StochasticNetUtils.useCache(true);
 		// start performance analysis:
 		long beforePrediction = System.currentTimeMillis();
 		Pair<Double,Double> predictedDurationAndConfidence = predictor.predict(net, observedSubTrace, new Date(monitoringTime), initialMarking);

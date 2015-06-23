@@ -18,6 +18,7 @@ import org.deckfour.xes.model.XTrace;
 import org.processmining.framework.connections.Connection;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.connections.ConnectionManager;
+import org.processmining.framework.connections.impl.ConnectionManagerImpl;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.PluginContextID;
 import org.processmining.framework.plugin.PluginDescriptor;
@@ -31,6 +32,7 @@ import org.processmining.framework.plugin.events.Logger.MessageLevel;
 import org.processmining.framework.plugin.events.PluginLifeCycleEventListener.List;
 import org.processmining.framework.plugin.events.ProgressEventListener.ListenerList;
 import org.processmining.framework.plugin.impl.FieldSetException;
+import org.processmining.framework.plugin.impl.PluginManagerImpl;
 import org.processmining.framework.providedobjects.ProvidedObjectManager;
 import org.processmining.framework.providedobjects.impl.ProvidedObjectManagerImpl;
 import org.processmining.framework.util.Pair;
@@ -85,7 +87,10 @@ public class TestUtils {
 	 */
 	public static Object[] loadModel(String name, boolean addMarkingsToCache) throws Exception {
 		Serializer serializer = new Persister();
-		File source = new File("tests/testfiles/"+name+".pnml");
+		if (!name.endsWith(".pnml")){
+			name = name + ".pnml";
+		}
+		File source = new File("tests/testfiles/"+name);
 
 		PNMLRoot pnml = serializer.read(PNMLRoot.class, source);
 
@@ -199,6 +204,7 @@ public class TestUtils {
 	static public class DummyConsolePluginContext implements PluginContext{
 		private Progress progress;
 		private ProvidedObjectManager objectManager;
+		private ConnectionManager connectionManager;
 		
 		public DummyConsolePluginContext(){
 			this.progress = new Progress() {
@@ -251,6 +257,7 @@ public class TestUtils {
 				}
 			};
 			this.objectManager = new ProvidedObjectManagerImpl();
+			this.connectionManager = new ConnectionManagerImpl(PluginManagerImpl.getInstance());
 		}
 		
 		public PluginManager getPluginManager() {
@@ -262,7 +269,7 @@ public class TestUtils {
 		}
 
 		public ConnectionManager getConnectionManager() {
-			return null;
+			return connectionManager;
 		}
 
 		public PluginContextID createNewPluginContextID() {

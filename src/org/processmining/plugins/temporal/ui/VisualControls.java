@@ -12,6 +12,7 @@ public class VisualControls extends JPanel implements ActionListener{
 	
 	private JButton resetButton;
 	private JButton layoutButton;
+	private JButton stepButton;
 	private JButton zInButton;
 	private JButton zOutButton;
 	
@@ -28,11 +29,14 @@ public class VisualControls extends JPanel implements ActionListener{
 		resetButton.addActionListener(this);
 		layoutButton = new JButton("layout");
 		layoutButton.addActionListener(this);
+		stepButton = new JButton("step");
+		stepButton.addActionListener(this);
 		
 		this.add(zInButton);
 		this.add(zOutButton);
 		this.add(resetButton);
 		this.add(layoutButton);
+		this.add(stepButton);
 		
 	}
 
@@ -45,6 +49,8 @@ public class VisualControls extends JPanel implements ActionListener{
 			panel.initPositions();
 		} else if (e.getSource().equals(layoutButton)){
 			panel.runLayout();	
+		} else if (e.getSource().equals(stepButton)){
+			panel.updatePositions();
 		}
 	}
 

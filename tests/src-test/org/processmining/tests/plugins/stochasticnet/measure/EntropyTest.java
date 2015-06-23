@@ -3,7 +3,9 @@ package org.processmining.tests.plugins.stochasticnet.measure;
 import org.junit.Test;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.plugins.stochasticpetrinet.measures.ComputedMeasures;
+import org.processmining.plugins.stochasticpetrinet.measures.MeasureConfig;
 import org.processmining.plugins.stochasticpetrinet.measures.MeasurePlugin;
+import org.processmining.plugins.stochasticpetrinet.measures.entropy.EntropyCalculatorApproximate;
 import org.processmining.tests.plugins.stochasticnet.TestUtils;
 
 public class EntropyTest {
@@ -28,5 +30,44 @@ public class EntropyTest {
 		MeasurePlugin plugin = new MeasurePlugin();
 		ComputedMeasures measures = plugin.getMeasure(null, model);
 		System.out.println(measures);
+	}
+	
+	@Test
+	public void testEntropy50NoLoops() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("50_no_loops", true);
+		
+		StochasticNet model = (StochasticNet) netAndMarking[0];
+		
+		MeasurePlugin plugin = new MeasurePlugin();
+		for (int i = 0 ; i < 50; i++){
+			ComputedMeasures measures = plugin.getMeasure(null, model, new MeasureConfig(new EntropyCalculatorApproximate()));
+			System.out.println(measures);
+		}
+	}
+	
+	@Test
+	public void testEntropy10Exclusive() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("10_exclusive", true);
+		
+		StochasticNet model = (StochasticNet) netAndMarking[0];
+		
+		MeasurePlugin plugin = new MeasurePlugin();
+		for (int i = 0 ; i < 50; i++){
+			ComputedMeasures measures = plugin.getMeasure(null, model, new MeasureConfig(new EntropyCalculatorApproximate()));
+			System.out.println(measures);
+		}
+	}
+	
+	@Test
+	public void testLoopyFreeChoice() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("loopy_free_choice", true);
+		
+		StochasticNet model = (StochasticNet) netAndMarking[0];
+		
+		MeasurePlugin plugin = new MeasurePlugin();
+		for (int i = 0 ; i < 50; i++){
+			ComputedMeasures measures = plugin.getMeasure(null, model, new MeasureConfig(new EntropyCalculatorApproximate()));
+			System.out.println(measures);
+		}
 	}
 }

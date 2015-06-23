@@ -46,7 +46,7 @@ public class ConversionTest {
 		
 //		List<IbmProcess> processes = new LinkedList<IbmProcess>();
 		
-		String outputPath = "tests/testfiles/ibm/converted_expanded";
+		String outputPath = "tests/testfiles/ibm/converted_expanded2";
 		
 		int ignored = 0;
 		int empty = 0;
