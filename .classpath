@@ -56,8 +56,11 @@
 	<classpathentry kind="lib" path="lib/REngine.jar"/>
 	<classpathentry kind="lib" path="packagelib/EfficientStorage.jar"/>
 	<classpathentry kind="lib" path="stdlib/jfreechart-1.0.14.jar"/>
-	<classpathentry kind="lib" path="lib/reflections-0.9.9-RC1.jar"/>
 	<classpathentry kind="lib" path="stdlib/commons-math-3.1.jar"/>
 	<classpathentry kind="lib" path="packagelib/ApacheUtils-lib/exp4j-0.3.8.jar"/>
+	<classpathentry kind="lib" path="packagelib/ApacheUtils-lib/reflections-0.9.10.jar"/>
+	<classpathentry kind="lib" path="packagelib/ApacheUtils-lib/commons-io-2.4.jar"/>
+	<classpathentry kind="lib" path="lib/javassist.jar"/>
+	<classpathentry kind="lib" path="lib/json-simple-1.1.1.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
