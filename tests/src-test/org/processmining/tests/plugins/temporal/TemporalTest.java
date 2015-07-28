@@ -19,10 +19,6 @@ import org.processmining.plugins.temporal.model.TemporalModel;
 import org.processmining.plugins.temporal.ui.TemporalModelVizualizer;
 import org.processmining.tests.plugins.stochasticnet.TestUtils;
 
-import de.lmu.ifi.dbs.elki.algorithm.AbstractDistanceBasedAlgorithm;
-import de.lmu.ifi.dbs.elki.algorithm.clustering.hierarchical.SLINK;
-import de.lmu.ifi.dbs.elki.distance.distancefunction.CosineDistanceFunction;
-
 public class TemporalTest {
 	
 	@Test
@@ -47,7 +43,6 @@ public class TemporalTest {
 		System.out.println("computation took : "+(afterComputation-currentTime)+" ms");
 		System.out.println("distance between 0 and 1: "+distanceMatrix[0]);
 
-		
 		Thread.sleep(1000000);
 	}
 	
@@ -97,7 +92,7 @@ public class TemporalTest {
 		System.out.println("distance between 0 and 1: "+distanceMatrix[0]);
 		
 		
-		AbstractDistanceBasedAlgorithm algorithm = new SLINK(CosineDistanceFunction.STATIC);
+//		AbstractDistanceBasedAlgorithm algorithm = new SLINK(CosineDistanceFunction.STATIC);
 //		ArrayAdapter<T, A> connection = new FlatMatrixAdapter();
 		
 		JFrame frame = new JFrame();
