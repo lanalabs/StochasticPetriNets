@@ -70,4 +70,108 @@ public class EntropyTest {
 			System.out.println(measures);
 		}
 	}
+	
+	@Test
+	public void testEntropy01() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("test01_xor_split", true);
+		
+		StochasticNet model = (StochasticNet) netAndMarking[0];
+		
+		MeasurePlugin plugin = new MeasurePlugin();
+		ComputedMeasures measures = plugin.getMeasure(null, model);
+		System.out.println(measures);
+	}
+	
+	@Test
+	public void testEntropy02() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("test02_and_AB", true);
+		
+		StochasticNet model = (StochasticNet) netAndMarking[0];
+		
+		MeasurePlugin plugin = new MeasurePlugin();
+		ComputedMeasures measures = plugin.getMeasure(null, model);
+		System.out.println(measures);
+	}
+	
+	/**
+	 * Two branches a 2 activities:
+	 * up: A,B
+	 * down: C,D
+	 * 
+	 * Outcomes: ABCD (0.25), ACBD (0.125), ACDB (0.125), CABD (0.125), CADB (0.125), CDAB (0.25)
+	 * 
+	 * Entropy = 2 * 1/4 * log² (4) + 4* 1/8 *log² (8) = 2.5
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testEntropy02a() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("test02_and_ABCD", true);
+		
+		StochasticNet model = (StochasticNet) netAndMarking[0];
+		
+		MeasurePlugin plugin = new MeasurePlugin();
+		ComputedMeasures measures = plugin.getMeasure(null, model);
+		System.out.println(measures);
+	}
+	
+	/**
+	 * Process with 3 branches a 2 activities.
+	 * Combinations: 6 activities -> 6! 
+	 * always two in sequence (6! / (2! * 2! * 2!)) = 6! / 6 = 5! = 120 possible outcomes in a list-abstraction
+	 * Entropy = 120 * 1/120 * log²(120) = 6.906890596
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testEntropy02b() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("test02_and_ABCDEF", true);
+		
+		StochasticNet model = (StochasticNet) netAndMarking[0];
+		
+		MeasurePlugin plugin = new MeasurePlugin();
+		ComputedMeasures measures = plugin.getMeasure(null, model);
+		System.out.println(measures);
+	}
+	
+	/**
+	 * Process with 3 branches a 1 activity.
+	 * Combinations: 3 activities -> 3! = 6 
+	 * Entropy = 6 * 1/6 * log²(6) = 2,584962501
+	 * 
+	 * @throws Exception
+	 */
+	@Test
+	public void testEntropy02c() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("test02_and_ABC", true);
+		
+		StochasticNet model = (StochasticNet) netAndMarking[0];
+		
+		MeasurePlugin plugin = new MeasurePlugin();
+		ComputedMeasures measures = plugin.getMeasure(null, model);
+		System.out.println(measures);
+	}
+	
+	@Test
+	public void testEntropy03() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("test03_and_ABCD_skip", true);
+		
+		StochasticNet model = (StochasticNet) netAndMarking[0];
+		
+		MeasurePlugin plugin = new MeasurePlugin();
+		ComputedMeasures measures = plugin.getMeasure(null, model);
+		System.out.println(measures);
+	}
+	
+	@Test
+	public void testEntropy04() throws Exception {
+		Object[] netAndMarking = TestUtils.loadModel("test04_loop_ABC", true);
+		
+		StochasticNet model = (StochasticNet) netAndMarking[0];
+		
+		MeasurePlugin plugin = new MeasurePlugin();
+		ComputedMeasures measures = plugin.getMeasure(null, model);
+		System.out.println(measures);
+	}
+	
 }

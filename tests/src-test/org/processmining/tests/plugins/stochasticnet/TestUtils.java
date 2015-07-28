@@ -9,6 +9,8 @@ import java.util.concurrent.Executor;
 
 import org.deckfour.xes.classification.XEventClassifier;
 import org.deckfour.xes.extension.std.XConceptExtension;
+import org.deckfour.xes.extension.std.XLifecycleExtension;
+import org.deckfour.xes.extension.std.XLifecycleExtension.StandardModel;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.in.XUniversalParser;
@@ -146,6 +148,36 @@ public class TestUtils {
 			return logs.iterator().next();
 		}
 		return null;
+	}
+	
+	/**
+	 * Shorthand to add an event with a given concept:name, a timestamp, and a lifecycle information to a trace.
+	 *  
+	 * @param name the name of the event (representing the event type)
+	 * @param trace the {@link XTrace} to add to
+	 * @param time the time stamp of the new event
+	 * @param lifecycleTransition the lifecycle transition of the event (e.g., "start", "complete") 
+	 * @return {@link XEvent} the newly created and added event.
+	 */
+	public static XEvent addEvent(String name, XTrace trace, long time, StandardModel lifecycleTransition){
+		XEvent e = addEvent(name, trace, time);
+		XLifecycleExtension.instance().assignStandardTransition(e, lifecycleTransition);
+		return e;
+	}
+	
+	/**
+	 * Shorthand to add an event with a given concept:name, a timestamp, and a lifecycle information to a trace.
+	 *  
+	 * @param name the name of the event (representing the event type)
+	 * @param trace the {@link XTrace} to add to
+	 * @param time the time stamp of the new event
+	 * @param lifecycleTransition the lifecycle transition of the event (e.g., "start", "complete") 
+	 * @return {@link XEvent} the newly created and added event.
+	 */
+	public static XEvent addEvent(String name, XTrace trace, long time, String lifecycleTransition){
+		XEvent e = addEvent(name, trace, time);
+		XLifecycleExtension.instance().assignTransition(e, lifecycleTransition);
+		return e;
 	}
 	
 	/**
