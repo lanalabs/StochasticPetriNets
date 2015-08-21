@@ -55,8 +55,9 @@ import org.processmining.plugins.transitionsystem.miner.modir.TSMinerModirInput;
 import org.processmining.plugins.transitionsystem.miner.util.TSAbstractions;
 import org.processmining.plugins.transitionsystem.miner.util.TSDirections;
 import org.processmining.plugins.tsanalyzer.TSAnalyzerPlugin;
-import org.processmining.plugins.tsanalyzer.TimeStateAnnotation;
-import org.processmining.plugins.tsanalyzer.TimeTransitionSystemAnnotation;
+import org.processmining.plugins.tsanalyzer.annotation.time.TimeStateAnnotation;
+import org.processmining.plugins.tsanalyzer.annotation.time.TimeTransitionSystemAnnotation;
+
 
 /**
  * 
@@ -356,24 +357,23 @@ public class PredictionExperimentPlugin {
 				new XEventResourceClassifier(), new XEventLifeTransClassifier() };
 		TSMinerInput input = new TSMinerInput(context, trainingLog, Arrays.asList(classifiers),
 				new XEventAndClassifier(new XEventNameClassifier(), new XEventLifeTransClassifier()));
-		TSAnalyzerPlugin analyzer = new TSAnalyzerPlugin();
 		TSMiner miner = new TSMiner(context);
 
 		// single event states
 		changeSettings(input, classifiers, TSAbstractions.SET, 1);
-		transitionSystemAnnotations[0] = getAnnotatedTransitionSystem(context, miner, input, analyzer, trainingLog);
+		transitionSystemAnnotations[0] = getAnnotatedTransitionSystem(context, miner, input, trainingLog);
 
 		// list of last activities
 		input = new TSMinerInput(context, trainingLog, Arrays.asList(classifiers), new XEventAndClassifier(
 				new XEventNameClassifier(), new XEventLifeTransClassifier()));
 		changeSettings(input, classifiers, TSAbstractions.SEQUENCE, 1000);
-		transitionSystemAnnotations[1] = getAnnotatedTransitionSystem(context, miner, input, analyzer, trainingLog);
+		transitionSystemAnnotations[1] = getAnnotatedTransitionSystem(context, miner, input, trainingLog);
 
 		// set of last activities
 		input = new TSMinerInput(context, trainingLog, Arrays.asList(classifiers), new XEventAndClassifier(
 				new XEventNameClassifier(), new XEventLifeTransClassifier()));
 		changeSettings(input, classifiers, TSAbstractions.SET, 1000);
-		transitionSystemAnnotations[2] = getAnnotatedTransitionSystem(context, miner, input, analyzer, trainingLog);
+		transitionSystemAnnotations[2] = getAnnotatedTransitionSystem(context, miner, input, trainingLog);
 
 		//		// multibag of last activities
 		//		input = new TSMinerInput(context, trainingLog, Arrays.asList(classifiers), new XEventAndClassifier(new XEventNameClassifier(),new XEventLifeTransClassifier()));
@@ -409,10 +409,10 @@ public class PredictionExperimentPlugin {
 	}
 
 	private TimeTransitionSystemAnnotation getAnnotatedTransitionSystem(PluginContext context, TSMiner miner,
-			TSMinerInput input, TSAnalyzerPlugin analyzer, XLog log) {
+			TSMinerInput input, XLog log) {
 		TSMinerOutput result = miner.mine(input);
 		EventPayloadTransitionSystem ts = result.getTransitionSystem();
-		return analyzer.simple(context, ts, log);
+		return TSAnalyzerPlugin.simple(context, ts, log).getTimeAnnotation();
 	}
 
 	/**
