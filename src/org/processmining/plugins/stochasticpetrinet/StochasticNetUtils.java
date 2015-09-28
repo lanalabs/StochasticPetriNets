@@ -93,6 +93,8 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.TransClasses;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
+import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGen;
+import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGenRes;
 import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
 import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.RProvider;
@@ -650,6 +652,14 @@ public class StochasticNetUtils {
 		}
 		
 		PNRepResult pnRepResult  = replayWithILP.replayLog(context, flattener.getNet(), log, flattener.getMap(), parameter);
+		try{
+			AlignmentPrecGen apg = new AlignmentPrecGen();
+			AlignmentPrecGenRes result = apg.measurePrecision(null, (Petrinet)net, log, pnRepResult);
+			pnRepResult.getInfo().put("precision", result.getPrecision());
+			pnRepResult.getInfo().put("generalization", result.getGeneralization());
+		} catch (Exception e){
+			
+		}
 		if (getManifest){
 			// translate result back to desired output
 			try {
