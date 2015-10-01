@@ -80,6 +80,7 @@ import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.EfficientStochasticNetSemanticsImpl;
 import org.processmining.models.semantics.petrinet.impl.PetrinetSemanticsFactory;
+import org.processmining.plugins.alignment.override.PrecisionAligner;
 import org.processmining.plugins.astar.petrinet.PetrinetReplayerILPRestrictedMoveModel;
 import org.processmining.plugins.astar.petrinet.manifestreplay.CostBasedCompleteManifestParam;
 import org.processmining.plugins.astar.petrinet.manifestreplay.ManifestFactory;
@@ -93,7 +94,6 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.TransClasses;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
-import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGen;
 import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGenRes;
 import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
 import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
@@ -112,6 +112,9 @@ public class StochasticNetUtils {
 	
 	public static final String ITERATION_KEY = "k-fold";
 	public static final String TIME_ATTRIBUTE_KEY = "time:timestamp";
+	
+	public static final String PRECISION_MEASURE = "Precision";
+	public static final String GENERALIZATION_MEASURE = "Generalization";
 	
 	private static int cacheSize = 100;
 	private static boolean cacheEnabled = false;
@@ -572,14 +575,19 @@ public class StochasticNetUtils {
 	}
 	
 	public static SyncReplayResult replayTrace(XLog originalTrace, TransEvClassMapping mapping, Petrinet net, Marking initialMarking, Marking finalMarking, XEventClassifier classifier) throws Exception {
-		TransClasses transClasses = new TransClasses(net, new DefTransClassifier());
-		PNManifestReplayerParameter parameters = getParameters(originalTrace, mapping, net, initialMarking,	finalMarking, classifier, transClasses);
-		PNRepResult repResult =  (PNRepResult) replayLog(null, net, originalTrace, parameters, false);
+		PNRepResult repResult = replayLogWithMapping(originalTrace, mapping, net, initialMarking, finalMarking, classifier);
 		if (repResult.size() > 0){
 			SyncReplayResult result = repResult.first();
 			return result;
 		}
 		throw new IllegalArgumentException("Could not replay trace on Model:\n"+debugTrace(originalTrace.get(0)));
+	}
+	protected static PNRepResult replayLogWithMapping(XLog originalTrace, TransEvClassMapping mapping, Petrinet net,
+			Marking initialMarking, Marking finalMarking, XEventClassifier classifier) {
+		TransClasses transClasses = new TransClasses(net, new DefTransClassifier());
+		PNManifestReplayerParameter parameters = getParameters(originalTrace, mapping, net, initialMarking,	finalMarking, classifier, transClasses);
+		PNRepResult repResult =  (PNRepResult) replayLog(null, net, originalTrace, parameters, false);
+		return repResult;
 	}
 	
 	public static String debugTrace(XTrace trace){
@@ -652,13 +660,15 @@ public class StochasticNetUtils {
 		}
 		
 		PNRepResult pnRepResult  = replayWithILP.replayLog(context, flattener.getNet(), log, flattener.getMap(), parameter);
+		
 		try{
-			AlignmentPrecGen apg = new AlignmentPrecGen();
-			AlignmentPrecGenRes result = apg.measurePrecision(null, (Petrinet)net, log, pnRepResult);
-			pnRepResult.getInfo().put("precision", result.getPrecision());
-			pnRepResult.getInfo().put("generalization", result.getGeneralization());
-		} catch (Exception e){
+			PrecisionAligner aligner = new PrecisionAligner();
+			AlignmentPrecGenRes result = aligner.measureConformanceAssumingCorrectAlignment(context, flattener.getMap(), pnRepResult, flattener.getNet(), flattener.getInitMarking(), false);
 			
+			pnRepResult.getInfo().put(PRECISION_MEASURE, result.getPrecision());
+			pnRepResult.getInfo().put(GENERALIZATION_MEASURE, result.getGeneralization());
+		} catch (Exception e){
+			e.printStackTrace();
 		}
 		if (getManifest){
 			// translate result back to desired output
@@ -674,6 +684,8 @@ public class StochasticNetUtils {
 			return pnRepResult;
 		}
 	}
+
+	
 	public static PNManifestReplayerParameter getParameters(XLog originalTrace, TransEvClassMapping mapping, PetrinetGraph net,
 			Marking initialMarking, Marking finalMarking, XEventClassifier classifier, TransClasses transClasses) {
 		// event classes, costs
