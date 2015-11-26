@@ -66,11 +66,12 @@ public class PNSimulator {
 	public static final String LIFECYCLE_TRANSITION = "lifecycle:transition";
 	public static final String TIME_TIMESTAMP = "time:timestamp";
 	public static final String CONCEPT_SIMULATED = "concept:simulated";
+	public static final String LOCATION_ROOM = "location:room";
 	public static final String CONCEPT_INSTANCE = "concept:instance";
 	public static final String CONCEPT_NAME = "concept:name";
 	public static final String SIMULATED_LOG_PROBABILITY = "simulated:logProbability";
 
-	protected Random random = new Random(new Date().getTime());
+	protected static Random random = new Random(new Date().getTime());
 
 	protected RealDistribution arrivalDistribution;
 	
@@ -97,8 +98,8 @@ public class PNSimulator {
 	protected boolean useOnlyPastTrainingData = false;
 	
 	/** maps from the prediction time point (long since start of epoch) to a cache storing the predictions for each transition */
-	private org.utils.datastructures.LimitedTreeMap<Integer, Map<Transition, RealDistribution>> cachedDurations;
-	private double logProbabilityOfCurrentTrace;
+	protected LimitedTreeMap<Integer, Map<Transition, RealDistribution>> cachedDurations;
+	protected double logProbabilityOfCurrentTrace;
 
 	public PNSimulator(){
 		transitionRemainingTimes = new HashMap<Transition, Long>();
@@ -206,7 +207,7 @@ public class PNSimulator {
 				if (petriNet.getLabel().equals("s00000633##s00004419")){
 					throw new IllegalArgumentException("Too many states!");
 				}
-				addAllDifferentTracesToLog(log, statesToVisit, semantics, new HashMap<String,Set<Integer>>(), config, endPlaces);
+				addAllDifferentTracesToLog(log, petriNet, statesToVisit, semantics, new HashMap<String,Set<Integer>>(), config, endPlaces);
 			}
 			
 			if (context != null){
@@ -227,7 +228,7 @@ public class PNSimulator {
 		return endPlaces;
 	}
 
-	protected void addAllDifferentTracesToLog(XLog log, LinkedList<Triple<XTrace, Marking,Long>> statesToVisit,
+	protected void addAllDifferentTracesToLog(XLog log, PetrinetGraph petriNet, LinkedList<Triple<XTrace, Marking,Long>> statesToVisit,
 			Semantics<Marking, Transition> semantics, Map<String,Set<Integer>> numberOfDecisionTransitions, PNSimulatorConfig config, Marking endPlaces) {
 		
 		while (!statesToVisit.isEmpty()){
@@ -305,7 +306,7 @@ public class PNSimulator {
 							} else {
 								time += random.nextDouble()*config.unitFactor.getUnitFactorToMillis();
 							}
-							XEvent e = createSimulatedEvent(t.getLabel(), time, XConceptExtension.instance().extractName(clone));
+							XEvent e = createSimulatedEvent(t, petriNet, time, XConceptExtension.instance().extractName(clone));
 							clone.add(e);
 						}
 						try {
@@ -423,7 +424,7 @@ public class PNSimulator {
 		while (transitions.size() > 0 && eventsProduced++ < config.maxEventsInOneTrace && !currentMarking.equals(finalMarking)) {
 //			System.out.println("events produced: "+eventsProduced);
 			try {
-				Triple<Transition, Long, Double> transitionAndDuration = pickTransition(semantics, transitions, petriNet, config, lastFiringTime, constraint, useTimeConstraint);
+				Triple<Transition, Long, Double> transitionAndDuration = pickTransition(semantics, transitions, transitionRemainingTimes, cachedDurations, petriNet, config, lastFiringTime, constraint, useTimeConstraint, useOnlyPastTrainingData);
 				long firingTime = lastFiringTime+transitionRemainingTimes.get(transitionAndDuration.getFirst());
 				
 				// fire first transition the list:
@@ -445,7 +446,7 @@ public class PNSimulator {
 						System.out.println("Debug me! This should not happen (if timed transitions were picked!!)");
 					}
 				}
-				insertEvent(i, trace, transitionAndDuration, firingTime, config);
+				insertEvent(String.valueOf(i), trace, petriNet, transitionAndDuration, firingTime, config);
 				this.logProbabilityOfCurrentTrace += Math.log(transitionAndDuration.getThird());
 				// before proceeding with the next transition, we update the enabled transitions: 
 				transitions = afterwardsEnabledTransitions;
@@ -457,6 +458,7 @@ public class PNSimulator {
 		}
 		return getReturnObject(trace,lastFiringTime, config);
 	}
+	
 	public double getLogProbabilityOfLastTrace(){
 		return this.logProbabilityOfCurrentTrace;
 	}
@@ -480,11 +482,11 @@ public class PNSimulator {
 		}
 	}
 
-	protected void insertEvent(int i, XTrace trace, Triple<Transition, Long, Double> transitionAndDuration, long firingTime, PNSimulatorConfig config) {
+	protected void insertEvent(String instanceId, XTrace trace, PetrinetGraph net, Triple<Transition, Long, Double> transitionAndDuration, long firingTime, PNSimulatorConfig config) {
 		if (config.simulateTraceless){
 			// do nothing
 		} else if (!transitionAndDuration.getFirst().isInvisible()){
-			XEvent e = createSimulatedEvent(transitionAndDuration.getFirst().getLabel(), firingTime, String.valueOf(i));
+			XEvent e = createSimulatedEvent(transitionAndDuration.getFirst(), net, firingTime, instanceId);
 			trace.insertOrdered(e);
 		}
 	}
@@ -587,7 +589,9 @@ public class PNSimulator {
 //	}
 	
 
-	protected XEvent createSimulatedEvent(String name, long firingTime, String instance) {
+	protected XEvent createSimulatedEvent(Transition transition, PetrinetGraph net, long firingTime, String instance) {
+		String name = transition.getLabel();
+		
 		XAttributeMap eventAttributes = new XAttributeMapImpl();
 		eventAttributes.put(LIFECYCLE_TRANSITION, new XAttributeLiteralImpl(LIFECYCLE_TRANSITION,
 				TRANSITION_COMPLETE));
@@ -650,12 +654,13 @@ public class PNSimulator {
 	 * 
 	 * @param t the transition for which the remaining duration (in ms) will be determined 
 	 * @param unitFactor the scaling factor to get from the distribution parameters to milliseconds
+	 * @param transitionRemainingTimes 
 	 * @param startOfTransition long the entry time of the current marking (i.e., usually the last observed event's timestamp) 
 	 * @param positiveConstraint a constraint that might restrict sample values (left-truncates the distribution)
 	 * @param the simulation configuration {@link PNSimulatorConfig} 
 	 * @return long milliseconds that the transition has to wait until it will fire. 
 	 */
-	protected long getTransitionRemainingTime(Transition t, TimeUnit unitFactor, long startOfTransition, double positiveConstraint) {
+	public static long getTransitionRemainingTime(Transition t, TimeUnit unitFactor, Map<Transition, Long> transitionRemainingTimes, long startOfTransition, double positiveConstraint, LimitedTreeMap<Integer, Map<Transition, RealDistribution>> cachedDurations, boolean useOnlyPastTrainingData) {
 		// only sample for transitions, that have no memory of their previous enabled periods (stored in the transition clocks)
 		if (transitionRemainingTimes.containsKey(t)){
 			return transitionRemainingTimes.get(t);
@@ -669,7 +674,7 @@ public class PNSimulator {
 						break;
 					default :
 						double sample;
-						sample = sampleDurationForTransition(positiveConstraint, startOfTransition, timedT, unitFactor);
+						sample = sampleDurationForTransition(positiveConstraint, startOfTransition, timedT, unitFactor, cachedDurations, useOnlyPastTrainingData);
 						if (sample < positiveConstraint){
 							System.out.println("debug me!");
 						}
@@ -692,16 +697,16 @@ public class PNSimulator {
 	 * 
 	 * @return
 	 */
-	protected double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT, TimeUnit unitFactor) {
+	public static double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT, TimeUnit unitFactor, LimitedTreeMap<Integer, Map<Transition, RealDistribution>> cachedDurations, boolean useOnlyPastTrainingData) {
 		RealDistribution dist;
 		if (useOnlyPastTrainingData && !(timedT.getDistribution() instanceof StatefulTimeseriesDistribution)){
 			SortedMultiset<ComparablePair<Long, List<Object>>> sortedTrainingData = timedT.getTrainingDataUpTo(startOfTransition);
-			int sizeOfTraningData = sortedTrainingData.size();
-			if (!cachedDurations.containsKey(sizeOfTraningData)){
-				cachedDurations.put(sizeOfTraningData, new HashMap<Transition, RealDistribution>());
+			int sizeOfTrainingData = sortedTrainingData.size();
+			if (!cachedDurations.containsKey(sizeOfTrainingData)){
+				cachedDurations.put(sizeOfTrainingData, new HashMap<Transition, RealDistribution>());
 			}
-			if (cachedDurations.get(sizeOfTraningData).containsKey(timedT)){
-				dist = cachedDurations.get(sizeOfTraningData).get(timedT);
+			if (cachedDurations.get(sizeOfTrainingData).containsKey(timedT)){
+				dist = cachedDurations.get(sizeOfTrainingData).get(timedT);
 			} else {
 				DescriptiveStatistics stats = new DescriptiveStatistics();
 				for (ComparablePair<Long, List<Object>> pair : sortedTrainingData){
@@ -724,7 +729,7 @@ public class PNSimulator {
 					default:
 						throw new IllegalArgumentException("Distribution type "+timedT.getDistributionType()+" not yet supported for rolling cross validation!"); 
 				}
-				cachedDurations.get(sizeOfTraningData).put(timedT, dist);
+				cachedDurations.get(sizeOfTrainingData).put(timedT, dist);
 			}
 		} else {
 			dist = timedT.getDistribution();
@@ -747,19 +752,31 @@ public class PNSimulator {
 //	}
 
 	/**
-	 * 
+	 * @param semantics the Semantics of the net
 	 * @param transitions all enabled transitions to pick from.
+	 * @param transitionRemainingTimes state of the simulation (transitions have associated remaining times/clocks)
+	 * @param cachedDurationDistributions (if transitions are only allowed to use training data up to a certain point in time, then this cache prevents us to recompute the estimated distribution over and over)
 	 * @param petriNet the underlying Petri net of the simulation.
 	 * @param config the configuration of the simulation. See {@link PNSimulatorConfig}. Contains the selection policy!
 	 * @param startOfTransition the absolute time of the current marking's last state.
 	 * @param constraint all sampled durations should be greater than the constraint
 	 * @param usePositiveTimeContraint the simulation might start in the middle of one trace, after some time has passed.
 	 * 		  In this case, we don't want to generate samples that are in the past.  (the parameter traceStart sets the constraint's value)
-
+	 * @param useOnlyPastTrainingData flag that indicates whether only past training data is allowed to be used (rolling forecasts), or all training data is allowed to be used in distribution estimation (cross-validation)
  	 * 
  	 * @return The transition that is picked as the next one to fire with its duration in the current marking 
 	 */
-	protected Triple<Transition, Long, Double> pickTransition(Semantics<Marking,Transition> semantics, Collection<Transition> transitions, PetrinetGraph petriNet, PNSimulatorConfig config, long startOfTransition, long constraint, boolean usePositiveTimeContraint) {
+	public static Triple<Transition, Long, Double> pickTransition(
+			Semantics<Marking,Transition> semantics, 
+			Collection<Transition> transitions, 
+			Map<Transition, Long> transitionRemainingTimes, 
+			LimitedTreeMap<Integer, Map<Transition, RealDistribution>> cachedDurationDistributions, 
+			PetrinetGraph petriNet, 
+			PNSimulatorConfig config, 
+			long startOfTransition, 
+			long constraint, 
+			boolean usePositiveTimeContraint, 
+			boolean useOnlyPastTrainingData) {
 		if (petriNet instanceof StochasticNet && transitionsContainTimingInfo(transitions)){
 			// sanity check of the semantics, to make sure that only immediate transitions, or timed transitions are competing for the right to fire next!
 			boolean allImmediate = getOnlyImmediateTransitions(transitions, true);
@@ -768,7 +785,7 @@ public class PNSimulator {
 			
 			// either transitions are all immediate -> pick one randomly according to their relative weights... 
 			if (allImmediate){
-				Pair<Integer, Double> indexAndProbability = pickTransitionAccordingToWeights(transitions, new Date(constraint), semantics);
+				Pair<Integer, Double> indexAndProbability = pickTransitionAccordingToWeights(transitions, new Date(constraint), semantics, useOnlyPastTrainingData);
 				Transition t = getTransitionWithIndex(transitions,indexAndProbability.getFirst());
 				transitionRemainingTimes.put(t,0l);
 				return new Triple<Transition, Long, Double>(t, 0l, indexAndProbability.getSecond());
@@ -777,7 +794,7 @@ public class PNSimulator {
 				double probability = 1;
 				// select according to selection policy:
 				if (config.executionPolicy.equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
-					Pair<Integer, Double> indexAndProbability = pickTransitionAccordingToWeights(transitions, new Date(constraint), semantics);
+					Pair<Integer, Double> indexAndProbability = pickTransitionAccordingToWeights(transitions, new Date(constraint), semantics, useOnlyPastTrainingData);
 					// restrict the set of enabled transitions to the randomly picked one:
 					Transition t = getTransitionWithIndex(transitions,indexAndProbability.getFirst());
 					transitions = new LinkedList<Transition>();
@@ -797,7 +814,7 @@ public class PNSimulator {
 						// calculate minimum transition time that is necessary for transition to be satisfying the constraint (resulting in time bigger than traceStart)
 						double samplingConstraint = Math.max(0, (constraint-startOfTransition)/config.unitFactor.getUnitFactorToMillis());
 						long now = System.currentTimeMillis();
-						long transitionRemainingTime = getTransitionRemainingTime(transition, config.unitFactor, startOfTransition, samplingConstraint);
+						long transitionRemainingTime = getTransitionRemainingTime(transition, config.unitFactor, transitionRemainingTimes, startOfTransition, samplingConstraint, cachedDurationDistributions, useOnlyPastTrainingData);
 						if (transitionRemainingTime+startOfTransition < constraint){
 							transitionRemainingTime = constraint-startOfTransition;
 							transitionRemainingTimes.put(transition, transitionRemainingTime);
@@ -814,7 +831,7 @@ public class PNSimulator {
 						times.put(transitionRemainingTime, transition);
 					} else {
 						// only allow positive durations:
-						times.put(getTransitionRemainingTime(transition, config.unitFactor, startOfTransition, 0), transition);
+						times.put(getTransitionRemainingTime(transition, config.unitFactor, transitionRemainingTimes, startOfTransition, 0, cachedDurationDistributions, useOnlyPastTrainingData), transition);
 					}
 					double rate = getFiringrate(transition);
 					firingRates.put(transition, rate);
@@ -832,11 +849,11 @@ public class PNSimulator {
 			// pick randomly:
 			int randomPick = random.nextInt(transitions.size());
 			Transition t = getTransitionWithIndex(transitions, randomPick);
-			return new Triple<Transition, Long, Double>(t,getTransitionRemainingTime(t,config.unitFactor, startOfTransition, 0), 1.0/transitions.size());
+			return new Triple<Transition, Long, Double>(t,getTransitionRemainingTime(t,config.unitFactor, transitionRemainingTimes, startOfTransition, 0, cachedDurationDistributions, useOnlyPastTrainingData), 1.0/transitions.size());
 		}
 	}
 
-	private double getFiringrate(Transition transition) {
+	private static double getFiringrate(Transition transition) {
 		double rate = 1.;
 		if (transition instanceof TimedTransition){
 			TimedTransition tt = (TimedTransition) transition;
@@ -845,7 +862,7 @@ public class PNSimulator {
 		return rate;
 	}
 
-	protected boolean transitionsContainTimingInfo(Collection<Transition> transitions) {
+	public static boolean transitionsContainTimingInfo(Collection<Transition> transitions) {
 		boolean allTimed = true;
 		for (Transition t : transitions){
 			allTimed &= t instanceof TimedTransition;
@@ -862,7 +879,7 @@ public class PNSimulator {
 	 * @param immediate flag
 	 * @return 
 	 */
-	protected boolean getOnlyImmediateTransitions(Collection<Transition> transitions, boolean immediate) {
+	public static boolean getOnlyImmediateTransitions(Collection<Transition> transitions, boolean immediate) {
 		boolean allSame = true;
 		for (Transition transition : transitions){
 			if (transition instanceof TimedTransition){
@@ -875,7 +892,15 @@ public class PNSimulator {
 		return allSame;
 	}
 
-	public Pair<Integer, Double> pickTransitionAccordingToWeights(Collection<Transition> transitions, Date currentTime, Semantics<Marking, Transition> semantics) {
+	/**
+	 * 
+	 * @param transitions collections of enabled transitions
+	 * @param currentTime the current simulation time 
+	 * @param semantics semantics of the net
+	 * @param useOnlyPastTrainingData flag that tells us wether we can use all training data, or only the ones in the past (e.g. for rolling forecasts)
+	 * @return
+	 */
+	public static Pair<Integer, Double> pickTransitionAccordingToWeights(Collection<Transition> transitions, Date currentTime, Semantics<Marking, Transition> semantics, boolean useOnlyPastTrainingData) {
 		double[] weights = new double[transitions.size()];
 		double cumulativeWeights = 0;
 		int i = 0;
@@ -895,7 +920,7 @@ public class PNSimulator {
 		return new Pair<Integer,Double>(index,probability);
 	}
 
-	protected Transition getTransitionWithIndex(Collection<Transition> transitions, int index) {
+	public static Transition getTransitionWithIndex(Collection<Transition> transitions, int index) {
 		Transition t = null;
 		Iterator<Transition> iterator = transitions.iterator();
 		for (int i = 0; i < index + 1; i++) {

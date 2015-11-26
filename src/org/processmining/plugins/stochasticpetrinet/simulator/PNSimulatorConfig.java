@@ -136,4 +136,11 @@ public class PNSimulatorConfig {
 	public void setSimulateTraceless(boolean simulateTraceLess){
 		this.simulateTraceless = simulateTraceLess;
 	}
+	
+	public ExecutionPolicy getExecutionPolicy(){
+		return this.executionPolicy;
+	}
+	public TimeUnit getUnitFactor(){
+		return this.unitFactor;
+	}
 }

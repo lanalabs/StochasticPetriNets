@@ -6,6 +6,8 @@ import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.net.URI;
@@ -41,17 +43,21 @@ import org.deckfour.xes.classification.XEventClass;
 import org.deckfour.xes.classification.XEventClasses;
 import org.deckfour.xes.classification.XEventClassifier;
 import org.deckfour.xes.extension.std.XConceptExtension;
+import org.deckfour.xes.extension.std.XLifecycleExtension;
+import org.deckfour.xes.extension.std.XOrganizationalExtension;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.info.XLogInfo;
 import org.deckfour.xes.info.XLogInfoFactory;
 import org.deckfour.xes.info.impl.XLogInfoImpl;
+import org.deckfour.xes.model.XAttribute;
 import org.deckfour.xes.model.XAttributeMap;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.deckfour.xes.model.impl.XAttributeContinuousImpl;
 import org.deckfour.xes.model.impl.XTraceImpl;
+import org.deckfour.xes.out.XesXmlSerializer;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
 import org.processmining.contexts.uitopia.UIPluginContext;
@@ -599,6 +605,16 @@ public class StochasticNetUtils {
 			}
 			Date eventTime = getTraceDate(e);
 			s += XConceptExtension.instance().extractName(e);
+			if (XLifecycleExtension.instance().extractTransition(e)!=null){
+				s+= "+"+XLifecycleExtension.instance().extractTransition(e);
+			}
+			if (XOrganizationalExtension.instance().extractResource(e)!=null){
+				s+= " by "+XOrganizationalExtension.instance().extractResource(e);
+			}
+			XAttribute location = e.getAttributes().get(PNSimulator.LOCATION_ROOM);
+			if (location != null){
+				s+= " in "+location.toString();
+			}
 			if (eventTime != null){
 				s += "("+format.format(eventTime)+")"; 
 			}
@@ -1316,5 +1332,30 @@ public class StochasticNetUtils {
 		JSONObject analysisObject = (JSONObject) resultObject.get("analysis");
 		JSONObject statsObject = (JSONObject) analysisObject.get("stats");
 		return (Long) statsObject.get("states");
+	}
+	
+	public static boolean writeLogToFile(XLog log, File file){
+		boolean success = false;
+		try {
+			if (!file.getParentFile().exists()){
+				file.getParentFile().mkdirs();
+			}
+			if (!file.exists()){
+				file.createNewFile();
+			}
+			
+			FileOutputStream fos = new FileOutputStream(file);
+			XesXmlSerializer serializer = new XesXmlSerializer();
+			serializer.serialize(log, fos);
+			fos.flush();
+			fos.close();
+			success = true;
+		} catch (FileNotFoundException e) {
+			e.printStackTrace();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		return success;
 	}
 }

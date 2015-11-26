@@ -1,11 +1,18 @@
 package org.processmining.tests.plugins.stochasticnet;
 
+import java.awt.Dimension;
 import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.Executor;
+
+import javax.swing.JComponent;
+import javax.swing.JFrame;
 
 import org.deckfour.xes.classification.XEventClassifier;
 import org.deckfour.xes.extension.std.XConceptExtension;
@@ -38,7 +45,14 @@ import org.processmining.framework.plugin.impl.PluginManagerImpl;
 import org.processmining.framework.providedobjects.ProvidedObjectManager;
 import org.processmining.framework.providedobjects.impl.ProvidedObjectManagerImpl;
 import org.processmining.framework.util.Pair;
+import org.processmining.models.graphbased.AttributeMap;
+import org.processmining.models.graphbased.ViewSpecificAttributeMap;
+import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
+import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
+import org.processmining.models.jgraph.ProMJGraphVisualizer;
+import org.processmining.models.jgraph.visualization.ProMJGraphPanel;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.log.logfilters.impl.EventLogFilter;
 import org.processmining.plugins.pnml.importing.StochasticNetDeserializer;
@@ -58,6 +72,8 @@ import org.simpleframework.xml.core.Persister;
  */
 public class TestUtils {
 
+	public static final String TEST_FOLDER = "tests/testfiles/";
+	
 	/**
 	 * Runs a performance enricher experiment on a given Model.
 	 *  
@@ -92,7 +108,7 @@ public class TestUtils {
 		if (!name.endsWith(".pnml")){
 			name = name + ".pnml";
 		}
-		File source = new File("tests/testfiles/"+name);
+		File source = new File(TEST_FOLDER+name);
 
 		PNMLRoot pnml = serializer.read(PNMLRoot.class, source);
 
@@ -109,6 +125,56 @@ public class TestUtils {
 		return netAndMarking;
 	}
 	
+	public static void showModel(Petrinet net){
+		JComponent comp = getVisualization(TestUtils.getDummyConsoleProgressContext(), net);
+		comp.setPreferredSize(new Dimension(900, 500));
+		showComponent(comp);
+	}
+	
+	public static void showComponent(JComponent comp) {
+		JFrame frame = new JFrame("Test Visualization");
+		
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		
+		frame.setContentPane(comp);
+		
+		frame.pack(); 
+		frame.setVisible(true);
+		try {
+			Thread.sleep(60000);
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		} finally {
+			frame.setVisible(false);
+			frame.dispose();
+		}
+	}
+
+	private static JComponent getVisualization(PluginContext context, Petrinet net) {
+		ViewSpecificAttributeMap map = new ViewSpecificAttributeMap();
+		
+		for (Transition t : net.getTransitions()){
+			if (t instanceof TimedTransition){
+				TimedTransition tt = (TimedTransition)t;
+				map.putViewSpecific(t, AttributeMap.LABEL, t.getLabel()+" ("+tt.getWeight()+")");
+				String parameters = Arrays.toString(tt.getDistributionParameters());
+				if (parameters.length()>101){
+					parameters = parameters.substring(0, 100)+"..."+"("+tt.getDistributionParameters().length+" parameters in total)";
+				}
+				map.putViewSpecific(t, AttributeMap.TOOLTIP, "<html>"+t.getLabel()+"\n<br>" +
+						"priority: "+tt.getPriority()+"\n<br>" +
+						"weight: "+tt.getWeight()+"\n<br>" +
+						"type: "+tt.getDistributionType().toString()+"\n<br>" +
+						"parameters: "+parameters+"</html>");
+			} else {
+				map.putViewSpecific(t, AttributeMap.TOOLTIP, t.getLabel());
+			}
+		}
+		
+		ProMJGraphPanel graphPanel = ProMJGraphVisualizer.instance().visualizeGraph(context, net, map);
+		return graphPanel;
+	}
+		
 	/**
 	 * Keep only events supplied as selected objects.
 	 * 
@@ -131,7 +197,7 @@ public class TestUtils {
 	 * @throws Exception
 	 */
 	public static XLog loadLog(String name) throws Exception {
-		return loadLog(new File("tests/testfiles/"+name));
+		return loadLog(new File(TEST_FOLDER+name));
 	}
 	
 	/**
@@ -227,6 +293,27 @@ public class TestUtils {
 		writer.flush();
 		writer.close();
 	}
+	
+	public static <T> Set<Set<T>> generateAllSubsets(Set<T> original) {
+	    Set<Set<T>> allSubsets = new HashSet<Set<T>>();
+
+	    allSubsets.add(new HashSet<T>()); //Add empty set.
+
+	    for (T element : original) {
+	        // Copy subsets so we can iterate over them without ConcurrentModificationException
+	        Set<Set<T>> tempClone = new HashSet<Set<T>>(allSubsets);
+
+	        // All element to all subsets of the current power set.
+	        for (Set<T> subset : tempClone) {
+	            Set<T> extended = new HashSet<T>(subset);
+	            extended.add(element);
+	            allSubsets.add(extended);
+	        }
+	    }
+
+	    return allSubsets;
+	}
+	
 	
 	public static PluginContext getDummyConsoleProgressContext(){
 		PluginContext context = new DummyConsolePluginContext();

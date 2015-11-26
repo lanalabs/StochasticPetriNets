@@ -1,14 +1,19 @@
 package org.processmining.plugins.stochasticpetrinet.converter;
 
+import java.util.Random;
+
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
+import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.Plugin;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
+import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
+import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.graphbased.directed.petrinet.impl.ToStochasticNet;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
@@ -21,6 +26,8 @@ import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
  */
 public class ConvertDistributionsPlugin {
 
+	private static Random random = new Random();
+	
 		@Plugin(name = "Convert Distributions in stochastic Petri net", 
 			parameterLabels = { StochasticNet.PARAMETER_LABEL }, 
 			returnLabels = { StochasticNet.PARAMETER_LABEL, "Marking" }, 
@@ -55,5 +62,35 @@ public class ConvertDistributionsPlugin {
 	public static Object[] stripStochasticInformation(PluginContext context, StochasticNet net){
 		Marking marking = StochasticNetUtils.getInitialMarking(context, net);
 		return ToStochasticNet.asPetriNet(context, net, marking);
+	}
+	
+	@Plugin(name = "Remove stochastic information from Petri net", 
+			parameterLabels = { StochasticNet.PARAMETER_LABEL }, 
+			returnLabels = { "Petri net", "Marking" }, 
+			returnTypes = { Petrinet.class, Marking.class }, 
+			userAccessible = true,
+			help = "Creates a new copy of the net stripped of performance data.")
+
+	@UITopiaVariant(affiliation = "Vienna University of Economics and Business", author = "A. Rogge-Solti", email = "andreas.rogge-solti@wu.ac.at", uiLabel = UITopiaVariant.USEPLUGIN)
+	public static Object[] enrichStochasticInformation(PluginContext context, Petrinet net){
+		Marking marking = StochasticNetUtils.getInitialMarking(context, net);
+		try {
+			Object[] netAndMarking = ToStochasticNet.fromPetrinet(context, net, marking);
+			StochasticNet stochNet = (StochasticNet) netAndMarking[0];
+			for (Transition t : stochNet.getTransitions()){
+				if (t instanceof TimedTransition){
+					TimedTransition tt = (TimedTransition) t;
+					tt.setDistributionType(DistributionType.EXPONENTIAL);
+					double mean = 5+random.nextDouble()*10;
+					tt.setDistributionParameters(new double[]{mean});
+					tt.setDistribution(null);
+					tt.setDistribution(tt.initDistribution(0));
+				}
+			}
+			return netAndMarking;
+		} catch (ConnectionCannotBeObtained e) {
+			e.printStackTrace();
+		}
+		return null;
 	}
 }

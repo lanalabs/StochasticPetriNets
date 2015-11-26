@@ -651,7 +651,7 @@ public class PNTimeSeriesSimulator extends PNSimulator {
 //				e.printStackTrace();
 //			}
 		}
-		return super.sampleDurationForTransition(positiveConstraint, startOfTransition, timedT, unitFactor);
+		return super.sampleDurationForTransition(positiveConstraint, startOfTransition, timedT, unitFactor, cachedDurations, useOnlyPastTrainingData);
 	
 	}
 
