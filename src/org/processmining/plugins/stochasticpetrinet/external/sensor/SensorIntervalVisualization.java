@@ -41,7 +41,7 @@ public class SensorIntervalVisualization {
 		private Map<String, Integer> locationPositions;
 		private long maxTime;
 		
-		public static final int LOCATION_HEIGHT = 20;
+		public static final int LOCATION_HEIGHT = 25;
 		public static final int WIDTH = 1000;
 
 		public IntervalVisualizer(SortedSensorIntervals sensorIntervals, SortedSet<String> locations,
@@ -49,37 +49,43 @@ public class SensorIntervalVisualization {
 			this.sensorIntervals = sensorIntervals;
 			this.locations = locations;
 			locationPositions = new HashMap<String, Integer>();
-			int i = 0;
+			int i = 1;
 			for (String location : locations){
 				// draw lane:
-				int y = (int)((i+0.8)*LOCATION_HEIGHT);
+				int y = (int)(((i++)+0.8)*LOCATION_HEIGHT);
 				locationPositions.put(location, y);
 			}
 			this.resourceColors = resourceColors;
 			
 			this.maxTime = sensorIntervals.last().endTime;
 			
-			this.setPreferredSize(new Dimension(WIDTH,locations.size()*LOCATION_HEIGHT));
+			this.setPreferredSize(new Dimension(WIDTH+4,(locations.size()+2)*LOCATION_HEIGHT));
 		}
 
 		public void paint(Graphics g) {
 			super.paint(g);
 			
+			Map<String, Integer> locationCounter = new HashMap<String, Integer>(); // round robin position counter
 			// draw background lanes:
 			for (String location : locations){
+				locationCounter.put(location, 0);
 				int y = locationPositions.get(location);
 				g.drawString(location, 5, y);
 				g.setColor(Color.GRAY);
-				g.drawLine(0, y+2, WIDTH, y+2);
+				g.drawLine(2, y+2, WIDTH+2, y+2);
 			}
+			
 			
 			// draw intervals:
 			for (SensorInterval interval : sensorIntervals){
-				int xStart = (int)(interval.startTime/this.maxTime * WIDTH);
-				int xEnd = (int)(interval.endTime/this.maxTime * WIDTH);
+				int locationPos = locationCounter.get(interval.locationKey);
+				locationCounter.put(interval.locationKey, locationPos+1 % 5);
+				
+				int xStart = (int)((double)interval.startTime/this.maxTime * WIDTH)+2;
+				int xEnd = (int)((double)interval.endTime/this.maxTime * WIDTH)+2;
 				int locationPosition = locationPositions.get(interval.locationKey);
 				g.setColor(resourceColors.get(interval.resourceKey));
-				g.drawRect(xStart, locationPosition, (xEnd - xStart), 2);
+				g.drawRect(xStart, locationPosition-(2*locationPos), (xEnd - xStart), 2);
 			}
 		}
 	}

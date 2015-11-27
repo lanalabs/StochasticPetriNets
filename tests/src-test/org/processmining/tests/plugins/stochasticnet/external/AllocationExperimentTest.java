@@ -1,10 +1,16 @@
 package org.processmining.tests.plugins.stochasticnet.external;
 
+import java.awt.BorderLayout;
 import java.io.File;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Set;
 
+import javax.swing.JComponent;
+import javax.swing.JPanel;
+
+import org.apache.commons.math3.util.Pair;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.junit.Assert;
@@ -28,6 +34,8 @@ import org.processmining.plugins.stochasticpetrinet.external.Role;
 import org.processmining.plugins.stochasticpetrinet.external.Room;
 import org.processmining.plugins.stochasticpetrinet.external.UniformAllocation;
 import org.processmining.plugins.stochasticpetrinet.external.sensor.LogToSensorIntervalConverter;
+import org.processmining.plugins.stochasticpetrinet.external.sensor.SensorIntervalVisualization;
+import org.processmining.plugins.stochasticpetrinet.external.sensor.SortedSensorIntervals;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNUnfoldedSimulator;
 import org.processmining.tests.plugins.stochasticnet.TestUtils;
@@ -43,6 +51,8 @@ public class AllocationExperimentTest {
 		StochasticNet stochNet = (StochasticNet) stochNetAndMarking[0];
 		stochNet.setTimeUnit(TimeUnit.MINUTES);
 		stochNet.setExecutionPolicy(ExecutionPolicy.RACE_ENABLING_MEMORY);
+		
+		
 		
 		boolean mixedResources = true; // to be tweaked by experiment
 		int rooms = 1; // to be tweaked by experiment
@@ -181,6 +191,13 @@ public class AllocationExperimentTest {
 		modelAllocations.addAllocation(consulting, new UniformAllocation(consultingRooms));
 		modelAllocations.addAllocation(bloodDraw, new UniformAllocation(bloodDrawRooms));
 		modelAllocations.addAllocation(examination, new UniformAllocation(examRooms));
+		
+		System.out.println("\n\n");
+		List<Pair<Transition,Transition>> orderedTransitions = modelAllocations.getOrderRelation(stochNet);
+		for (Pair<Transition,Transition> orderedPair : orderedTransitions){
+			System.out.println(orderedPair.getFirst().getLabel()+" -> "+orderedPair.getSecond().getLabel());
+		}
+		System.out.println("\n\n");
 
 		//TODO: add lane information to be able to distinguish traces
 		Object[] generatedNetAndMarking = AllocationBasedNetGenerator.generateNet(stochNet, modelAllocations, allResources, numCases, meanTimeBetweenArrivals); 
@@ -191,7 +208,7 @@ public class AllocationExperimentTest {
 		StochasticNet generatedNet = (StochasticNet) generatedNetAndMarking[0];
 		
 		// visualize generated net!
-		TestUtils.showModel(generatedNet);
+//		TestUtils.showModel(generatedNet);
 		
 		XLog log = simulator.simulate(null, generatedNet, StochasticNetUtils.getSemantics(generatedNet), config, (Marking) generatedNetAndMarking[1]);
 		StochasticNetUtils.writeLogToFile(log, new File("tests/testfiles/out/richLog"+numCases+".xes"));
@@ -201,10 +218,23 @@ public class AllocationExperimentTest {
 		
 		System.out.println("\n\n-----------------\n\n");
 		
-		String intervalString = LogToSensorIntervalConverter.convertLog(log, generatedNet.getTimeUnit(), true, 1).toString(); 
-		System.out.println(intervalString);
+		SortedSensorIntervals intervals = LogToSensorIntervalConverter.convertLog(log, generatedNet.getTimeUnit(), false, 1); 
+		System.out.println(intervals.toString());
 		
-		StochasticNetUtils.writeStringToFile(intervalString, "tests/testfiles/out/intervalLog"+numCases+".csv");
+		JComponent orig = SensorIntervalVisualization.visualize(null, intervals);
+		
+		SortedSensorIntervals intervalsAdjusted = LogToSensorIntervalConverter.convertLog(log, generatedNet.getTimeUnit(), true, 1);
+		
+		JComponent adjusted = SensorIntervalVisualization.visualize(null, intervalsAdjusted);
+		
+		JComponent comparison = new JPanel();
+		comparison.setLayout(new BorderLayout());
+		comparison.add(orig, BorderLayout.NORTH);
+		comparison.add(adjusted, BorderLayout.SOUTH);
+		
+		TestUtils.showComponent(comparison);
+		
+		StochasticNetUtils.writeStringToFile(intervals.toString(), "tests/testfiles/out/intervalLog"+numCases+".csv");
 		
 	}
 

@@ -29,12 +29,16 @@ public class ToStochasticNet {
 	public static Object[] fromPetrinet(PluginContext context, PetrinetGraph net, Marking marking)
 			throws ConnectionCannotBeObtained {
 		if (marking != null) {
-			// Check for connection
-			context.getConnectionManager().getFirstConnection(InitialMarkingConnection.class, context, net, marking);
+			if (context != null){
+				// Check for connection
+				context.getConnectionManager().getFirstConnection(InitialMarkingConnection.class, context, net, marking);
+			}
 		}
 		Object[] transformed = fromPetriNetExternal(context, net, marking);
-		context.getFutureResult(0).setLabel(net.getLabel());
-		context.getFutureResult(1).setLabel("Initial Marking of " + net.getLabel());
+		if (context != null){
+			context.getFutureResult(0).setLabel(net.getLabel());
+			context.getFutureResult(1).setLabel("Initial Marking of " + net.getLabel());
+		}
 		return transformed;
 	}
 	

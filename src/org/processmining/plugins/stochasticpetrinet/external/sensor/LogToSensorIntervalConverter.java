@@ -80,12 +80,18 @@ public class LogToSensorIntervalConverter {
 				for (SensorInterval interval : intervalsByResource.get(resource)){
 					if (lastInterval!= null){
 						// tug at ends a bit randomly to a randomly selected center
-						int timeBetweenIntervals = (int) (interval.startTime - lastInterval.endTime); 
-						int middle = random.nextInt(timeBetweenIntervals);
-						int tugUp = random.nextInt(middle);
-						lastInterval.endTime += tugUp;
-						int tugDown = random.nextInt(timeBetweenIntervals-middle);
-						interval.startTime -= tugDown;
+						int timeBetweenIntervals = (int) (interval.startTime - lastInterval.endTime);
+						if (timeBetweenIntervals>0){
+							int middle = random.nextInt(timeBetweenIntervals);
+							if (middle > 0){
+								int tugUp = random.nextInt(middle);
+								lastInterval.endTime += tugUp;
+							}
+							if (middle < timeBetweenIntervals){
+								int tugDown = random.nextInt(timeBetweenIntervals-middle);
+								interval.startTime -= tugDown;
+							}
+						}
 
 					}
 					lastInterval = interval;
