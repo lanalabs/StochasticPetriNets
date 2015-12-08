@@ -26,6 +26,7 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
 import java.util.Set;
+import java.util.SortedSet;
 import java.util.TreeMap;
 import java.util.concurrent.TimeUnit;
 
@@ -39,6 +40,7 @@ import org.apache.commons.math3.distribution.NormalDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
 import org.apache.commons.math3.distribution.UniformRealDistribution;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
+import org.apache.commons.math3.util.FastMath;
 import org.deckfour.xes.classification.XEventClass;
 import org.deckfour.xes.classification.XEventClasses;
 import org.deckfour.xes.classification.XEventClassifier;
@@ -110,6 +112,7 @@ import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.rosuda.JRI.Rengine;
 import org.utils.datastructures.ComparablePair;
+import org.utils.datastructures.SortedSetComparator;
 
 import com.google.common.collect.SortedMultiset;
 import com.google.common.collect.TreeMultiset;
@@ -124,6 +127,17 @@ public class StochasticNetUtils {
 	
 	private static int cacheSize = 100;
 	private static boolean cacheEnabled = false;
+	
+	private static Random random = new Random(1);
+	public static double getRandomDouble(){
+		return random.nextDouble();
+	}
+	public static int getRandomInt(int n){
+		return random.nextInt(n);
+	}
+	public static void setRandomSeed(long seed){
+		random.setSeed(seed);
+	}
 	
 	private static Map<PetrinetGraph, Marking> initialMarkings = new LinkedHashMap<PetrinetGraph, Marking>() {
 		@Override
@@ -140,6 +154,25 @@ public class StochasticNetUtils {
 	
 	public static void setCacheEnabled(boolean enabled){
 		cacheEnabled = enabled;
+	}
+	
+	public static <E extends Comparable<E>> int compareSortedSets(SortedSet<E> first, SortedSet<E> second){
+		SortedSetComparator<E> comparator = new SortedSetComparator<E>();
+		return comparator.compare(first, second);
+	}
+	
+	/**
+	 * Computes entropy of a discrete probability distribution. 
+	 * @param probs a map assigning probabilities to objects. Note that probs.values() should sum to 1.
+	 * @return the entropy of the map.
+	 */
+	public static <E extends Object> double getEntropy(Map<E, Double> probs){
+		double h = 0;
+		for (E key :  probs.keySet()){
+			double p = probs.get(key);
+			h -= p*FastMath.log(p);
+		}
+		return h;
 	}
 	
 //	/**
@@ -459,6 +492,82 @@ public class StochasticNetUtils {
 			}
 		}
 		return result;
+	}
+	
+	/**
+	 * Generates all subsets of a set.
+	 * @param original
+	 * @return
+	 */
+	public static <T> Set<Set<T>> generateAllSubsets(Set<T> original) {
+	    Set<Set<T>> allSubsets = new HashSet<Set<T>>();
+
+	    allSubsets.add(new HashSet<T>()); //Add empty set.
+
+	    for (T element : original) {
+	        // Copy subsets so we can iterate over them without ConcurrentModificationException
+	        Set<Set<T>> tempClone = new HashSet<Set<T>>(allSubsets);
+
+	        // All element to all subsets of the current power set.
+	        for (Set<T> subset : tempClone) {
+	            Set<T> extended = new HashSet<T>(subset);
+	            extended.add(element);
+	            allSubsets.add(extended);
+	        }
+	    }
+	    return allSubsets;
+	}
+	
+	public static <T> Set<Set<T>> generateAllSubsetsOfSize(Set<T> original, int minSize, int maxSize) {
+		Set<Set<T>> allSubsets = new HashSet<Set<T>>();
+		if (maxSize == 0){
+			return allSubsets;
+		}
+
+	    allSubsets.add(new HashSet<T>()); //Add empty set.
+
+	    for (T element : original) {
+	        // Copy subsets so we can iterate over them without ConcurrentModificationException
+	        Set<Set<T>> tempClone = new HashSet<Set<T>>(allSubsets);
+
+	        // All element to all subsets of the current power set.
+	        for (Set<T> subset : tempClone) {
+	            Set<T> extended = new HashSet<T>(subset);
+	            extended.add(element);
+	            if (extended.size() <= maxSize){
+	            	allSubsets.add(extended);
+	            }
+	        }
+	    }
+	    Set<Set<T>> restrictedSubsets = new HashSet<Set<T>>();
+	    Iterator<Set<T>> iter = allSubsets.iterator();
+	    while(iter.hasNext()){
+	    	Set<T> subset = iter.next();
+	    	if (subset.size() >= minSize && subset.size() <= maxSize){
+	    		restrictedSubsets.add(subset);
+	    	}
+	    }
+	    return restrictedSubsets;
+	}
+	
+	public static <T> Set<Set<T>> generateCrossProduct(Set<Set<T>> setA,
+			Set<Set<T>> setB) {
+		if (setA.isEmpty()) {
+			return setB;
+		}
+		if (setB.isEmpty()){
+			return setA;
+		}
+		Set<Set<T>> allOptions = new HashSet<Set<T>>();
+		for (Set<T> a : setA){
+			Set<T> product = new HashSet<T>(a);
+			for (Set<T> b : setB){
+				product = new HashSet<T>(a);
+				product.addAll(b);
+				allOptions.add(product);
+			}
+		}
+		return allOptions;
 	}
 	
 	/**

@@ -7,12 +7,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.apache.commons.math3.util.Pair;
+import org.jbpt.algo.tree.rpst.RPST;
 import org.jbpt.bp.BehaviouralProfile;
 import org.jbpt.bp.construct.BPCreatorUnfolding;
+import org.jbpt.petri.Flow;
 import org.jbpt.petri.NetSystem;
 import org.jbpt.petri.Node;
-import org.jbpt.petri.PetriNet;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
@@ -23,30 +25,37 @@ import org.processmining.models.graphbased.directed.petrinet.elements.TimedTrans
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.external.Allocation.AllocType;
 
 public class PetrinetModelAllocations {
 	
 	private Petrinet net;
 	
-	private Map<Transition, Set<Allocation>> allocations;
+	private Map<Transition, Set<Allocation>> locationAllocations;
+	private Map<Transition, Set<Allocation>> resourceAllocations;
 	
 	public PetrinetModelAllocations(Petrinet net){
 		this.net = net;
-		allocations = new HashMap<Transition, Set<Allocation>>();
+		locationAllocations = new HashMap<Transition, Set<Allocation>>();
+		resourceAllocations = new HashMap<Transition, Set<Allocation>>();
 	}
 
 	public void addAllocation(Transition transition, Allocation allocation){
 		if (!net.getTransitions().contains(transition)){
 			throw new IllegalArgumentException("Transition not in net!!");
 		}
-		if (!allocations.containsKey(transition)){
-			allocations.put(transition, new HashSet<Allocation>());
+		Map<Transition, Set<Allocation>> target = allocation.getType().equals(AllocType.LOCATION)?locationAllocations:resourceAllocations;
+		if (!target.containsKey(transition)){
+			target.put(transition, new HashSet<Allocation>());
 		}
-		allocations.get(transition).add(allocation);
+		target.get(transition).add(allocation);
 	}
 	
 	public Set<Allocation> getAllocations(Transition transition){
-		return allocations.get(transition);
+		Set<Allocation> allocations = new HashSet<Allocation>();
+		allocations.addAll(locationAllocations.get(transition));
+		allocations.addAll(resourceAllocations.get(transition));
+		return allocations;
 	}
 	
 	/**
@@ -79,35 +88,21 @@ public class PetrinetModelAllocations {
 	}
 	
 	private Pair<NetSystem, Map<Transition, org.jbpt.petri.Transition>> getPetrinetRepresentation(PetrinetGraph net2) {
-		PetriNet pn = new PetriNet();
-		Map<Transition, org.jbpt.petri.Transition> transitionMapping = new HashMap<Transition, org.jbpt.petri.Transition>();
-		Map<Place, org.jbpt.petri.Place> placeMapping = new HashMap<Place, org.jbpt.petri.Place>();
+		PetrinetWithMapping pnWithMapping = new PetrinetWithMapping(net2);
+		pnWithMapping.constructMapping();
 		
-		for (Transition t : net.getTransitions()){
-			transitionMapping.put(t, pn.addTransition(new org.jbpt.petri.Transition(t.getLabel())));
-		}
-		for (Place p : net.getPlaces()){
-			placeMapping.put(p, pn.addPlace(new org.jbpt.petri.Place(p.getLabel())));
-		}
-		for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : net.getEdges()){
-			if (edge.getSource() instanceof Transition){
-				pn.addFlow(transitionMapping.get(edge.getSource()),placeMapping.get(edge.getTarget()));
-			} else {
-				pn.addFlow(placeMapping.get(edge.getSource()), transitionMapping.get(edge.getTarget()));
-			}
-		}
 		Marking initialMarking = StochasticNetUtils.getInitialMarking(null, net); 
-		NetSystem system = new NetSystem(pn);
+		NetSystem system = new NetSystem(pnWithMapping.getJbptNet());
 		//org.jbpt.petri.Marking marking = new org.jbpt.petri.Marking(pn);
 		
 		for (Place p : initialMarking){
-			org.jbpt.petri.Place place = placeMapping.get(p);
+			org.jbpt.petri.Place place = pnWithMapping.getPlaceMapping().get(p);
 			system.putTokens(place, 1);
 		}
-		return new Pair<NetSystem, Map<Transition,org.jbpt.petri.Transition>>(system, transitionMapping);
+		return new Pair<NetSystem, Map<Transition,org.jbpt.petri.Transition>>(system, pnWithMapping.getTransitionMapping());
 	}
 
-	List<Pair<Transition, Double>> getTransitionProbabilities(PetrinetGraph net){
+	Map<Transition, Double> getTransitionProbabilities(PetrinetGraph net){
 		// TODO: maybe keep it simple by sampling some logs, or doing a sophisticated computation
 		// idea: reuse order relations
 		// 1. identify local probability by checking weights of conflicting transitions
@@ -115,12 +110,16 @@ public class PetrinetModelAllocations {
 		// 3. compute probability of nodes by traversing the upwards path to the root.
 		Map<Transition, Double> localProbabilities = computeLocalProbabilities(net);
 		
+//		Map<Transition, Double> pathProbabilities = new HashMap<Transition, Double>();
 		
-		Map<Transition, Double> pathProbabilities = new HashMap<Transition, Double>();
+		PetrinetWithMapping pnWithMapping = new PetrinetWithMapping(net);
 		
 		
+		RPST<Flow,Node> rpst = new RPST<Flow,Node>(pnWithMapping.getJbptNet());
+		System.out.println(rpst);
 		
-		return null;
+		// TODO: fix this later with real probabilities from the RPST
+		return localProbabilities;
 	}
 
 	private Map<Transition, Double> computeLocalProbabilities(PetrinetGraph net) {
@@ -180,9 +179,69 @@ public class PetrinetModelAllocations {
 				}
 			}
 			localProbabilities.put(transition, probabilityToFire);
-			
 		}
 		
 		return localProbabilities;
+	}
+
+	public Set<Allocatable> getLocationAllocations() {
+		Set<Allocatable> locations = new HashSet<Allocatable>();
+		for (Set<Allocation> allocations : locationAllocations.values()){
+			for (Allocation alloc : allocations){
+				for(Allocatable all : alloc.getAllAllocatables()){
+					locations.add(all);
+				}
+			}
+		}
+		return locations;
+	}
+	
+	public double getReverseEntropy(AllocType type){
+		Map<String, Map<Transition, Double>> reverseDistributions = collectReverseDistributions(type);
+		DescriptiveStatistics entropies = new DescriptiveStatistics();
+		for (String alloc : reverseDistributions.keySet()){
+			Map<Transition, Double> transitionProbs = reverseDistributions.get(alloc);
+			normalizeDistribution(transitionProbs);
+			entropies.addValue(StochasticNetUtils.getEntropy(transitionProbs));
+		}
+		return entropies.getMean();
+	}
+
+	private void normalizeDistribution(Map<Transition, Double> transitionProbs) {
+		double sum = 0.;
+		for (Double d : transitionProbs.values()){
+			sum += d;
+		}
+		for (Transition t : transitionProbs.keySet()){
+			transitionProbs.put(t, transitionProbs.get(t)/sum);
+		}
+	}
+
+	private Map<String, Map<Transition, Double>> collectReverseDistributions(AllocType type) {
+		Map<Transition, Set<Allocation>> transitionAllocations = null;
+		switch(type){
+			case LOCATION:
+				transitionAllocations = locationAllocations;
+				break;
+			case RESOURCE:
+				transitionAllocations = resourceAllocations;
+				break;
+		}
+		Map<String, Map<Transition, Double>> reverseDistributions = new HashMap<String, Map<Transition,Double>>();
+		for (Transition trans : transitionAllocations.keySet()){
+			double transPrior = 1.0/transitionAllocations.size(); // TODO: improve by getting real probability of transition.
+			Set<Allocation> allocations = transitionAllocations.get(trans);
+			for (Allocation alloc : allocations){
+				Map<String, Double> probs = alloc.getProbabilitiesOfAllocations();
+				for (String key : probs.keySet()){
+					if (!reverseDistributions.containsKey(key)){
+						reverseDistributions.put(key, new HashMap<Transition, Double>());
+					}
+					double prob = reverseDistributions.get(key).containsKey(trans)?reverseDistributions.get(key).get(trans):0.0;
+					reverseDistributions.get(key).put(trans, prob + transPrior*probs.get(key));
+				}
+			}
+		}
+		return reverseDistributions;
 	}
 }

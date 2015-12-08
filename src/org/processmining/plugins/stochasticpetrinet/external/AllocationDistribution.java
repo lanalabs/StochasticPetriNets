@@ -1,9 +1,13 @@
 package org.processmining.plugins.stochasticpetrinet.external;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
-import java.util.Random;
+import java.util.Map;
 import java.util.Set;
+
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 
 /**
  * A distribution of possible allocation options for some activity/task in a process.
@@ -13,19 +17,23 @@ import java.util.Set;
  * @author Andreas Rogge-Solti
  *
  */
-public class AllocationDistribution implements Allocation{
+public class AllocationDistribution extends AbstractAllocation {
 
-	private static Random random = new Random(1);
-	
 	private List<ProbabilisticAllocation> allocationPossibilities;
 	private double cumulativeWeight = 0;
 	
+	private Set<Allocatable> allAllocateds = new HashSet<Allocatable>();
+	
 
-	public AllocationDistribution(){
+	public AllocationDistribution(AllocType type){
+		super(type);
 		this.allocationPossibilities = new ArrayList<ProbabilisticAllocation>();
 	}
 	
 	public void addAllocationOption(Set<Allocatable> allocation, double weight){
+		for (Allocatable alloc : allocation){
+			allAllocateds.add(alloc);
+		}
 		allocationPossibilities.add(new ProbabilisticAllocation(allocation, weight));
 		cumulativeWeight += weight;
 	}
@@ -34,7 +42,7 @@ public class AllocationDistribution implements Allocation{
 	 * randomly draws an allocation from the distribution
 	 */
 	public Set<Allocatable> getAllocation() {
-		double d = random.nextDouble();
+		double d = StochasticNetUtils.getRandomDouble();
 		double upperThresh = 0;
 		int pos = -1;
 		
@@ -45,7 +53,26 @@ public class AllocationDistribution implements Allocation{
 		
 		return allocationPossibilities.get(pos).getAllocatedEntities();
 	}
-	
-	
-	
+
+	public Map<String, Double> getProbabilitiesOfAllocations() {
+		Map<String, Double> probabilties = new HashMap<String, Double>();
+		for (ProbabilisticAllocation alloc : allocationPossibilities){
+			
+			probabilties.put(getString(alloc.getAllocatedEntities()), alloc.getWeight()/cumulativeWeight);
+		}
+		return probabilties;
+	}
+
+	public Set<Allocatable> getAllAllocatables() {
+		return allAllocateds;
+	}
+
+	public Set<Allocatable> getAllocation(String allocString) {
+		for (ProbabilisticAllocation alloc : allocationPossibilities){
+			if (getString(alloc.getAllocatedEntities()).equals(allocString)){
+				return alloc.getAllocatedEntities();
+			}
+		}
+		return null;
+	}	
 }

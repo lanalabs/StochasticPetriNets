@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -16,6 +15,8 @@ import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.external.Person;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 
 /**
@@ -37,13 +38,11 @@ public class LogToSensorIntervalConverter {
 	private static SortedSensorIntervals allIntervals;
 	private static Map<String, SortedSet<SensorInterval>> intervalsByResource;
 	
-	private static Random random = new Random(1);
-	
 	public static SortedSensorIntervals convertLog(XLog log, TimeUnit timeUnit, boolean fillGapsRandomly, long seed){
 		allIntervals = new SortedSensorIntervals();
 		intervalsByResource = new HashMap<String, SortedSet<SensorInterval>>();
 		
-		random.setSeed(seed);
+		StochasticNetUtils.setRandomSeed(seed);
 		
 		Set<String> locations = new HashSet<String>();
 		
@@ -67,7 +66,7 @@ public class LogToSensorIntervalConverter {
 						addResourceInterval(resources, event, endEvent, timeUnit);
 					}
 					String caseResource = XConceptExtension.instance().extractInstance(event);
-					addResourceInterval("patient"+caseResource, event, endEvent, timeUnit);
+					addResourceInterval(Person.CASE_PREFIX+caseResource, event, endEvent, timeUnit);
 				}
 			}
 		}
@@ -80,16 +79,16 @@ public class LogToSensorIntervalConverter {
 				for (SensorInterval interval : intervalsByResource.get(resource)){
 					if (lastInterval!= null){
 						// tug at ends a bit randomly to a randomly selected center
-						int timeBetweenIntervals = (int) (interval.startTime - lastInterval.endTime);
+						int timeBetweenIntervals = (int) (interval.getStartTime() - lastInterval.getEndTime());
 						if (timeBetweenIntervals>0){
-							int middle = random.nextInt(timeBetweenIntervals);
+							int middle = StochasticNetUtils.getRandomInt(timeBetweenIntervals);
 							if (middle > 0){
-								int tugUp = random.nextInt(middle);
-								lastInterval.endTime += tugUp;
+								int tugUp = StochasticNetUtils.getRandomInt(middle);
+								lastInterval.setEndTime(lastInterval.getEndTime() + tugUp );
 							}
 							if (middle < timeBetweenIntervals){
-								int tugDown = random.nextInt(timeBetweenIntervals-middle);
-								interval.startTime -= tugDown;
+								int tugDown = StochasticNetUtils.getRandomInt(timeBetweenIntervals-middle);
+								interval.setStartTime(interval.getStartTime() - tugDown);
 							}
 						}
 
@@ -106,12 +105,14 @@ public class LogToSensorIntervalConverter {
 		String location = extractLocation(event);
 		int startTime = (int)Math.floor(XTimeExtension.instance().extractTimestamp(event).getTime() / timeUnit.getUnitFactorToMillis());
 		int endTime = (int)Math.floor(XTimeExtension.instance().extractTimestamp(endEvent).getTime() / timeUnit.getUnitFactorToMillis());
-		SensorInterval interval = new SensorInterval(startTime, endTime, location, resource);
-		allIntervals.add(interval);
-		if (!intervalsByResource.containsKey(resource)){
-			intervalsByResource.put(resource, new TreeSet<SensorInterval>());
+		if (endTime > startTime){ // prune empty intervals!
+			SensorInterval interval = new SensorInterval(startTime, endTime, location, resource);
+			allIntervals.add(interval);
+			if (!intervalsByResource.containsKey(resource)){
+				intervalsByResource.put(resource, new TreeSet<SensorInterval>());
+			}
+			intervalsByResource.get(resource).add(interval);
 		}
-		intervalsByResource.get(resource).add(interval);
 	}
 
 	private static String extractLocation(XEvent event) {

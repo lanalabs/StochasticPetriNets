@@ -1,14 +1,17 @@
 package org.processmining.plugins.stochasticpetrinet.external;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 import com.google.common.collect.ImmutableSet;
 
-public class DirectAllocation implements Allocation{
+public class DirectAllocation extends AbstractAllocation{
 	
 	private Set<Allocatable> allocation;
 
-	public DirectAllocation(Set<Allocatable> allocation){
+	public DirectAllocation(Set<Allocatable> allocation, AllocType type){
+		super(type);
 		this.allocation = allocation;
 	}
 
@@ -16,4 +19,20 @@ public class DirectAllocation implements Allocation{
 		return ImmutableSet.copyOf(allocation);
 	}
 
+	public Map<String, Double> getProbabilitiesOfAllocations() {
+		Map<String, Double> probabilities = new HashMap<String, Double>();
+		probabilities.put(getString(getAllocation()), 1.0);
+		return probabilities;
+	}
+
+	public Set<Allocatable> getAllAllocatables() {
+		return allocation;
+	}
+
+	public Set<Allocatable> getAllocation(String allocString) {
+		if (getString(allocation).equals(allocString)){
+			return allocation;
+		}
+		return null;
+	}
 }

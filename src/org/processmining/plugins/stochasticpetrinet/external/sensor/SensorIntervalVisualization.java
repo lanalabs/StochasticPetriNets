@@ -25,9 +25,9 @@ public class SensorIntervalVisualization {
 		Map<String, Color> resourceColors = new HashMap<String, Color>();
 		
 		for (SensorInterval interval : sensorIntervals){
-			locations.add(interval.locationKey);
-			Color resourceColor = new Color(interval.resourceKey.hashCode());
-			resourceColors.put(interval.resourceKey, resourceColor);
+			locations.add(interval.getLocationKey());
+			Color resourceColor = new Color(interval.getResourceKey().hashCode());
+			resourceColors.put(interval.getResourceKey(), resourceColor);
 		}
 		
 		return new IntervalVisualizer(sensorIntervals, locations, resourceColors);
@@ -57,7 +57,7 @@ public class SensorIntervalVisualization {
 			}
 			this.resourceColors = resourceColors;
 			
-			this.maxTime = sensorIntervals.last().endTime;
+			this.maxTime = sensorIntervals.last().getEndTime();
 			
 			this.setPreferredSize(new Dimension(WIDTH+4,(locations.size()+2)*LOCATION_HEIGHT));
 		}
@@ -78,13 +78,13 @@ public class SensorIntervalVisualization {
 			
 			// draw intervals:
 			for (SensorInterval interval : sensorIntervals){
-				int locationPos = locationCounter.get(interval.locationKey);
-				locationCounter.put(interval.locationKey, locationPos+1 % 5);
+				int locationPos = locationCounter.get(interval.getLocationKey());
+				locationCounter.put(interval.getLocationKey(), locationPos+1 % 5);
 				
-				int xStart = (int)((double)interval.startTime/this.maxTime * WIDTH)+2;
-				int xEnd = (int)((double)interval.endTime/this.maxTime * WIDTH)+2;
-				int locationPosition = locationPositions.get(interval.locationKey);
-				g.setColor(resourceColors.get(interval.resourceKey));
+				int xStart = (int)((double)interval.getStartTime()/this.maxTime * WIDTH)+2;
+				int xEnd = (int)((double)interval.getEndTime()/this.maxTime * WIDTH)+2;
+				int locationPosition = locationPositions.get(interval.getLocationKey());
+				g.setColor(resourceColors.get(interval.getResourceKey()));
 				g.drawRect(xStart, locationPosition-(2*locationPos), (xEnd - xStart), 2);
 			}
 		}

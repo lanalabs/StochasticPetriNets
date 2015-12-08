@@ -168,6 +168,20 @@ public class PNUnfoldedSimulator extends PNSimulator {
 				}
 			}
 		}
+		if (locations.isEmpty()){
+			// check for complete transitions:
+			for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : petriNet.getOutEdges(transition)){
+				if (!edge.getTarget().getLabel().startsWith(AllocationBasedNetGenerator.PLACE_CASE_PREFIX)){
+					// this is either a resource place, or a location!
+					String placeLabel = edge.getTarget().getLabel();
+					if (placeLabel.contains("_room_")){
+						locations.add(placeLabel.substring(2));
+					} else {
+						resources.add(placeLabel.substring(2));
+					}
+				} 
+			}	
+		}
 
 		String name = transition.getLabel();
 		XAttributeMap eventAttributes = new XAttributeMapImpl();
@@ -209,7 +223,7 @@ public class PNUnfoldedSimulator extends PNSimulator {
 		return event;
 	}
 	
-	private String getResourceString(Set<String> resources) {
+	public static String getResourceString(Set<String> resources) {
 		if (resources.size() == 1){
 			return resources.iterator().next();
 		} else {

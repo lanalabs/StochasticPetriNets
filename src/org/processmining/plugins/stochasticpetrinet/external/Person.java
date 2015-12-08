@@ -2,6 +2,8 @@ package org.processmining.plugins.stochasticpetrinet.external;
 
 public class Person extends Resource {
 
+	public static final String CASE_PREFIX = "patient#";
+	
 	protected int capacity;
 	
 	public Person(String name) {
@@ -18,5 +20,9 @@ public class Person extends Resource {
 	
 	public String toString(){
 		return getName();
+	}
+	
+	public static boolean isCaseResourceName(String name){
+		return name.startsWith(CASE_PREFIX);
 	}
 }

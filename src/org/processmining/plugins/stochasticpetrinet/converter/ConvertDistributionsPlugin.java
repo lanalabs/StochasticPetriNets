@@ -69,10 +69,10 @@ public class ConvertDistributionsPlugin {
 			returnLabels = { "Petri net", "Marking" }, 
 			returnTypes = { Petrinet.class, Marking.class }, 
 			userAccessible = true,
-			help = "Creates a new copy of the net stripped of performance data.")
+			help = "Creates a new copy of the net enriched with performance data.")
 
 	@UITopiaVariant(affiliation = "Vienna University of Economics and Business", author = "A. Rogge-Solti", email = "andreas.rogge-solti@wu.ac.at", uiLabel = UITopiaVariant.USEPLUGIN)
-	public static Object[] enrichStochasticInformation(PluginContext context, Petrinet net){
+	public static Object[] enrichStochasticInformation(PluginContext context, Petrinet net, DistributionType type){
 		Marking marking = StochasticNetUtils.getInitialMarking(context, net);
 		try {
 			Object[] netAndMarking = ToStochasticNet.fromPetrinet(context, net, marking);
@@ -80,9 +80,17 @@ public class ConvertDistributionsPlugin {
 			for (Transition t : stochNet.getTransitions()){
 				if (t instanceof TimedTransition){
 					TimedTransition tt = (TimedTransition) t;
-					tt.setDistributionType(DistributionType.EXPONENTIAL);
-					double mean = 5+random.nextDouble()*10;
-					tt.setDistributionParameters(new double[]{mean});
+					switch(type){
+						case GAMMA:
+							tt.setDistributionType(type);
+							tt.setDistributionParameters(5+random.nextDouble()*10, 1+random.nextDouble());
+							break;
+						case EXPONENTIAL:
+						default:
+							tt.setDistributionType(DistributionType.EXPONENTIAL);
+							tt.setDistributionParameters(5+random.nextDouble()*10);		
+							break;
+					}
 					tt.setDistribution(null);
 					tt.setDistribution(tt.initDistribution(0));
 				}

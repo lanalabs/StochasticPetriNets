@@ -2,8 +2,6 @@ package org.processmining.plugins.stochasticpetrinet.external;
 
 import java.util.Set;
 
-
-
 public class ProbabilisticAllocation {
 	private Set<Allocatable> allocatedEntities;
 	private double weight;

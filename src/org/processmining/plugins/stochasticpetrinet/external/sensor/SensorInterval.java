@@ -4,12 +4,12 @@ public class SensorInterval implements Comparable<SensorInterval>{
 
 	private static final String SEPARATOR = ";";
 	
-	long startTime;
-	long endTime;
+	private long startTime;
+	private long endTime;
 	
-	String locationKey;
+	private String locationKey;
 	
-	String resourceKey;
+	private String resourceKey;
 	
 	public SensorInterval(long startTime, long endTime, String location, String resource){
 		this.startTime = startTime;
@@ -39,4 +39,72 @@ public class SensorInterval implements Comparable<SensorInterval>{
 		}
 		return diff; 
 	}
+
+	public long getStartTime() {
+		return startTime;
+	}
+
+	public void setStartTime(long startTime) {
+		this.startTime = startTime;
+	}
+
+	public long getEndTime() {
+		return endTime;
+	}
+
+	public void setEndTime(long endTime) {
+		this.endTime = endTime;
+	}
+
+	public String getLocationKey() {
+		return locationKey;
+	}
+
+	public void setLocationKey(String locationKey) {
+		this.locationKey = locationKey;
+	}
+
+	public String getResourceKey() {
+		return resourceKey;
+	}
+
+	public void setResourceKey(String resourceKey) {
+		this.resourceKey = resourceKey;
+	}
+
+	public int hashCode() {
+		final int prime = 31;
+		int result = 1;
+		result = prime * result + (int) (endTime ^ (endTime >>> 32));
+		result = prime * result + ((locationKey == null) ? 0 : locationKey.hashCode());
+		result = prime * result + ((resourceKey == null) ? 0 : resourceKey.hashCode());
+		result = prime * result + (int) (startTime ^ (startTime >>> 32));
+		return result;
+	}
+
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		SensorInterval other = (SensorInterval) obj;
+		if (endTime != other.endTime)
+			return false;
+		if (locationKey == null) {
+			if (other.locationKey != null)
+				return false;
+		} else if (!locationKey.equals(other.locationKey))
+			return false;
+		if (resourceKey == null) {
+			if (other.resourceKey != null)
+				return false;
+		} else if (!resourceKey.equals(other.resourceKey))
+			return false;
+		if (startTime != other.startTime)
+			return false;
+		return true;
+	}
+	
 }
