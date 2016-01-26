@@ -7,8 +7,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.concurrent.Executor;
 
 import javax.swing.JComponent;
@@ -141,7 +139,7 @@ public class TestUtils {
 		frame.pack(); 
 		frame.setVisible(true);
 		try {
-			Thread.sleep(60000);
+			Thread.sleep(600000);
 		} catch (InterruptedException e) {
 			e.printStackTrace();
 		} finally {
@@ -293,27 +291,6 @@ public class TestUtils {
 		writer.flush();
 		writer.close();
 	}
-	
-	public static <T> Set<Set<T>> generateAllSubsets(Set<T> original) {
-	    Set<Set<T>> allSubsets = new HashSet<Set<T>>();
-
-	    allSubsets.add(new HashSet<T>()); //Add empty set.
-
-	    for (T element : original) {
-	        // Copy subsets so we can iterate over them without ConcurrentModificationException
-	        Set<Set<T>> tempClone = new HashSet<Set<T>>(allSubsets);
-
-	        // All element to all subsets of the current power set.
-	        for (Set<T> subset : tempClone) {
-	            Set<T> extended = new HashSet<T>(subset);
-	            extended.add(element);
-	            allSubsets.add(extended);
-	        }
-	    }
-
-	    return allSubsets;
-	}
-	
 	
 	public static PluginContext getDummyConsoleProgressContext(){
 		PluginContext context = new DummyConsolePluginContext();

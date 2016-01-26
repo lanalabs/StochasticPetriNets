@@ -10,6 +10,8 @@ import java.util.Set;
 
 import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.apache.commons.math3.distribution.RealDistribution;
+import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
+import org.processmining.models.graphbased.directed.petrinet.PetrinetNode;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
@@ -28,11 +30,57 @@ import org.utils.datastructures.Triple;
 
 public class AllocationBasedNetGenerator {
 	
+	public enum ObsType{
+		OBSERVED,UNOBSERVED;
+	}
+	
 	public static final String PLACE_CASE_PREFIX = "p_case_";
 	
 	protected static RealDistribution arrivalDistribution;
 
 	/**
+	 * TOSO: Currently we neglect resources!
+	 * @param base
+	 * @param allocations
+	 * @param resources
+	 * @param noise
+	 * @return
+	 */
+	public static Object[] generateObservationAwareNet(StochasticNet base, PetrinetModelAllocations allocations, Set<Allocatable> resources, double noise){
+		// create an empty net:
+		StochasticNet net = new StochasticNetImpl("generated observation aware net (from "+base.getLabel()+")");
+		
+		net.setTimeUnit(base.getTimeUnit());
+		net.setExecutionPolicy(base.getExecutionPolicy());
+		
+		Marking initialMarking = new Marking();
+		// add resource places:
+		Map<Allocatable, Place> allocatablePlaces = new HashMap<Allocatable, Place>();
+		for (Allocatable resource : resources){
+			Place p = net.addPlace("p_"+resource.getName());
+			allocatablePlaces.put(resource, p);
+			initialMarking.add(p, resource.getCapacity());
+		}
+		Map<PetrinetNode,PetrinetNode> nodeMapObserved = new HashMap<PetrinetNode, PetrinetNode>();
+		addNet(net, base, ObsType.OBSERVED, nodeMapObserved);
+		Map<PetrinetNode,PetrinetNode> nodeMapUnobserved = new HashMap<PetrinetNode, PetrinetNode>();
+		addNet(net, base, ObsType.UNOBSERVED, nodeMapUnobserved);
+		
+		connectObservedAndUnobserved(net, nodeMapObserved, nodeMapUnobserved);
+		
+		Marking baseMarking = StochasticNetUtils.getInitialMarking(null, base);
+		for (Place initPlace : baseMarking){
+			initialMarking.add((Place)nodeMapObserved.get(initPlace));	
+		}
+		
+		
+		return new Object[]{net,initialMarking}; 
+	}
+
+	
+	/**
+	 * Generates a net based on a basis and a number of cases that are drawn randomly from the model.
+	 * Puts all traces in one big unfolded model.
 	 * 
 	 * @param base
 	 * @param allocations
@@ -255,5 +303,67 @@ public class AllocationBasedNetGenerator {
 			transitions = semantics.getExecutableTransitions();
 		}
 		return transitionSequence;
+	}
+	
+	
+	private static void addNet(StochasticNet net, StochasticNet base, ObsType observed, Map<PetrinetNode, PetrinetNode> mapping) {
+		for (Transition t : base.getTransitions()) {
+			TimedTransition copy = net.addTimedTransition(t.getLabel(), DistributionType.UNDEFINED);
+			if (t instanceof TimedTransition){
+				TimedTransition tt = (TimedTransition) t;
+				copy.setDistributionType(tt.getDistributionType());
+				copy.setDistributionParameters(tt.getDistributionParameters());
+				copy.setWeight(tt.getWeight());
+				copy.initDistribution(Double.MAX_VALUE);
+			}
+			copy.setInvisible(t.isInvisible());
+			mapping.put(t, copy);
+		}
+		for (Place p : base.getPlaces()) {
+			Place copy = net.addPlace(p.getLabel());
+			mapping.put(p, copy);
+		}
+		for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> a : base.getEdges()) {
+			if (a.getSource() instanceof Place){
+				net.addArc((Place)mapping.get(a.getSource()), (Transition)mapping.get(a.getTarget()));
+			} else {
+				net.addArc((Transition)mapping.get(a.getSource()), (Place)mapping.get(a.getTarget()));
+			}
+		}
+	}
+	
+	/**
+	 * We have a net with an observed part and a mirrored unobserved part.
+	 * This method adds transitions in both directions representing "dropping" or "picking up" of a Sensor badge.
+	 * 
+	 * @param net
+	 * @param nodeMapObserved
+	 * @param nodeMapUnobserved
+	 */
+	private static void connectObservedAndUnobserved(StochasticNet net,
+			Map<PetrinetNode, PetrinetNode> nodeMapObserved, Map<PetrinetNode, PetrinetNode> nodeMapUnobserved) {
+		
+		double rate = 0.1;
+		
+		for (PetrinetNode nodeInNet : nodeMapObserved.keySet()){
+			if (nodeInNet instanceof Place){
+				Place placeInNet = (Place) nodeInNet;
+				// connect to unobserved part  
+				Place observedPlace = (Place) nodeMapObserved.get(placeInNet);
+				Place unobservedPlace = (Place) nodeMapUnobserved.get(placeInNet);
+				
+				Transition newTransDropBadge = net.addTimedTransition(nodeInNet.getLabel()+"_drop", rate, DistributionType.EXPONENTIAL, rate);
+				newTransDropBadge.setInvisible(true);
+				Transition newTransPickupBadge = net.addTimedTransition(nodeInNet.getLabel()+"_pickup", rate, DistributionType.EXPONENTIAL, rate);
+				newTransPickupBadge.setInvisible(true);
+				
+				net.addArc(observedPlace, newTransDropBadge);
+				net.addArc(newTransDropBadge, unobservedPlace);
+				
+				net.addArc(unobservedPlace, newTransPickupBadge);
+				net.addArc(newTransPickupBadge, observedPlace);
+			}
+		}
+		
 	}
 }

@@ -35,7 +35,8 @@ public class TimeSeriesComparer {
 				TimeSeries<Bit> tsJ = caseTimeSeries.getTimeSeries(j);
 				double distance = com.dtw.FastDTW.getWarpDistBetween(tsI, tsJ, distFn);
 				final double dist = matrix[pos++] = distance;
-				System.out.println("i=\t"+i+", j=\t"+j+", dist=\t"+dist);
+				if (j == size -1)
+					System.out.println("i=\t"+i+", j=\t"+j+", dist=\t"+dist);
 			}
 		}
 		return matrix;

@@ -25,7 +25,15 @@ public class CaseTimeSeries {
 
 	public void add(TimeSeriesBit timeSeriesBit) {
 		this.timeSeries.add(timeSeriesBit);
-		
+	}
+	
+	public String[] getNames(){
+		String[] names = new String[timeSeries.size()];
+		int i = 0;
+		for (TimeSeriesBit ts : timeSeries){
+			names[i++] = "case"+i; 
+		}
+		return names;
 	}
 
 }
