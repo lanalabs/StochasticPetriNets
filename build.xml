@@ -1,4 +1,4 @@
-<project name="StochasticPetriNets" default="Compile Sources" basedir=".">
+<project name="StochasticPetriNets" default="Compile Sources" basedir="."  xmlns:ivy="antlib:org.apache.ivy.ant">
 		<!-- set global properties for this build -->
 		<property environment="env" />
 		<property name="src" location="src" />
@@ -12,6 +12,16 @@
 
 		<!-- Set the os to win32, win64, lin32, lin64, mac, or all -->
 		<property name="os" value="all" />
+		
+		<property name="ivy.lib.dir" value="ivy" />
+    	<property name="ivy.cache.dir" value="/var/lib/hudson/.ivy2/cache/${env.EXECUTOR_NUMBER}" />
+
+		<property name="author" value="Andreas Rogge-Solti" />
+		<property name="organization" value="Wirtschaftsuniversität Wien, Austria" />
+		<property name="description" value="StochasticPetriNets" />
+		<property name="license" value="LGPL" />
+		<property name="logo" value="http://www.solti.de/andi/logo.png" />
+		
 
 		<!-- Compilation macro
 		 This Macro compiles the sources is one ${src}-... folder.
@@ -22,6 +32,7 @@
  			<pathelement path="${build}" />
  			<pathelement path="${java.class.path}" />
  			<fileset dir=".">
+	 			<include name="ivy/**/*.jar" />
  				<include name="lib/**/*.jar" />
  				<include name="stdlib/**/*.jar" />
  				<include name="packagelib/**/*.jar" />
@@ -92,6 +103,7 @@
 					<exclude name="src/test/**" />
 					<exclude name="**/*.jj" />
 					<exclude name="**/*.jjt" />
+					<exclude name="**/*.properties" />
 				</fileset>
 			</javadoc>
 		</target>
@@ -115,43 +127,33 @@
 				<delete includeEmptyDirs="true" quiet="true">
 			    	<fileset dir="${release}/lib" includes="**/*"/>
 			  	</delete>
-				<mkdir dir="${release}/lib"/>
+				<mkdir dir="${release}/lib" />
 				<copy todir="${release}/lib" overwrite="true">
 					<fileset dir="${lib}"/>
 				</copy>
-				<copy todir="${release}/lib" overwrite="true">
-					<fileset dir="${lib}"/>
-				</copy>
-				<echoxml file="${release}/packages.xml">
-					<packages>
-						<package 
-							name="${project}" 
-							version="${version}" 
-							os="all" 
-							url="http://www.promtools.org/prom6/packages/${project}/${project}-${version}-${os}.zip"
-							desc="Stochastic Petri Nets"
-							org="Hasso Plattner Institute, University of Potsdam, Germany" 
-							license="LGPL" 
-							author="Andreas Rogge-Solti"
-							auto="false"
-							hasPlugins="true"
-							logo="http://www.solti.de/andi/logo.png">
-							<dependency name="PetriNets"/>
-							<dependency name="Log"/>
-							<dependency name="LpSolve"/>
-							<dependency name="PNetAlignmentAnalysis"/>
-							<dependency name="PNetReplayer"/>
-							<dependency name="TransitionSystems"/>
-							<dependency name="Widgets"/>
-							<dependency name="BasicUtils"/>
-							<dependency name="ApacheUtils"/>
-						</package>
-					</packages>
-				</echoxml>
+				
+				<exec executable="grep">
+				<redirector output="ivypack.xml" />
+				<arg value="&lt;dependency .*org=&quot;prom&quot; " />
+				<arg value="ivy.xml" />
+			</exec>
+			<echo file="${release}/packages.xml">
+					&lt;packages&gt;
+							&lt;package name="${project}" version="${version}" os="${os}" url="http://www.promtools.org/prom6/packages/${project}/${project}-${version}-${os}.zip" desc="${description}" org="${organization}" license="${license}" author="${author}" auto="false" hasPlugins="true" logo="${logo}"&gt;
+				</echo>
+			<concat destfile="${release}/packages.xml" append="true">
+				<filelist files="ivypack.xml" />
+			</concat>
+			<echo file="${release}/packages.xml" append="true">
+						&lt;/package&gt;
+					&lt;/packages&gt;
+				</echo>
+				<copy file="ivy.xml" tofile="${release}/ivy.xml" overwrite="true" />
+			    <replace file="${release}/ivy.xml" token="VERSION" value="${version}" />
 			</sequential>
 		</target>
 
-		<target name="Compile Sources">
+		<target name="Compile Sources" depends="resolve">
 			<!-- Create the build directory structure used by compile -->
 			<!-- Create the time stamp -->
 			<tstamp />
@@ -163,6 +165,9 @@
 			<makejar />
 		</target>
 
+	<target name="resolve">
+		<ivy:retrieve />
+	</target>
 
 	</project>
 
