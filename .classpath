@@ -49,8 +49,6 @@
 	<classpathentry kind="lib" path="lib/JRIEngine.jar"/>
 	<classpathentry kind="lib" path="packagelib/Log.jar"/>
 	<classpathentry kind="lib" path="stdlib/guava-16.0.1.jar"/>
-	<classpathentry kind="lib" path="packagelib/Log-lib/OpenXES-XStream.jar"/>
-	<classpathentry kind="lib" path="packagelib/Log-lib/OpenXES.jar"/>
 	<classpathentry kind="lib" path="packagelib/BasicUtils-lib/javailp-1.2a.jar"/>
 	<classpathentry kind="lib" path="packagelib/BasicUtils-lib/trove-3.0.3.jar"/>
 	<classpathentry kind="lib" path="lib/REngine.jar"/>
@@ -62,5 +60,10 @@
 	<classpathentry kind="lib" path="packagelib/ApacheUtils-lib/commons-io-2.4.jar"/>
 	<classpathentry kind="lib" path="lib/javassist.jar"/>
 	<classpathentry kind="lib" path="lib/json-simple-1.1.1.jar"/>
+	<classpathentry kind="lib" path="packagelib/Log-lib/OpenXES-20160212.jar"/>
+	<classpathentry kind="lib" path="packagelib/Log-lib/OpenXES-XStream-20160212.jar"/>
+	<classpathentry kind="lib" path="lib/SparseBitSet-1.0.jar"/>
+	<classpathentry kind="lib" path="lib/FastDTW.jar"/>
+	<classpathentry kind="lib" path="packagelib/BasicUtils-lib/jbpt-0.2.429.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
