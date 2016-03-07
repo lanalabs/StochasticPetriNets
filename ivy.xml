@@ -14,6 +14,7 @@
     	<dependency org="prom" name="XESLite" rev="latest" changing="true" transitive="true" />
     	<dependency org="prom" name="EfficientStorage" rev="latest" changing="true" transitive="true" />
     	<dependency org="prom" name="ProcessTree" rev="latest" changing="true" transitive="true" />	
+    	<dependency org="prom" name="PTConversions" rev="latest" changing="true" transitive="true" />
     	<dependency org="prom" name="Properties" rev="latest" changing="true" transitive="true" />
         <dependency org="prom" name="PetriNets" rev="latest" changing="true" transitive="true" />
         <dependency org="prom" name="PNetReplayer" rev="latest" changing="true" transitive="true" />
