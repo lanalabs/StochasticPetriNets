@@ -10,11 +10,14 @@ import javax.swing.JSlider;
 import javax.swing.event.ChangeEvent;
 import javax.swing.event.ChangeListener;
 
+import org.deckfour.xes.model.XLog;
 import org.jgraph.JGraph;
 import org.processmining.contexts.uitopia.annotations.Visualizer;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.Plugin;
+import org.processmining.framework.util.Pair;
 import org.processmining.plugins.logmodeltrust.miner.GeneralizedMiner;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.processtree.ProcessTree;
 import org.processmining.processtree.visualization.tree.TreeLayoutBuilder;
 
@@ -56,9 +59,9 @@ public class GeneralizedMinerVisualizer implements ChangeListener {
 		modelTrust.addChangeListener(this);
 		logTrust.addChangeListener(this);
 		
-		ProcessTree tree = miner.getProcessTreeBasedOnTrust(1);
+		Pair<XLog, ProcessTree> bestPair = miner.getFittingPair(1, 1);
 		
-		updateGraph(tree);
+		updateGraph(bestPair.getSecond());
 		
 		return panel;
 	}
@@ -98,8 +101,11 @@ public class GeneralizedMinerVisualizer implements ChangeListener {
 	}
 
 	private void updateModelAndLogPair() {
-		ProcessTree tree = miner.getProcessTreeBasedOnTrust(trustInModel);
-		System.out.println(tree);
-		updateGraph(tree);
+		Pair<XLog,ProcessTree> logTreePair = miner.getFittingPair(trustInLog, trustInModel);
+		System.out.println(logTreePair.getSecond());
+		updateGraph(logTreePair.getSecond());
+		
+		// align log and model:
+		System.out.println("new fitness: "+StochasticNetUtils.getDistance(miner.getLastModelPetriNet(), logTreePair.getFirst()));
 	}
 }
