@@ -102,6 +102,7 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.TransClasses;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
+import org.processmining.plugins.petrinet.replayresult.StepTypes;
 import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGenRes;
 import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
 import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
@@ -827,7 +828,8 @@ public class StochasticNetUtils {
 			Marking initialMarking, Marking finalMarking, XEventClassifier classifier, TransClasses transClasses) {
 		// event classes, costs
 		Map<XEventClass, Integer> mapEvClass2Cost = new HashMap<XEventClass, Integer>();
-		for ( XEventClass c : mapping.values()) {
+		XEventClasses ecLog = XLogInfoFactory.createLogInfo(originalTrace, XLogInfoImpl.STANDARD_CLASSIFIER).getEventClasses();
+		for ( XEventClass c : ecLog.getClasses()) {
 			mapEvClass2Cost.put(c, 100);
 		}
 		// transition classes
@@ -1510,8 +1512,20 @@ public class StochasticNetUtils {
 	public static double getDistance(PetrinetWithMarkings petriNet, XLog log) {
 		double distance = 0;
 		
-		PNRepResult result = (PNRepResult) replayLog(null, petriNet.petrinet, log, false, true);
+		PNRepResult result = (PNRepResult) replayLog(null, petriNet.petrinet, log, false, false);
 		distance = Double.valueOf(result.getInfo().get(PNRepResult.TRACEFITNESS).toString());
+		
+		System.out.println("Unaligned traces:");
+		// debug example misaligned trace:
+		for (SyncReplayResult repResult : result){
+			for(StepTypes stepType : repResult.getStepTypes()){
+				if (stepType.equals(StepTypes.L) || stepType.equals(StepTypes.MREAL)){
+					System.out.println(debugTrace(log.get(repResult.getTraceIndex().first())));
+					break;
+				}
+			}
+		}
+		
 		return distance;
 	}
 }

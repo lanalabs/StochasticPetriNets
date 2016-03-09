@@ -12,7 +12,6 @@ import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.extension.std.XLifecycleExtension;
 import org.deckfour.xes.extension.std.XLifecycleExtension.StandardModel;
 import org.deckfour.xes.factory.XFactoryRegistry;
-import org.deckfour.xes.model.XAttribute;
 import org.deckfour.xes.model.XAttributeDiscrete;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
@@ -20,12 +19,12 @@ import org.deckfour.xes.model.XTrace;
 import org.deckfour.xes.model.impl.XAttributeDiscreteImpl;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
+import org.processmining.plugins.logmodeltrust.converter.RelaxedPT2PetrinetConverter;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
 import org.processmining.plugins.petrinet.replayresult.StepTypes;
 import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.processtree.ProcessTree;
-import org.processmining.ptconversions.pn.ProcessTree2Petrinet;
 import org.processmining.ptconversions.pn.ProcessTree2Petrinet.InvalidProcessTreeException;
 import org.processmining.ptconversions.pn.ProcessTree2Petrinet.NotYetImplementedException;
 import org.processmining.ptconversions.pn.ProcessTree2Petrinet.PetrinetWithMarkings;
@@ -36,7 +35,8 @@ import com.google.common.collect.Table.Cell;
 
 public abstract class AbstractGeneralizedMiner implements GeneralizedMiner {
 
-	private static final String IMPUTEDPOS = "trustBasedRepair:imputedPos";
+	private static final String IMPUTED_POS = "trustBasedRepair:imputedPos";
+	private static final String ALIGNED_POS = "trustBasedRepair:alignedPos";
 
 	private boolean initialized = false;
 	
@@ -77,18 +77,37 @@ public abstract class AbstractGeneralizedMiner implements GeneralizedMiner {
 		ProcessTree bestTree = getProcessTreeBasedOnTrust(trustModel);
 		
 		// repair events in the log, until we reach the repaired trust level
-		XLog repairedLog = (XLog) log.clone();
-		
+		XLog repairedLog = StochasticNetUtils.cloneLog(log);
+		int alreadyRepairedEvents = 0;
 		try {
 			// convert tree to Petri net
-			pnWithMarkings = ProcessTree2Petrinet.convert(bestTree);
+			pnWithMarkings = RelaxedPT2PetrinetConverter.convert(bestTree);
 
 			// align petri net with log:
 			PNRepResult result = (PNRepResult) StochasticNetUtils.replayLog(null, pnWithMarkings.petrinet, log, false, true);
+			// go through events and mark their positions in the alignments
 			List<SyncReplayResult> resultList = new ArrayList<>();
+			int adjustedEvents = 0;
 			for (SyncReplayResult repResult : result){
 				resultList.add(repResult);
+				int tracePos = 0;
+				int alignmentPos = 0;
+				for(StepTypes stepType : repResult.getStepTypes()){
+					if (stepType.equals(StepTypes.LMNOGOOD)){
+						System.out.println("Debug me!");
+					}
+					if (stepType.equals(StepTypes.L) || stepType.equals(StepTypes.LMGOOD) || stepType.equals(StepTypes.LMNOGOOD) || stepType.equals(StepTypes.LMREPLACED)){
+						for (Integer traceIndex : repResult.getTraceIndex()){
+							XTrace trace = repairedLog.get(traceIndex);
+							trace.get(tracePos).getAttributes().put(ALIGNED_POS, new XAttributeDiscreteImpl(ALIGNED_POS, alignmentPos));
+							adjustedEvents++;
+						}
+						tracePos++;
+					}
+					alignmentPos++;
+				}
 			}
+//			System.out.println("adjusted "+adjustedEvents+" events!");
 			
 			// gather frequencies of misalignments
 			Table<String, Boolean, Pair<Integer,Set<int[]>>> eventAddedRemovedCounts = extractCountsOfEventsToBeRemovedOrAdded(pnWithMarkings, result);
@@ -96,7 +115,6 @@ public abstract class AbstractGeneralizedMiner implements GeneralizedMiner {
 			
 			int alignmentMismatchCount = getAlignmentMismatchCount(repairEntries);
 			int numToRepair = (int) Math.floor((1.0-trustLog) * alignmentMismatchCount);
-			int alreadyRepairedEvents = 0;
 			for (RepairEntry entry : repairEntries){
 				if (alreadyRepairedEvents >= numToRepair){
 					break;
@@ -108,48 +126,58 @@ public abstract class AbstractGeneralizedMiner implements GeneralizedMiner {
 					for (Integer trIndex : traceIndexes){
 						XTrace trace = repairedLog.get(trIndex);
 						String traceId = XConceptExtension.instance().extractName(trace);
-						List<StepTypes> sTypes = repResult.getStepTypes();
-						List<Object> objects = repResult.getNodeInstance();
+//						List<StepTypes> sTypes = repResult.getStepTypes();
+//						List<Object> objects = repResult.getNodeInstance();
 						// traverse trace and find position where the new event belongs to, or which event needs to be removed.
-						int alignmentPos = 0;
+//						int alignmentPos = 0;
 						int tracePos = 0;
-						for (; alignmentPos < pos[1]; alignmentPos++){ // go from 0 to the current pos in the alignment and find the position in the trace
+						
+						for (; tracePos < trace.size(); tracePos++){
 							XEvent e = trace.get(tracePos);
-							StepTypes sType = sTypes.get(alignmentPos);
-							Object object = objects.get(alignmentPos);
-							switch (sType){
-								case MREAL:
-									// real model move 
-									// check if event is there already:
-									Transition t = (Transition) object;
-									XAttribute attr = e.getAttributes().get(IMPUTEDPOS);
-									if (XConceptExtension.instance().extractName(e).equals(t.getLabel()) && attr != null && ((XAttributeDiscrete)attr).getValue() <= alignmentPos ){
-										// we synch these, as it is possible that they match!
-										tracePos++;
-									}
-									break;
-								case L:
-									// real log move
-									// check if event was removed already:
-									XEventClass eClass = (XEventClass) object;
-									if (XConceptExtension.instance().extractName(e).equals(eClass.getId())){
-										tracePos++;
-									}
-									break;
-								case LMGOOD:
-									tracePos++;
-									break;
-								case MINVI: // don't care about these
-								default:
-									break;
+							XAttributeDiscrete attribute = (XAttributeDiscrete) (e.getAttributes().containsKey(ALIGNED_POS)?e.getAttributes().get(ALIGNED_POS) : e.getAttributes().get(IMPUTED_POS));
+							if (attribute.getValue() >= pos[1]){
+								break;
 							}
 						}
+						
+//						for (; alignmentPos < pos[1]; alignmentPos++){ // go from 0 to the current pos in the alignment and find the position in the trace
+//							XEvent e = trace.get(tracePos);
+//							StepTypes sType = sTypes.get(alignmentPos);
+//							Object object = objects.get(alignmentPos);
+//							long alignedPos = ((XAttributeDiscrete)e.getAttributes().get(ALIGNED_POS)).getValue();
+//							switch (sType){
+//								case MREAL:
+//									// real model move 
+//									// check if event is there already:
+//									Transition t = (Transition) object;
+//									XAttribute attr = e.getAttributes().get(IMPUTED_POS);
+//									if (XConceptExtension.instance().extractName(e).equals(t.getLabel()) && attr != null && ((XAttributeDiscrete)attr).getValue() <= alignmentPos ){
+//										// we synch these, as it is possible that they match!
+//										tracePos++;
+//									}
+//									break;
+//								case L:
+//									// real log move
+//									// check if event was removed already:
+//									XEventClass eClass = (XEventClass) object;
+//									if (XConceptExtension.instance().extractName(e).equals(eClass.getId())){
+//										tracePos++;
+//									}
+//									break;
+//								case LMGOOD:
+//									tracePos++;
+//									break;
+//								case MINVI: // don't care about these
+//								default:
+//									break;
+//							}
+//						}
 						if (entry.isAdd()){
 							XEvent newEvent = XFactoryRegistry.instance().currentDefault().createEvent();
 							XConceptExtension.instance().assignName(newEvent, entry.getEventType());
 							XConceptExtension.instance().assignInstance(newEvent, traceId);
 							XLifecycleExtension.instance().assignStandardTransition(newEvent, StandardModel.COMPLETE);
-							newEvent.getAttributes().put(IMPUTEDPOS, new XAttributeDiscreteImpl(IMPUTEDPOS, pos[1]));
+							newEvent.getAttributes().put(IMPUTED_POS, new XAttributeDiscreteImpl(IMPUTED_POS, pos[1]));
 							trace.add(tracePos, newEvent);
 						} else { // remove it!
 							trace.remove(tracePos);
@@ -168,7 +196,7 @@ public abstract class AbstractGeneralizedMiner implements GeneralizedMiner {
 		} catch (InvalidProcessTreeException e) {
 			e.printStackTrace();
 		}
-		
+		System.out.println("Repaired "+alreadyRepairedEvents+" events!");		
 		return new Pair<XLog, ProcessTree>(repairedLog, bestTree);
 	}
 
@@ -242,6 +270,8 @@ public abstract class AbstractGeneralizedMiner implements GeneralizedMiner {
 						if (!t.isInvisible()){
 							key = t.getLabel();
 							current = eventAddedRemovedCounts.get(key, add);
+						} else {
+							System.out.println("Debug this!");
 						}
 					} else {
 						System.out.println("Debug me!");

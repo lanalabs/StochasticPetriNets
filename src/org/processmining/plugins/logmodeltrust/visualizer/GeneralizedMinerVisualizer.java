@@ -1,6 +1,7 @@
 package org.processmining.plugins.logmodeltrust.visualizer;
 
 import java.awt.BorderLayout;
+import java.awt.GridLayout;
 
 import javax.swing.JComponent;
 import javax.swing.JLabel;
@@ -16,10 +17,13 @@ import org.processmining.contexts.uitopia.annotations.Visualizer;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.Plugin;
 import org.processmining.framework.util.Pair;
+import org.processmining.models.jgraph.ProMJGraphVisualizer;
+import org.processmining.models.jgraph.visualization.ProMJGraphPanel;
 import org.processmining.plugins.logmodeltrust.miner.GeneralizedMiner;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.processtree.ProcessTree;
 import org.processmining.processtree.visualization.tree.TreeLayoutBuilder;
+import org.processmining.ptconversions.pn.ProcessTree2Petrinet.PetrinetWithMarkings;
 
 public class GeneralizedMinerVisualizer implements ChangeListener {
 	
@@ -34,6 +38,8 @@ public class GeneralizedMinerVisualizer implements ChangeListener {
 	private JPanel panel;
 	private GeneralizedMiner miner;
 	
+	private PluginContext context;
+	
 	@Plugin(name = "Generalized Miner Visualizer", returnLabels = { "Visualized Generalized Miner" }, returnTypes = { JComponent.class }, parameterLabels = { GeneralizedMiner.PARAMETER_LABEL }, userAccessible = true)
 	@Visualizer
 	public static JComponent visualize(PluginContext context, GeneralizedMiner gMiner) {
@@ -44,6 +50,7 @@ public class GeneralizedMinerVisualizer implements ChangeListener {
 	private JComponent getVisualization(PluginContext context, GeneralizedMiner gMiner) {
 		miner = gMiner;
 		panel = new JPanel(new BorderLayout());
+		this.context = context;
 		
 		modelTrust = new JSlider(0, 100, 100);
 		logTrust = new JSlider(0, 100, 100);
@@ -61,20 +68,30 @@ public class GeneralizedMinerVisualizer implements ChangeListener {
 		
 		Pair<XLog, ProcessTree> bestPair = miner.getFittingPair(1, 1);
 		
-		updateGraph(bestPair.getSecond());
+		updateGraph(bestPair.getSecond(), miner.getLastModelPetriNet());
 		
 		return panel;
 	}
 
-	private void updateGraph(ProcessTree tree) {
+	private void updateGraph(ProcessTree tree, PetrinetWithMarkings petrinetWithMarkings) {
 		TreeLayoutBuilder builder = new TreeLayoutBuilder(tree);
 		JGraph graph = builder.getJGraph();
 		
 		if (graphPanel != null){
 			panel.remove(graphPanel);
 		}
-		graphPanel = new JPanel();
+		graphPanel = new JPanel(new GridLayout(2, 1));
 		graphPanel.add(new JScrollPane(graph));
+		
+		ProMJGraphPanel newGraphPanel = null;
+		if (context == null){
+			newGraphPanel = ProMJGraphVisualizer.instance().visualizeGraphWithoutRememberingLayout(petrinetWithMarkings.petrinet);
+		} else {
+			newGraphPanel = ProMJGraphVisualizer.instance().visualizeGraph(context, petrinetWithMarkings.petrinet);
+		}
+		graphPanel.add(new JScrollPane(newGraphPanel));
+		
+		
 		panel.add(graphPanel, BorderLayout.CENTER);
 		panel.repaint();
 		panel.revalidate();
@@ -103,7 +120,7 @@ public class GeneralizedMinerVisualizer implements ChangeListener {
 	private void updateModelAndLogPair() {
 		Pair<XLog,ProcessTree> logTreePair = miner.getFittingPair(trustInLog, trustInModel);
 		System.out.println(logTreePair.getSecond());
-		updateGraph(logTreePair.getSecond());
+		updateGraph(logTreePair.getSecond(), miner.getLastModelPetriNet());
 		
 		// align log and model:
 		System.out.println("new fitness: "+StochasticNetUtils.getDistance(miner.getLastModelPetriNet(), logTreePair.getFirst()));
