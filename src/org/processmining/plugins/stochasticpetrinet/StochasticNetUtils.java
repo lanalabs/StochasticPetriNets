@@ -110,6 +110,7 @@ import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogram
 import org.processmining.plugins.stochasticpetrinet.distribution.TruncatedDistributionFactory;
 import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
+import org.processmining.ptconversions.pn.ProcessTree2Petrinet.PetrinetWithMarkings;
 import org.rosuda.JRI.Rengine;
 import org.utils.datastructures.ComparablePair;
 import org.utils.datastructures.SortedSetComparator;
@@ -140,12 +141,16 @@ public class StochasticNetUtils {
 	}
 	
 	private static Map<PetrinetGraph, Marking> initialMarkings = new LinkedHashMap<PetrinetGraph, Marking>() {
+		private static final long serialVersionUID = 6745901965568659463L;
+
 		@Override
 		protected boolean removeEldestEntry(Map.Entry<PetrinetGraph, Marking> eldest) {
 			return size() > StochasticNetUtils.cacheSize;
 		}
 	}; 
 	private static Map<PetrinetGraph, Marking> finalMarkings = new LinkedHashMap<PetrinetGraph, Marking>() {
+		private static final long serialVersionUID = -6216937984123036411L;
+
 		@Override
 		protected boolean removeEldestEntry(Map.Entry<PetrinetGraph, Marking> eldest) {
 			return size() > StochasticNetUtils.cacheSize;
@@ -247,7 +252,7 @@ public class StochasticNetUtils {
 		}
 		try {
 			if (context == null || context.getConnectionManager() == null){
-				throw new ConnectionCannotBeObtained("No plugin context available!", InitialMarkingConnection.class, null);
+				throw new ConnectionCannotBeObtained("No plugin context available!", InitialMarkingConnection.class);
 			}
 			InitialMarkingConnection imc = context.getConnectionManager().getFirstConnection(InitialMarkingConnection.class, context, petriNet);
 			initialMarking = imc.getObjectWithRole(InitialMarkingConnection.MARKING);
@@ -293,7 +298,7 @@ public class StochasticNetUtils {
 		}
 		try {
 			if (context == null || context.getConnectionManager() == null){
-				throw new ConnectionCannotBeObtained("No plugin context available!", FinalMarkingConnection.class, null);
+				throw new ConnectionCannotBeObtained("No plugin context available!", FinalMarkingConnection.class);
 			}
 			FinalMarkingConnection imc = context.getConnectionManager().getFirstConnection(FinalMarkingConnection.class, context, petriNet);
 			finalMarking = imc.getObjectWithRole(FinalMarkingConnection.MARKING);
@@ -653,7 +658,7 @@ public class StochasticNetUtils {
 	 * @param getManifest
 	 * @param addSmallDeltaCosts specifies, if a small cost should be added to increase the cost of uncommon transitions 
 	 * (favors alignment containing more frequent activities)
-	 * @return
+	 * @return {@link PNRepResult} or {@link Manifest}, depending on the flag getManifest. 
 	 */
 	public static Object replayLog(PluginContext context, PetrinetGraph net, XLog log, boolean getManifest, boolean addSmallDeltaCosts) {
 		TransEvClassMapping transitionEventClassMap = getEvClassMapping(net, log);
@@ -783,6 +788,13 @@ public class StochasticNetUtils {
 			replayWithILP.isAllReqSatisfied(null, net, log, flattener.getMap(), parameter);
 			initialized = true;
 		}
+		ResetInhibitorNet riNet = flattener.getNet();
+		for (Transition tr : riNet.getTransitions()){
+			if (flattener.getOrigTransFor(tr).isInvisible()){
+				tr.setInvisible(true);
+			}
+		}
+		
 		
 		PNRepResult pnRepResult  = replayWithILP.replayLog(context, flattener.getNet(), log, flattener.getMap(), parameter);
 		
@@ -1306,6 +1318,18 @@ public class StochasticNetUtils {
 		return 1;
 	}
 	
+	public static XLog cloneLog(XLog log){
+		XLog logClone = XFactoryRegistry.instance().currentDefault().createLog((XAttributeMap) log.getAttributes().clone());
+		for (XTrace trace : log){
+			XTrace traceClone = XFactoryRegistry.instance().currentDefault().createTrace((XAttributeMap) trace.getAttributes().clone());
+			for (XEvent event : trace){
+				XEvent eventClone = XFactoryRegistry.instance().currentDefault().createEvent((XAttributeMap) event.getAttributes().clone());
+				traceClone.add(eventClone);
+			}
+			logClone.add(traceClone);
+		}
+		return logClone;
+	}
 	
 	public static XLog getSortedLog(XLog unsortedLog) {
 		SortedMultiset<ComparablePair<Long, XTrace>> sortedTracesByStartTime = TreeMultiset.<ComparablePair<Long,XTrace>>create();
@@ -1389,7 +1413,7 @@ public class StochasticNetUtils {
 					if (inEdges > 0){
 						builder.append(",");
 					}
-					builder.append(placeNames.get((Place)edge.getSource())).append(":1");
+					builder.append(placeNames.get(edge.getSource())).append(":1");
 					inEdges ++;
 				}
 			}
@@ -1402,7 +1426,7 @@ public class StochasticNetUtils {
 					if (outEdges > 0){
 						builder.append(",");
 					}
-					builder.append(placeNames.get((Place)edge.getTarget())).append(":1");
+					builder.append(placeNames.get(edge.getTarget())).append(":1");
 					outEdges ++;
 				}
 			}
@@ -1466,5 +1490,28 @@ public class StochasticNetUtils {
 		}
 		
 		return success;
+	}
+	
+	public static String getActivityName(XEventClass eClass){
+		String eClassName = eClass.getId();
+		if (eClassName.contains("+")){
+			eClassName = eClassName.substring(0, eClassName.indexOf("+"));
+		}
+		return eClassName;
+	}
+	/**
+	 * Aligns the petri net to a log and return the distance.
+	 * TODO: incorporate further quality criteria!
+	 * 
+	 * @param petriNet
+	 * @param first
+	 * @return
+	 */
+	public static double getDistance(PetrinetWithMarkings petriNet, XLog log) {
+		double distance = 0;
+		
+		PNRepResult result = (PNRepResult) replayLog(null, petriNet.petrinet, log, false, true);
+		distance = Double.valueOf(result.getInfo().get(PNRepResult.TRACEFITNESS).toString());
+		return distance;
 	}
 }
