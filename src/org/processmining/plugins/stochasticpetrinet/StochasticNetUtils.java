@@ -93,6 +93,7 @@ import org.processmining.plugins.astar.petrinet.PetrinetReplayerILPRestrictedMov
 import org.processmining.plugins.astar.petrinet.manifestreplay.CostBasedCompleteManifestParam;
 import org.processmining.plugins.astar.petrinet.manifestreplay.ManifestFactory;
 import org.processmining.plugins.astar.petrinet.manifestreplay.PNManifestFlattener;
+import org.processmining.plugins.connectionfactories.logpetrinet.EvClassLogPetrinetConnectionFactoryUI;
 import org.processmining.plugins.connectionfactories.logpetrinet.TransEvClassMapping;
 import org.processmining.plugins.petrinet.manifestreplayer.EvClassPattern;
 import org.processmining.plugins.petrinet.manifestreplayer.PNManifestReplayerParameter;
@@ -103,12 +104,14 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
 import org.processmining.plugins.petrinet.replayresult.StepTypes;
+import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGen;
 import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGenRes;
 import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
 import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.RProvider;
 import org.processmining.plugins.stochasticpetrinet.distribution.SimpleHistogramDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.TruncatedDistributionFactory;
+import org.processmining.plugins.stochasticpetrinet.miner.QualityCriterion;
 import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.processmining.ptconversions.pn.ProcessTree2Petrinet.PetrinetWithMarkings;
@@ -214,7 +217,7 @@ public class StochasticNetUtils {
 	 * @return
 	 */
 	public static TransEvClassMapping getEvClassMapping(PetrinetGraph sNet, XLog log) {
-		XEventClass evClassDummy = new XEventClass("DUMMY", -1);
+		XEventClass evClassDummy = EvClassLogPetrinetConnectionFactoryUI.DUMMY;
 		XEventClasses ecLog = XLogInfoFactory.createLogInfo(log, XLogInfoImpl.STANDARD_CLASSIFIER).getEventClasses();
 		Iterator<Transition> transIt;
 		TransEvClassMapping mapping = new TransEvClassMapping(XLogInfoImpl.STANDARD_CLASSIFIER, evClassDummy);
@@ -1509,11 +1512,19 @@ public class StochasticNetUtils {
 	 * @param first
 	 * @return
 	 */
-	public static double getDistance(PetrinetWithMarkings petriNet, XLog log) {
+	public static Map<QualityCriterion, Double> getDistance(PetrinetWithMarkings petriNet, XLog log) {
 		double distance = 0;
+		Map<QualityCriterion, Double> qualities = new HashMap<>();
 		
 		PNRepResult result = (PNRepResult) replayLog(null, petriNet.petrinet, log, false, false);
 		distance = Double.valueOf(result.getInfo().get(PNRepResult.TRACEFITNESS).toString());
+		qualities.put(QualityCriterion.FITNESS, distance);
+		
+		AlignmentPrecGen precisionGen = new AlignmentPrecGen();
+		AlignmentPrecGenRes precGenRes = precisionGen.measurePrecision(null, petriNet.petrinet, log, result);
+		qualities.put(QualityCriterion.PRECISION, precGenRes.getPrecision());
+		qualities.put(QualityCriterion.GENERALIZATION, precGenRes.getGeneralization());
+		qualities.put(QualityCriterion.SIMPLICITY, (double)petriNet.petrinet.getNodes().size()+petriNet.petrinet.getEdges().size());
 		
 		System.out.println("Unaligned traces:");
 		// debug example misaligned trace:
@@ -1526,6 +1537,6 @@ public class StochasticNetUtils {
 			}
 		}
 		
-		return distance;
+		return qualities;
 	}
 }

@@ -5,8 +5,13 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Map.Entry;
 import java.util.concurrent.Executor;
 
 import javax.swing.JComponent;
@@ -24,8 +29,8 @@ import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.framework.connections.Connection;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
+import org.processmining.framework.connections.ConnectionID;
 import org.processmining.framework.connections.ConnectionManager;
-import org.processmining.framework.connections.impl.ConnectionManagerImpl;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.PluginContextID;
 import org.processmining.framework.plugin.PluginDescriptor;
@@ -35,6 +40,7 @@ import org.processmining.framework.plugin.PluginParameterBinding;
 import org.processmining.framework.plugin.ProMFuture;
 import org.processmining.framework.plugin.Progress;
 import org.processmining.framework.plugin.RecursiveCallException;
+import org.processmining.framework.plugin.events.ConnectionObjectListener;
 import org.processmining.framework.plugin.events.Logger.MessageLevel;
 import org.processmining.framework.plugin.events.PluginLifeCycleEventListener.List;
 import org.processmining.framework.plugin.events.ProgressEventListener.ListenerList;
@@ -353,7 +359,8 @@ public class TestUtils {
 				}
 			};
 			this.objectManager = new ProvidedObjectManagerImpl();
-			this.connectionManager = new ConnectionManagerImpl(PluginManagerImpl.getInstance());
+			PluginManagerImpl.initialize(PluginContext.class);
+			this.connectionManager = new DummyConnectionManager();
 		}
 		
 		public PluginManager getPluginManager() {
@@ -477,6 +484,64 @@ public class TestUtils {
 			return null;
 		}
 		public void clear() {
+		}
+	}
+
+	public static class DummyConnectionManager<T extends Connection> implements ConnectionManager {
+		private final Map<ConnectionID, Connection> connections = new HashMap<ConnectionID, Connection>();
+
+		public DummyConnectionManager() {
+		}
+
+		public void setEnabled(boolean isEnabled) {
+		}
+
+		public boolean isEnabled() {
+			return false;
+		}
+
+		public <T extends Connection> T getFirstConnection(Class<T> connectionType, PluginContext context,
+				Object... objects) throws ConnectionCannotBeObtained {
+			Iterator<Map.Entry<ConnectionID, Connection>> it = connections.entrySet().iterator();
+			while (it.hasNext()) {
+				Entry<ConnectionID, Connection> entry = it.next();
+				Connection c = entry.getValue();
+				if (((connectionType == null) || connectionType.isAssignableFrom(c.getClass()))
+						&& c.containsObjects(objects)) {
+					return (T)c;
+				}
+			}
+			throw new ConnectionCannotBeObtained("Connections can't be obtained in dummy testing", connectionType,
+					objects);
+		}
+
+		public <T extends Connection> Collection<T> getConnections(Class<T> connectionType, PluginContext context,
+				Object... objects) throws ConnectionCannotBeObtained {
+			throw new ConnectionCannotBeObtained("Connections can't be obtained in dummy testing", connectionType,
+					objects);
+		}
+
+		public org.processmining.framework.plugin.events.ConnectionObjectListener.ListenerList getConnectionListeners() {
+			org.processmining.framework.plugin.events.ConnectionObjectListener.ListenerList list = new ConnectionObjectListener.ListenerList();
+			return list;
+		}
+
+		public Collection<ConnectionID> getConnectionIDs() {
+			java.util.List<ConnectionID> list = new ArrayList<>();
+			return list;
+		}
+
+		public Connection getConnection(ConnectionID id) throws ConnectionCannotBeObtained {
+			return null;
+		}
+
+		public void clear() {
+		}
+
+		public <T extends Connection> T addConnection(T connection) {
+			connections.put(connection.getID(), connection);
+			connection.setManager(this);
+			return connection;
 		}
 	}
 }
