@@ -1,25 +1,36 @@
 package org.processmining.plugins.logmodeltrust.mover;
 
-import org.processmining.processtree.Node;
+import java.util.UUID;
 
 public class EditOperation implements Comparable<EditOperation>{
 
+	private boolean reverse = false;
+	
 	public enum Op{
 		INSERT, DELETE, RENAME, KEEP;
 	}
 	
 	private Op operation;
 	
-	private Node origNode;
-	private Node newNode;
+	private UUID origNode;
+	private UUID newNode;
+	
+	private String origName, newName;
 	
 	private double cost;
-	
-	public EditOperation(Op operation, Node origNode, Node newNode, double cost){
+
+	public EditOperation(Op operation, UUID origNodeId, String origName, UUID newNodeId, String newName,  double cost){
+		this(operation,origNodeId, origName, newNodeId, newName, cost, false);
+	}
+
+	public EditOperation(Op operation, UUID origNodeId, String origName, UUID newNodeId, String newName,  double cost, boolean reverse){
 		this.operation = operation;
-		this.origNode = origNode;
-		this.newNode = newNode;
+		this.origNode = origNodeId;
+		this.origName = origName;
+		this.newNode = newNodeId;
+		this.newName = newName;
 		this.cost = cost;
+		this.reverse = reverse;
 	}
 	
 	public int compareTo(EditOperation other) {
@@ -30,11 +41,11 @@ public class EditOperation implements Comparable<EditOperation>{
 		return operation;
 	}
 
-	public Node getOrigNode() {
+	public UUID getOrigNode() {
 		return origNode;
 	}
 
-	public Node getNewNode() {
+	public UUID getNewNode() {
 		return newNode;
 	}
 
@@ -43,9 +54,15 @@ public class EditOperation implements Comparable<EditOperation>{
 	}
 	
 	public String toString() {
-		String origString = origNode == null? "null" : (origNode.getName().isEmpty() ? origNode.getClass().getSimpleName() : origNode.getName());
-		String targetString = newNode == null? "null" : (newNode.getName().isEmpty() ? newNode.getClass().getSimpleName() : newNode.getName());
-		return operation+" "+origString+"->"+targetString+" "+cost;
+		String origString = origName == null? "null" : origName;
+		String targetString = newNode == null? "null" : newName;
+		return operation+(isReverse()?"-":"")+" "+origString+"->"+targetString+" "+cost;
 	}
 
+	public boolean isReverse() {
+		return reverse;
+	}
+	public void setReverse(boolean reverse) {
+		this.reverse = reverse;
+	}
 }
