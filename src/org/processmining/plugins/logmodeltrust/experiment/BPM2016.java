@@ -32,7 +32,6 @@ import org.processmining.processtree.ProcessTree;
 import org.processmining.ptconversions.pn.ProcessTree2Petrinet.InvalidProcessTreeException;
 import org.processmining.ptconversions.pn.ProcessTree2Petrinet.NotYetImplementedException;
 import org.processmining.ptconversions.pn.ProcessTree2Petrinet.PetrinetWithMarkings;
-import org.processmining.tests.plugins.stochasticnet.TestUtils;
 
 import lpsolve.LpSolve;
 
@@ -59,8 +58,7 @@ public class BPM2016 {
 	}
 	
 	private void init(File logFile) throws Exception {
-//		context = TestUtils.getDummyConsoleProgressContext(); // TODO: perhaps set up a mock plugin
-		context = null;
+		context = StochasticNetUtils.getDummyConsoleProgressContext(); // TODO: perhaps set up a mock plugin
 		
 		// the L in the paper
 		inputLog = loadLog(logFile);
@@ -70,6 +68,7 @@ public class BPM2016 {
 		System.loadLibrary("lpsolve55j");
 		System.out.println(LpSolve.lpSolveVersion());
 		// the file to store the test log
+		
 		String testLogFile = "./tests/testfiles/bpm2016/BPI_Challenge_2013_incidents.xes";
 		File logFile = new File(testLogFile);
 		if (!logFile.exists()){
@@ -77,6 +76,7 @@ public class BPM2016 {
 					+ "http://data.3tu.nl/repository/uuid:500573e6-accc-4b0c-9576-aa5468b10cee\n"
 					+ "and place it in the "+logFile.getParent()+" folder. Then you can re-run this experiment.");
 		}
+		
 		BPM2016 experiment = new BPM2016(logFile);
 		experiment.run();
 	}
