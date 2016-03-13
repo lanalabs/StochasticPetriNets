@@ -1,9 +1,11 @@
 package org.processmining.plugins.logmodeltrust.experiment;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
 
+import org.apache.commons.io.FileUtils;
 import org.deckfour.xes.classification.XEventNameClassifier;
 import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.in.XUniversalParser;
@@ -32,6 +34,8 @@ import org.processmining.ptconversions.pn.ProcessTree2Petrinet.NotYetImplemented
 import org.processmining.ptconversions.pn.ProcessTree2Petrinet.PetrinetWithMarkings;
 import org.processmining.tests.plugins.stochasticnet.TestUtils;
 
+import lpsolve.LpSolve;
+
 /**
  * Experiment for the BPM2016 submission "In Log and Model We Trust?"
  * 
@@ -55,13 +59,16 @@ public class BPM2016 {
 	}
 	
 	private void init(File logFile) throws Exception {
-		context = TestUtils.getDummyConsoleProgressContext(); // TODO: perhaps set up a mock plugin
+//		context = TestUtils.getDummyConsoleProgressContext(); // TODO: perhaps set up a mock plugin
+		context = null;
 		
 		// the L in the paper
 		inputLog = loadLog(logFile);
 	}
 
 	public static void main(String[] args) throws Exception {
+		System.loadLibrary("lpsolve55j");
+		System.out.println(LpSolve.lpSolveVersion());
 		// the file to store the test log
 		String testLogFile = "./tests/testfiles/bpm2016/BPI_Challenge_2013_incidents.xes";
 		File logFile = new File(testLogFile);
@@ -75,7 +82,8 @@ public class BPM2016 {
 	}
 	
 	
-	private void run() throws NotYetImplementedException, InvalidProcessTreeException {
+	private void run() throws NotYetImplementedException, InvalidProcessTreeException, IOException {
+		
 		MiningParameters parameters = new MiningParametersIMi();
 		parameters.setNoiseThreshold(0.5f);
 		
@@ -84,6 +92,14 @@ public class BPM2016 {
 		
 		// Petri net version of M
 		PetrinetWithMarkings inputPetrinet = RelaxedPT2PetrinetConverter.convert(inputTree);
+		
+		
+		// repair with different trust levels:
+		double[] trustLevels = new double[]{0.,0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.};
+//		double trustInModel = 0.5;
+		double trustInLog = 1;
+		
+		GeneralizedMiner miner = GeneralizedMinerPlugin.mineGeneralLogModel(context, inputLog, inputTree);
 		
 		// repair M with "model repair approach"
 		RepairConfiguration config = new RepairConfiguration(); // use default configuration
@@ -99,51 +115,57 @@ public class BPM2016 {
 		repairedModel.initialMarking = (Marking) netAndMarking[1];
 		repairedModel.finalMarking = StochasticNetUtils.getFinalMarking(context, repairedModel.petrinet);
 		
-		// repair with different trust levels:
-		double trustInModel = 0.5;
-		double trustInLog = 1;
-		
-		GeneralizedMiner miner = GeneralizedMinerPlugin.mineGeneralLogModel(context, inputLog, inputTree);
-		
-		Pair<XLog, ProcessTree> pair = miner.getFittingPair(trustInLog, trustInModel);
-
-		// ProcessTree version of M*
-		ProcessTree bestTree = pair.getSecond();
-		// Petri net version of M*
-		PetrinetWithMarkings bestPetrinet = RelaxedPT2PetrinetConverter.convert(bestTree);
-		
 		// evaluate quality criteria on models:
-		System.out.println(evaluateQualityCriteria(inputLog, bestPetrinet, repairedModel, trustInModel, trustInLog));	
+		StringBuffer buffer = new StringBuffer();
+		buffer.append(getHeader()).append("\n");
+		
+		buffer.append(evaluateQualityCriteria(inputLog, "repaired Model",repairedModel, Double.NaN, Double.NaN));
+		File resultFile = new File("./BPM16_results.csv");
+		if (!resultFile.exists()) resultFile.createNewFile();
+		FileUtils.write(resultFile, buffer.toString());
+		// our approach:
+		for (double trustInModel : trustLevels){
+			Pair<XLog, ProcessTree> pair = miner.getFittingPair(trustInLog, trustInModel);
+			// ProcessTree version of M*
+			ProcessTree bestTree = pair.getSecond();
+			// Petri net version of M*
+			PetrinetWithMarkings bestPetrinet = RelaxedPT2PetrinetConverter.convert(bestTree);
+			buffer.append(evaluateQualityCriteria(inputLog, "M*_"+trustInModel, bestPetrinet, trustInModel, trustInLog));
+			FileUtils.write(resultFile, buffer.toString());
+		}
+		
+		// Joos' approach?
+		System.out.println(buffer.toString());
+		FileUtils.write(resultFile, buffer.toString());
+		
 	}
- 	private static String evaluateQualityCriteria(XLog inputLog, PetrinetWithMarkings bestPetrinet,
-			PetrinetWithMarkings repairedModel, double trustInModel, double trustInLog) {
+ 	public static String evaluateQualityCriteria(XLog inputLog, String modelName, PetrinetWithMarkings petrinet,
+			 Double trustInModel, Double trustInLog) {
 		// replay both models on the log.
 		StringBuffer result = new StringBuffer();
-		result.append(getHeader()).append("\n");
+		
 		result.append(XConceptExtension.instance().extractName(inputLog)).append(SEP); // logname;
+		result.append(modelName).append(SEP); // logname;
 		result.append(trustInModel).append(SEP).append(trustInLog).append(SEP); // trustM;trustL;
 		
-		// replay model repair:
-		Map<QualityCriterion, Double> qualityRepaired = StochasticNetUtils.getDistance(repairedModel, inputLog);
+		Map<QualityCriterion, Double> qualityRepaired = StochasticNetUtils.getDistance(petrinet, inputLog);
 		addToResult(result, qualityRepaired);
-		Map<QualityCriterion, Double> qualityBest = StochasticNetUtils.getDistance(bestPetrinet, inputLog);
-		addToResult(result, qualityBest);
 		result.append("\n"); 
 		return result.toString();
-		
 	}
 
 	private static void addToResult(StringBuffer result, Map<QualityCriterion, Double> qualityRepaired) {
 		result.append(qualityRepaired.get(QualityCriterion.FITNESS)).append(SEP);
+		result.append(qualityRepaired.get(QualityCriterion.PRECISION1)).append(SEP);
+		result.append(qualityRepaired.get(QualityCriterion.GENERALIZATION1)).append(SEP);
 		result.append(qualityRepaired.get(QualityCriterion.PRECISION)).append(SEP);
 		result.append(qualityRepaired.get(QualityCriterion.GENERALIZATION)).append(SEP);
-		result.append(qualityRepaired.get(QualityCriterion.SIMPLICITY)).append(SEP);
+		result.append(qualityRepaired.get(QualityCriterion.SIMPLICITY));
 	}
 
-	private static String getHeader() {
-		return "logname"+SEP+"trustM"+SEP+"trustL"+SEP+
-				"fitnessMR"+SEP+"precisionMR"+SEP+"generalizationMR"+SEP+"simplicityMR"+SEP+
-				"fitnessM*"+SEP+"precisionM*"+SEP+"generalizationM*"+SEP+"simplicityM*";
+	public static String getHeader() {
+		return "logname"+SEP+"approach"+SEP+"trustM"+SEP+"trustL"+SEP+
+				"fitness"+SEP+"precision"+SEP+"generalization"+SEP+"precision2"+SEP+"generalization2"+SEP+"simplicity";
 	}
 
 	/**

@@ -2,18 +2,18 @@ package org.processmining.plugins.logmodeltrust.heuristic.processtree;
 
 import java.util.UUID;
 
-import org.processmining.plugins.logmodeltrust.mover.TreeUtils;
 import org.processmining.processtree.Block;
 import org.processmining.processtree.Node;
 import org.processmining.processtree.ProcessTree;
 import org.processmining.processtree.impl.AbstractTask;
+import org.processmining.processtree.impl.ProcessTreeImpl;
 
 public class TreeWrapper {
 
 	public static ProcessTree getWrappedTree(ProcessTree tree){
 		try {
-			ProcessTree copyTree = TreeUtils.getClone(tree);
-			Node wrappedRoot = wrap(copyTree, copyTree.getRoot());
+			ProcessTree copyTree = new ProcessTreeImpl(tree.getName());
+			Node wrappedRoot = wrap(copyTree, tree.getRoot());
 			copyTree.setRoot(wrappedRoot);
 			return copyTree;
 		} catch (Exception e){

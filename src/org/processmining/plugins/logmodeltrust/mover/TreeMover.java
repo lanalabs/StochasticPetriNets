@@ -1,21 +1,16 @@
 package org.processmining.plugins.logmodeltrust.mover;
 
-import java.awt.Dimension;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-
 import org.jbpt.bp.BehaviouralProfile;
-import org.jgraph.JGraph;
 import org.processmining.framework.util.Pair;
 import org.processmining.plugins.logmodeltrust.converter.ProcessTreeConverter;
 import org.processmining.plugins.logmodeltrust.heuristic.bp.BehaviourJaccardSimilarity;
@@ -27,8 +22,8 @@ import org.processmining.processtree.Edge;
 import org.processmining.processtree.Node;
 import org.processmining.processtree.ProcessTree;
 import org.processmining.processtree.impl.AbstractTask;
-import org.processmining.processtree.visualization.tree.TreeLayoutBuilder;
 
+import com.google.common.base.Joiner;
 import com.google.common.collect.BiMap;
 import com.google.common.collect.HashBiMap;
 
@@ -50,11 +45,12 @@ public class TreeMover {
 	private ProcessTree origTree;
 	private ProcessTree targetTree;
 	
+	private ProcessTree resultTree;
+	
 	private LabeledTree origLblTree;
 	private LabeledTree targetLblTree;
 	
 	private Map<UUID, String> names;
-	private Map<UUID, Node> targetNodesToInsert;
 	
 	/** maps from the orig nodes' ids to their integer position in the target labeled tree */ 
 	private BiMap<UUID, Integer> origNodeIds;
@@ -62,15 +58,17 @@ public class TreeMover {
 	private BiMap<UUID, Integer> targetNodeIds;
 	
 	/** maps from the original tree representation (LabeledTree) to the new nodes in the moving tree*/
-	private BiMap<Integer, UUID> fromOrigToNewNodes;
+	private BiMap<Integer, Node> fromOrigToNewNodes;
 	/** maps from the target tree representation (LabeledTree) to the new nodes in the moving tree*/
-	private BiMap<Integer, UUID> fromTargetToNewNodes;
+	private BiMap<Integer, Node> fromTargetToNewNodes;
 	
-	private JPanel graphPanel;
+//	private JPanel graphPanel;
 
 	private Mapping map;
 	private double distance;
 	private BehaviorScore score;
+	
+	private BehaviouralProfile<ProcessTree, NodeWrapper> targetProfile;
 	
 	private List<EditOperation> editOperations; 
 	
@@ -82,16 +80,15 @@ public class TreeMover {
 		this.origTree = orig;
 		this.targetTree = target;
 		
-		this.graphPanel = new JPanel();
-		JFrame frame = new JFrame("debug window");
-		graphPanel.setPreferredSize(new Dimension(800,1000));
-		frame.getContentPane().add(graphPanel);
-		frame.pack();
-		frame.setVisible(true);
-		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+//		this.graphPanel = new JPanel();
+//		JFrame frame = new JFrame("debug window");
+//		graphPanel.setPreferredSize(new Dimension(800,1000));
+//		frame.getContentPane().add(graphPanel);
+//		frame.pack();
+//		frame.setVisible(true);
+//		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		
 		init();
-		
 	}
 
 	/**
@@ -103,13 +100,10 @@ public class TreeMover {
 		this.origLblTree = converter.getLabeledTree(origTree);
 		this.targetLblTree = converter.getLabeledTree(targetTree);
 		
+		this.targetProfile = ProcessTreeBPCreator.getInstance().deriveBehaviouralProfile(targetTree);
+		
 		this.origNodeIds = getMappingOfNodes(origTree);
 		this.targetNodeIds = getMappingOfNodes(targetTree);
-		
-		targetNodesToInsert = new HashMap<>();
-		for (Node targetNode : targetTree.getNodes()){
-			targetNodesToInsert.put(targetNode.getID(), targetNode);
-		}
 		
 		this.map = new Mapping(this.origLblTree, this.targetLblTree);
 		this.score = new BehaviorScore(this.origLblTree, this.targetLblTree);
@@ -117,17 +111,15 @@ public class TreeMover {
 		distance = dist.calc(this.origLblTree, this.targetLblTree, map);
 		
 //		TreeDistanceTest.debugTrace(converter, origLblTree, targetLblTree, map);
-		
-		// add edit operations from the mapping, until we reach a point close to the trust level
-		editOperations = getEditOperations();
-		Collections.shuffle(editOperations);
 	}
 
 	private BiMap<UUID,Integer> getMappingOfNodes(ProcessTree tree) {
 		BiMap<UUID,Integer> mapping = HashBiMap.create();
 		for (Node node : tree.getNodes()){
+			String nodeName = node.getName();
+			nodeName = nodeName.trim().isEmpty()? node.getClass().getSimpleName(): nodeName;
 			mapping.put(node.getID(), converter.getNodeMapping().get(node));
-			names.put(node.getID(), node.getName());
+			names.put(node.getID(), nodeName);
 		}
 		return mapping;
 	}
@@ -136,21 +128,27 @@ public class TreeMover {
 		if (trustLevel < 0 || trustLevel > 1){
 			throw new IllegalArgumentException("trust level must be between 1 (total trust) and 0 (no trust at all)");
 		}
-		ProcessTree resultTree = TreeUtils.getClone(this.origTree);
-		BehaviouralProfile<ProcessTree, NodeWrapper> targetProfile = ProcessTreeBPCreator.getInstance().deriveBehaviouralProfile(targetTree);
+		
+		this.resultTree = TreeUtils.getClone(this.origTree);
 		
 		this.fromOrigToNewNodes = HashBiMap.create();
 		this.fromTargetToNewNodes = HashBiMap.create();
 		for (Node n : resultTree.getNodes()){
-			fromOrigToNewNodes.put(converter.getNodeMapping().get(n), n.getID());
+			fromOrigToNewNodes.put(converter.getNodeMapping().get(n), n);
 		}
 		for (int[] repl : map.getAllReplacement()){
 			if (fromOrigToNewNodes.containsKey(repl[0])){
 				fromTargetToNewNodes.put(repl[1], fromOrigToNewNodes.get(repl[0]));
+				System.out.println("mapped: "+names.get(fromOrigToNewNodes.get(repl[0]).getID())+" - "+names.get(targetNodeIds.inverse().get(repl[1])));
 			} else {
 				System.out.println("Debug this! - all original replacement nodes should be already in the map.");
 			}
 		}
+		
+		// add edit operations from the mapping, until we reach a point close to the trust level
+		editOperations = getEditOperations();
+//		editOperations.add(0, editOperations.remove(4));
+
 		double targetDistance = this.distance * (1-trustLevel);
 				
 		double currentDistance = 0;
@@ -161,9 +159,29 @@ public class TreeMover {
 			for (EditOperation oper : editOperations){
 				try {
 					// peek forward to see, how good the next tree would be.
+					List<Edge> edges = new ArrayList<>(resultTree.getEdges());
+					Collections.sort(edges, new Comparator<Edge>() {
+						public int compare(Edge o1, Edge o2) {
+							return o1.toString().compareTo(o2.toString());
+						}
+					});
+					int size = edges.size();
 					apply(oper, resultTree);
 					BehaviouralProfile<ProcessTree, NodeWrapper> potentialProfile = ProcessTreeBPCreator.getInstance().deriveBehaviouralProfile(resultTree);
 					unapply(oper, resultTree);
+					List<Edge> newEdges = new ArrayList<>(resultTree.getEdges());
+					Collections.sort(newEdges, new Comparator<Edge>() {
+						public int compare(Edge o1, Edge o2) {
+							return o1.toString().compareTo(o2.toString());
+						}
+					});
+					if (resultTree.getEdges().size()!=size){
+						System.out.println("before oper "+oper+" :"+edges.size());
+						System.out.println("after oper "+oper+" :"+resultTree.getEdges().size());
+						System.out.println(Joiner.on("\n ").join(edges));
+						System.out.println("");
+						System.out.println(Joiner.on("\n ").join(newEdges));
+					}
 					
 					Pair<EditOperation, Double> thisOperation = new Pair<>(oper, getSimilarityOfProfiles(targetProfile, potentialProfile));
 					if (bestEditOperation == null || bestEditOperation.getSecond() < thisOperation.getSecond()){
@@ -175,6 +193,8 @@ public class TreeMover {
 				}
 			}
 			currentDistance += apply(bestEditOperation.getFirst(), resultTree);
+//			visualizeTree(resultTree, targetTree);
+			editOperations.remove(bestEditOperation.getFirst());
 		}		
 		
 		return resultTree;
@@ -196,7 +216,7 @@ public class TreeMover {
 
 	public double apply(EditOperation op, ProcessTree tree){
 		System.out.println("Applying: "+op);
-		visualizeTree(tree);
+//		visualizeTree(tree, targetTree);
 		switch (op.getOperation()){
 			case INSERT:
 				if (!op.isReverse()){
@@ -214,13 +234,17 @@ public class TreeMover {
 				}
 				break;
 			case RENAME:
-				renameNodesInTree(op.getOrigNode(), op.getNewNode(), op.isReverse(), tree);
+				if (!op.isReverse()){
+					renameNodesInTree(op.getOrigNode(), op.getNewNode(), false, tree);
+				} else {
+					renameNodesInTree(op.getNewNode(), op.getOrigNode(), true, tree);
+				}
 				break;
 			default:
 				break;
 				
 		}
-		visualizeTree(tree);
+//		visualizeTree(tree, targetTree);
 		return op.getCost();
 	}
 
@@ -236,35 +260,55 @@ public class TreeMover {
 	 * @param tree
 	 */
 	protected void renameNodesInTree(UUID origNodeId, UUID newNodeId, boolean reverse, ProcessTree tree) {
-		int nodeIdToRename = origNodeIds.get(origNodeId);
-		int nodeIdToRenameTo = targetNodeIds.get(newNodeId);
+		BiMap<UUID, Integer> fromNodeIds = reverse?targetNodeIds:origNodeIds;
+		BiMap<UUID, Integer> toNodeIds = reverse?origNodeIds:targetNodeIds;
+		BiMap<Integer, Node> fromNodeToNewNodes = reverse?fromTargetToNewNodes:fromOrigToNewNodes;
+		BiMap<Integer, Node> toNodeToNewNodes = reverse?fromOrigToNewNodes:fromTargetToNewNodes;
 		
-		Node nodeWithNewName = targetNodesToInsert.get(newNodeId);
-		Node nodeToRename = tree.getNode(origNodeId);
-		if (reverse){
-			nodeWithNewName = this.origTree.getNode(origNodeId);
-			nodeToRename = tree.getNode(newNodeId);
-		}
 		
-		Node np = getNewNode(nodeWithNewName, nodeToRename, tree);
+		int nodeIdToRename = fromNodeIds.get(origNodeId);
+		int nodeIdToRenameTo = toNodeIds.get(newNodeId);
+
+		Node nodeToRename = fromNodeToNewNodes.get(nodeIdToRename);
+		Node newNode = reverse ? origTree.getNode(newNodeId) : targetTree.getNode(newNodeId);
+
 		
-		if (np != null && nodeToRename != null & np instanceof Block && nodeToRename instanceof Block){
+		Node np = getNewNode(newNode, nodeToRename, tree);
+		
+		if (np != null && nodeToRename != null && np instanceof Block && nodeToRename instanceof Block){
 			// transfer all connection of the original node to the new node:
 			Block origBlock = (Block) nodeToRename;
 			Block newBlock = (Block) np;
+			int index = 0;
 			for (Node child : origBlock.getChildren()){
 				newBlock.addChild(child);
+				tree.removeEdge(origBlock.getOutgoingEdges().get(index++));
 			}
-			Collection<Block> parents = origBlock.getParents();
-			for (Block parent : parents){
-				newBlock.addParent(parent);
+			
+		}
+		Collection<Block> parents = nodeToRename.getParents();
+		for (Block parent : parents){
+			np.addParent(parent);
+			Collection<Edge> edgesToRemove = new ArrayList<>();
+			for (Edge outgoing : parent.getOutgoingEdges()){
+				if (outgoing.getTarget().equals(nodeToRename)){
+					edgesToRemove.add(outgoing);
+				}
+			}
+			for (Edge toRemove : edgesToRemove){
+				parent.removeOutgoingEdge(toRemove);
 			}
 		}
+		for (Edge e : nodeToRename.getIncomingEdges()){
+			tree.removeEdge(e);
+		}
 		tree.removeNode(nodeToRename);
+	
+		
 //			toRemove.setProcessTree(null);
 		
-		fromOrigToNewNodes.put(nodeIdToRename, np.getID());
-		fromTargetToNewNodes.put(nodeIdToRenameTo, np.getID());
+		fromNodeToNewNodes.put(nodeIdToRename, np);
+		toNodeToNewNodes.put(nodeIdToRenameTo, np);
 	}
 
 	/**
@@ -278,10 +322,12 @@ public class TreeMover {
 	 * @param tree
 	 */
 	protected void deleteNodeFromTree(UUID uuid, boolean reverse, ProcessTree tree) {
-		BiMap<UUID, Integer> nodeIds = !reverse ? origNodeIds : targetNodeIds;
+		BiMap<UUID, Integer> nodeIds = reverse ? targetNodeIds : origNodeIds ;
+		BiMap<Integer, Node> fromNodeToNewNodes = reverse?fromTargetToNewNodes:fromOrigToNewNodes;
 		
-		int nodeIdInOrig = nodeIds.get(uuid);
-		Node origNode = tree.getNode(uuid);
+		Integer nodeIdInOrig = nodeIds.get(uuid);
+		Node origNode = fromNodeToNewNodes.get(nodeIdInOrig);
+		
 		if (origNode == null){
 			System.out.println("Debug me!");
 		}
@@ -297,14 +343,21 @@ public class TreeMover {
 		if (origNode instanceof Block){ // might have children
 			Block origBlock = (Block) origNode;
 			edgesToRelocate = origBlock.getOutgoingEdges();
+			
+			if (parentNode != null){
+				Block newParentBlock = (Block) parentNode;
+				for (Edge e : edgesToRelocate){
+					newParentBlock.addChildAt(e.getTarget(), currentSiblingPosition++);
+					tree.removeEdge(e);
+					e.getTarget().removeIncomingEdge(e);
+				}
+			}
 		}
 		
 		// add children at sibling position of current node that will be removed
 		if (parentNode != null){
 			Block newParentBlock = (Block) parentNode;
-			for (Edge e : edgesToRelocate){
-				newParentBlock.addChildAt(e.getTarget(), currentSiblingPosition++);
-			}
+			
 			Edge toRemove = null;
 			for (Edge e : newParentBlock.getOutgoingEdges()){
 				if (e.getTarget().getID().equals(origNode.getID())){
@@ -312,12 +365,11 @@ public class TreeMover {
 				}
 			}
 			newParentBlock.removeOutgoingEdge(toRemove);
+			tree.removeEdge(toRemove);
 			tree.removeNode(origNode);
-			if (!reverse){
-				fromOrigToNewNodes.remove(nodeIdInOrig);
-			} else {
-				fromTargetToNewNodes.remove(targetNodeIds.get(uuid));
-			}
+			fromNodeToNewNodes.remove(nodeIdInOrig);
+		} else {
+			System.out.println("Debug me!");
 		}
 	}
 
@@ -332,35 +384,31 @@ public class TreeMover {
 	 * @param tree
 	 */
 	protected void insertNodeIntoTree(UUID uuid, boolean reverse, ProcessTree tree) {
-		BiMap<UUID, Integer> nodeIds = reverse?origNodeIds:targetNodeIds;
+		BiMap<UUID, Integer> nodeIds = reverse ? origNodeIds : targetNodeIds;
+		BiMap<Integer, Node> nodeToNewNodes = reverse?fromOrigToNewNodes:fromTargetToNewNodes;
+		ProcessTree sourceTree = reverse? origTree : targetTree; 
 		
-		int nodeIdInTree = nodeIds.get(uuid);
-		Node newNode = targetNodesToInsert.get(uuid);
-		LabeledTree labeledTree = targetLblTree;
-		BiMap<Integer, UUID> fromTreeToNodes = fromTargetToNewNodes;
-		if (reverse){
-			newNode = origTree.getNode(uuid);
-			labeledTree = origLblTree;
-			fromTreeToNodes = fromOrigToNewNodes;
-		}
+		Integer nodeIdInTree = nodeIds.get(uuid);
+		Node newNode = sourceTree.getNode(uuid);
+		
+		LabeledTree labeledTree = reverse ? origLblTree : targetLblTree;
 		
 		// find next existing parent under which we can place the new node:
-		int newParentInTree = findNextMappedParent(nodeIdInTree, labeledTree, fromTreeToNodes);
-		UUID parentNodeId = fromTreeToNodes.get(newParentInTree);
-		Node parentNode = tree.getNode(parentNodeId);
+		int newParentInTree = findNextMappedParent(nodeIdInTree, labeledTree, nodeToNewNodes);
+		Node parentNode = nodeToNewNodes.get(newParentInTree);
 		
 		// we need to find all children that will go below the new node and are currently present in the tree
 		if (parentNode != null && parentNode instanceof Block){ // has parent
-			Block parent = (Block) parentNode;
+			Block parentBlock = (Block) parentNode;
 			
 			int lastChild = 0;
-			List<Edge> edges = parent.getOutgoingEdges();
+			List<Edge> edges = parentBlock.getOutgoingEdges();
 			List<Edge> edgesToRelocate = new ArrayList<>();
 			for (Edge outgoing : edges){
 				Node child = outgoing.getTarget();
-				Integer childIdInTarget =  fromTreeToNodes.inverse().get(child.getID());
+				Integer childIdInTarget =  nodeToNewNodes.inverse().get(child);
 				if (childIdInTarget == null){
-					// not added yet!
+					// not added yet! or belongs to other tree (we don't care)
 				} else {
 					if (isAncestor(childIdInTarget, nodeIdInTree, labeledTree)){
 						lastChild++;
@@ -373,16 +421,21 @@ public class TreeMover {
 			// add child at position of last child that will be removed or at the end
 			// TODO: change this to use sibling information of the new node!
 			Node newNodeToInsert = getNewNode(newNode, null, tree);
-			parent.addChildAt(newNodeToInsert, lastChild);
-			fromTreeToNodes.put(nodeIdInTree, newNodeToInsert.getID());
-			
+			parentBlock.addChildAt(newNodeToInsert, lastChild);
+			int size = nodeToNewNodes.size();
+			nodeToNewNodes.put(nodeIdInTree, newNodeToInsert);
+			System.out.println("added "+newNodeToInsert.getName()+" to nodes. Size from " + size+" to " + nodeToNewNodes.size());
 			for (Edge edgeToRelocate : edgesToRelocate){
+				System.out.println("Relocating edge: "+edgesToRelocate+" to new ");
 				Node target = edgeToRelocate.getTarget();
-				parent.removeOutgoingEdge(edgeToRelocate);
-				
+				parentBlock.removeOutgoingEdge(edgeToRelocate);
+				target.removeIncomingEdge(edgeToRelocate);
+				tree.removeEdge(edgeToRelocate);
 				Block newBlock = (Block) newNodeToInsert;
 				newBlock.addChild(target);
 			}
+		} else {
+			System.out.println("Debug me!");
 		}
 	}
 
@@ -464,7 +517,7 @@ public class TreeMover {
 		return parents;
 	}
 
-	private int findNextMappedParent(int nodeIdInTarget, LabeledTree tree, BiMap<Integer, UUID> fromToNewMapping) {
+	private int findNextMappedParent(int nodeIdInTarget, LabeledTree tree, BiMap<Integer, Node> fromToNewMapping) {
 		boolean found = false;
 		int nodeId = nodeIdInTarget;
 		while (!found && tree.getParent(nodeId) >= -1){
@@ -509,12 +562,17 @@ public class TreeMover {
 		return editOps;
 	}	
 	
-	private void visualizeTree(ProcessTree tree){
-		TreeLayoutBuilder builder = new TreeLayoutBuilder(tree);
-		JGraph graph = builder.getJGraph();
-		graphPanel.removeAll();
-		graphPanel.add(new JScrollPane(graph));
-		graphPanel.revalidate();
-		graphPanel.repaint();
+	private void visualizeTree(ProcessTree... trees){
+//		graphPanel.removeAll();
+//		graphPanel.setLayout(new GridLayout(trees.length, 1));
+//		
+//		for (ProcessTree tree : trees){
+//			TreeLayoutBuilder builder = new TreeLayoutBuilder(tree);
+//			JGraph graph = builder.getJGraph();
+//			graphPanel.add(new JScrollPane(graph));
+//		}
+//		
+//		graphPanel.revalidate();
+//		graphPanel.repaint();
 	}
 }

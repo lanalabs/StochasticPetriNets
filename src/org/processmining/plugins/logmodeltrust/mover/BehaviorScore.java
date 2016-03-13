@@ -56,7 +56,8 @@ public class BehaviorScore implements EditScore {
 		if (t1.getLabel(node1) == t2.getLabel(node2)) {
 			return 0;
 		} else {
-			return (4+getScore(node1, tree1Children))/maxSize;
+			double diffInChildren = Math.abs(getScore(node1, tree1Children) - getScore(node2, tree2Children));
+			return (4+diffInChildren)/maxSize;
 		}
 	}
 

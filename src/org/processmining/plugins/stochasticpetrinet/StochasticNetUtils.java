@@ -103,7 +103,6 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.TransClasses;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
-import org.processmining.plugins.petrinet.replayresult.StepTypes;
 import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGen;
 import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGenRes;
 import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
@@ -115,6 +114,7 @@ import org.processmining.plugins.stochasticpetrinet.miner.QualityCriterion;
 import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.processmining.ptconversions.pn.ProcessTree2Petrinet.PetrinetWithMarkings;
+import org.processmining.tests.plugins.stochasticnet.TestUtils;
 import org.rosuda.JRI.Rengine;
 import org.utils.datastructures.ComparablePair;
 import org.utils.datastructures.SortedSetComparator;
@@ -1519,23 +1519,28 @@ public class StochasticNetUtils {
 		PNRepResult result = (PNRepResult) replayLog(null, petriNet.petrinet, log, false, false);
 		distance = Double.valueOf(result.getInfo().get(PNRepResult.TRACEFITNESS).toString());
 		qualities.put(QualityCriterion.FITNESS, distance);
+		qualities.put(QualityCriterion.PRECISION1, Double.valueOf(result.getInfo().get("Precision").toString()));
+		qualities.put(QualityCriterion.GENERALIZATION1, Double.valueOf(result.getInfo().get("Generalization").toString()));
+		
+		TransEvClassMapping evMapping = getEvClassMapping(petriNet.petrinet, log);
 		
 		AlignmentPrecGen precisionGen = new AlignmentPrecGen();
-		AlignmentPrecGenRes precGenRes = precisionGen.measurePrecision(null, petriNet.petrinet, log, result);
+		AlignmentPrecGenRes precGenRes = precisionGen.measureConformanceAssumingCorrectAlignment(TestUtils.getDummyConsoleProgressContext(), evMapping, result,
+				petriNet.petrinet, petriNet.initialMarking, false);
 		qualities.put(QualityCriterion.PRECISION, precGenRes.getPrecision());
 		qualities.put(QualityCriterion.GENERALIZATION, precGenRes.getGeneralization());
 		qualities.put(QualityCriterion.SIMPLICITY, (double)petriNet.petrinet.getNodes().size()+petriNet.petrinet.getEdges().size());
 		
-		System.out.println("Unaligned traces:");
-		// debug example misaligned trace:
-		for (SyncReplayResult repResult : result){
-			for(StepTypes stepType : repResult.getStepTypes()){
-				if (stepType.equals(StepTypes.L) || stepType.equals(StepTypes.MREAL)){
-					System.out.println(debugTrace(log.get(repResult.getTraceIndex().first())));
-					break;
-				}
-			}
-		}
+//		System.out.println("Unaligned traces:");
+//		// debug example misaligned trace:
+//		for (SyncReplayResult repResult : result){
+//			for(StepTypes stepType : repResult.getStepTypes()){
+//				if (stepType.equals(StepTypes.L) || stepType.equals(StepTypes.MREAL)){
+//					System.out.println(debugTrace(log.get(repResult.getTraceIndex().first())));
+//					break;
+//				}
+//			}
+//		}
 		
 		return qualities;
 	}

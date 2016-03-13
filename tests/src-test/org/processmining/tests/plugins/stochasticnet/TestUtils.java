@@ -439,7 +439,13 @@ public class TestUtils {
 		}
 
 		public ProMFuture<?> getFutureResult(int i) {
-			return null;
+			return new ProMFuture<Object>(XLog.class, "name") {
+
+				@Override
+				protected Object doInBackground() throws Exception {
+					return new Object();
+				}
+			};
 		}
 
 		public Executor getExecutor() {
@@ -481,13 +487,13 @@ public class TestUtils {
 			return false;
 		}
 		public <T extends Connection> T addConnection(T c) {
-			return null;
+			return connectionManager.addConnection(c);
 		}
 		public void clear() {
 		}
 	}
 
-	public static class DummyConnectionManager<T extends Connection> implements ConnectionManager {
+	public static class DummyConnectionManager implements ConnectionManager {
 		private final Map<ConnectionID, Connection> connections = new HashMap<ConnectionID, Connection>();
 
 		public DummyConnectionManager() {
@@ -517,8 +523,17 @@ public class TestUtils {
 
 		public <T extends Connection> Collection<T> getConnections(Class<T> connectionType, PluginContext context,
 				Object... objects) throws ConnectionCannotBeObtained {
-			throw new ConnectionCannotBeObtained("Connections can't be obtained in dummy testing", connectionType,
-					objects);
+			Collection<T> validConnections = new ArrayList<>();
+			Iterator<Map.Entry<ConnectionID, Connection>> it = connections.entrySet().iterator();
+			while (it.hasNext()) {
+				Entry<ConnectionID, Connection> entry = it.next();
+				Connection c = entry.getValue();
+				if (((connectionType == null) || connectionType.isAssignableFrom(c.getClass()))
+						&& c.containsObjects(objects)) {
+					validConnections.add((T)c);
+				}
+			}
+			return validConnections;
 		}
 
 		public org.processmining.framework.plugin.events.ConnectionObjectListener.ListenerList getConnectionListeners() {
