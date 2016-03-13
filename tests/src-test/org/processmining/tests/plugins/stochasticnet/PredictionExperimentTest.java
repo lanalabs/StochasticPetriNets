@@ -67,6 +67,6 @@ public class PredictionExperimentTest {
 		
 		XLog simulatedLog = simulator.simulate(null, model, semantics, simConfig, initialMarking); 
 		
-		experimentPlugin.predictWithConfig(TestUtils.getDummyConsoleProgressContext(), model, simulatedLog, config);
+		experimentPlugin.predictWithConfig(StochasticNetUtils.getDummyConsoleProgressContext(), model, simulatedLog, config);
 	}
 }

@@ -298,7 +298,7 @@ public class OptimalSelectionPredictionTest {
 		config.setTimeUnitFactor(TimeUnit.HOURS);
 		config.setWorkerCount(1);
 		
-		PredictionExperimentResult result = predictWithConfig(TestUtils.getDummyConsoleProgressContext(), net, optimallyfilteredLog, config);
+		PredictionExperimentResult result = predictWithConfig(StochasticNetUtils.getDummyConsoleProgressContext(), net, optimallyfilteredLog, config);
 		
 		DescriptiveStatistics meanErrorStats = new DescriptiveStatistics();
 		DescriptiveStatistics meanAbsoluteErrorStats = new DescriptiveStatistics();
