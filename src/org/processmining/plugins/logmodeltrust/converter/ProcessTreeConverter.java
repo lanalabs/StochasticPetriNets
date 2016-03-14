@@ -48,7 +48,7 @@ public class ProcessTreeConverter {
 
 	private int addNodesAndChildren(int[] parents, int[] labels, Node root, Map<Node, Integer> mapping, int index, int parentId) {
 		parents[index] = parentId;
-		labels[index] = getLabelKey(root.getName());
+		labels[index] = getLabelKey(getLabel(root));
 		mapping.put(root, mapping.size());
 		nodeMapping.put(root, mapping.get(root));
 		if (root instanceof Block){
@@ -58,6 +58,10 @@ public class ProcessTreeConverter {
 			}
 		}
 		return index;
+	}
+
+	private String getLabel(Node root) {
+		return (root.getName()==null || root.getName().isEmpty())?root.getClass().getSimpleName() : root.getName();
 	}
 
 	public Map<String,Integer> getMapping() {

@@ -53,6 +53,14 @@ public class EditOperation implements Comparable<EditOperation>{
 		return cost;
 	}
 	
+	public String getOrigName() {
+		return origName;
+	}
+
+	public String getNewName() {
+		return newName;
+	}
+
 	public String toString() {
 		String origString = origName == null? "null" : origName;
 		String targetString = newNode == null? "null" : newName;

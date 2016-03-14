@@ -64,7 +64,9 @@ public class BehaviourJaccardSimilarity<M, N extends IEntity> {
 			List<String> unionEntities) {
 		for (N entity : profileA.getEntities()){
 			String name = entity.getLabel();
-			aEntities.put(aEntities.size(), name);
+			if (!aEntities.containsValue(name)){
+				aEntities.put(aEntities.size(), name);
+			}
 			if (!unionEntities.contains(name)){
 				unionEntities.add(name);
 			}

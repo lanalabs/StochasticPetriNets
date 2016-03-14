@@ -1,9 +1,12 @@
 package org.processmining.plugins.logmodeltrust.experiment;
 
+import java.awt.BorderLayout;
 import java.io.File;
 import java.io.IOException;
 import java.util.Collection;
 import java.util.Map;
+
+import javax.swing.JFrame;
 
 import org.apache.commons.io.FileUtils;
 import org.deckfour.xes.classification.XEventNameClassifier;
@@ -18,6 +21,8 @@ import org.processmining.modelrepair.parameters.RepairConfiguration;
 import org.processmining.modelrepair.plugins.Uma_RepairModel_Plugin;
 import org.processmining.models.connections.petrinets.EvClassLogPetrinetConnection;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
+import org.processmining.models.jgraph.ProMJGraphVisualizer;
+import org.processmining.models.jgraph.visualization.ProMJGraphPanel;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.InductiveMiner.mining.MiningParameters;
 import org.processmining.plugins.InductiveMiner.mining.MiningParametersIMi;
@@ -69,7 +74,7 @@ public class BPM2016 {
 		System.out.println(LpSolve.lpSolveVersion());
 		// the file to store the test log
 		
-		String testLogFile = "./tests/testfiles/bpm2016/BPI_Challenge_2013_incidents.xes";
+		String testLogFile = "./tests/testfiles/bpm2016/dfci.xes";
 		File logFile = new File(testLogFile);
 		if (!logFile.exists()){
 			throw new RuntimeException("Please download the BPI challenge 2013 log from \n"
@@ -101,6 +106,15 @@ public class BPM2016 {
 		
 		GeneralizedMiner miner = GeneralizedMinerPlugin.mineGeneralLogModel(context, inputLog, inputTree);
 		
+		ProcessTree zeroTrustTree = miner.getProcessTreeBasedOnTrust(0);
+		
+		ProMJGraphPanel newGraphPanel = ProMJGraphVisualizer.instance().visualizeGraphWithoutRememberingLayout(RelaxedPT2PetrinetConverter.convert(zeroTrustTree).petrinet);
+		JFrame frame = new JFrame();
+		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		frame.getContentPane().add(newGraphPanel, BorderLayout.CENTER);
+		frame.pack();
+		frame.setVisible(true);
+		
 		// repair M with "model repair approach"
 		RepairConfiguration config = new RepairConfiguration(); // use default configuration
 		
@@ -114,6 +128,9 @@ public class BPM2016 {
 		repairedModel.petrinet = (Petrinet) netAndMarking[0];
 		repairedModel.initialMarking = (Marking) netAndMarking[1];
 		repairedModel.finalMarking = StochasticNetUtils.getFinalMarking(context, repairedModel.petrinet);
+		
+		
+		
 		
 		// evaluate quality criteria on models:
 		StringBuffer buffer = new StringBuffer();

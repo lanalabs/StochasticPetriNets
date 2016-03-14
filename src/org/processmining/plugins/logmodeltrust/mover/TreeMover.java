@@ -153,41 +153,44 @@ public class TreeMover {
 				
 		double currentDistance = 0;
 		
-		while (!editOperations.isEmpty() && currentDistance < targetDistance){
+		while (!editOperations.isEmpty() && (trustLevel == 0 || currentDistance < targetDistance)){
 			// check all possible next moves and apply the best one
 			Pair<EditOperation, Double> bestEditOperation = null;
 			for (EditOperation oper : editOperations){
 				try {
-					// peek forward to see, how good the next tree would be.
-					List<Edge> edges = new ArrayList<>(resultTree.getEdges());
-					Collections.sort(edges, new Comparator<Edge>() {
-						public int compare(Edge o1, Edge o2) {
-							return o1.toString().compareTo(o2.toString());
+					if (isAllowedOp(oper, editOperations)){
+						// peek forward to see, how good the next tree would be.
+						List<Edge> edges = new ArrayList<>(resultTree.getEdges());
+						Collections.sort(edges, new Comparator<Edge>() {
+							public int compare(Edge o1, Edge o2) {
+								return o1.toString().compareTo(o2.toString());
+							}
+						});
+						int size = edges.size();
+						apply(oper, resultTree);
+						BehaviouralProfile<ProcessTree, NodeWrapper> potentialProfile = ProcessTreeBPCreator.getInstance().deriveBehaviouralProfile(resultTree);
+						unapply(oper, resultTree);
+						List<Edge> newEdges = new ArrayList<>(resultTree.getEdges());
+						Collections.sort(newEdges, new Comparator<Edge>() {
+							public int compare(Edge o1, Edge o2) {
+								return o1.toString().compareTo(o2.toString());
+							}
+						});
+						if (resultTree.getEdges().size()!=size){
+							System.out.println("before oper "+oper+" :"+edges.size());
+							System.out.println("after oper "+oper+" :"+resultTree.getEdges().size());
+							System.out.println(Joiner.on("\n ").join(edges));
+							System.out.println("");
+							System.out.println(Joiner.on("\n ").join(newEdges));
 						}
-					});
-					int size = edges.size();
-					apply(oper, resultTree);
-					BehaviouralProfile<ProcessTree, NodeWrapper> potentialProfile = ProcessTreeBPCreator.getInstance().deriveBehaviouralProfile(resultTree);
-					unapply(oper, resultTree);
-					List<Edge> newEdges = new ArrayList<>(resultTree.getEdges());
-					Collections.sort(newEdges, new Comparator<Edge>() {
-						public int compare(Edge o1, Edge o2) {
-							return o1.toString().compareTo(o2.toString());
+						
+						Pair<EditOperation, Double> thisOperation = new Pair<>(oper, getSimilarityOfProfiles(targetProfile, potentialProfile));
+						if (bestEditOperation == null || bestEditOperation.getSecond() < thisOperation.getSecond()){
+							bestEditOperation = thisOperation;
 						}
-					});
-					if (resultTree.getEdges().size()!=size){
-						System.out.println("before oper "+oper+" :"+edges.size());
-						System.out.println("after oper "+oper+" :"+resultTree.getEdges().size());
-						System.out.println(Joiner.on("\n ").join(edges));
-						System.out.println("");
-						System.out.println(Joiner.on("\n ").join(newEdges));
-					}
-					
-					Pair<EditOperation, Double> thisOperation = new Pair<>(oper, getSimilarityOfProfiles(targetProfile, potentialProfile));
-					if (bestEditOperation == null || bestEditOperation.getSecond() < thisOperation.getSecond()){
-						bestEditOperation = thisOperation;
 					}
 				} catch (IllegalArgumentException e){
+					e.printStackTrace();
 					// ignore moves that violate the behavioral profile computation
 					// for example: adding an already existing node, before removing the old one.
 				}
@@ -195,11 +198,31 @@ public class TreeMover {
 			currentDistance += apply(bestEditOperation.getFirst(), resultTree);
 //			visualizeTree(resultTree, targetTree);
 			editOperations.remove(bestEditOperation.getFirst());
-		}		
+		}	
 		
 		return resultTree;
 	}
 
+
+	/**
+	 * In case a node should be relocated by two add / remove operations, we only allow to do remove first!
+	 * Same goes for rename operations to  
+	 * @param oper
+	 * @param editOperations2
+	 * @return
+	 */
+	private boolean isAllowedOp(EditOperation oper, List<EditOperation> editOperations) {
+		if (oper.getOperation().equals(Op.INSERT)){
+			for (EditOperation other : editOperations){
+				if (other.getOperation().equals(Op.DELETE)){
+					if (other.getOrigName().equals(oper.getNewName())){
+						return false;
+					}
+				}
+			}
+		}
+		return true;
+	}
 
 	private Double getSimilarityOfProfiles(BehaviouralProfile<ProcessTree, NodeWrapper> profileA,
 			BehaviouralProfile<ProcessTree, NodeWrapper> profileB) {
@@ -556,6 +579,7 @@ public class TreeMover {
 				EditOperation replaceNode = new EditOperation(Op.RENAME, origNodeIds.inverse().get(replacement[0]), names.get(origNodeIds.inverse().get(replacement[0])), targetNodeIds.inverse().get(replacement[1]), names.get(targetNodeIds.inverse().get(replacement[1])), cost);
 				editOps.add(replaceNode);
 			} else {
+//				System.out.println("From: "+names.get(fromOrigToNewNodes.get(replacement[0]).getID())+" - "+names.get(targetNodeIds.inverse().get(replacement[1]))+" costs nothing!!");
 				// nothing changed here
 			}
 		}
