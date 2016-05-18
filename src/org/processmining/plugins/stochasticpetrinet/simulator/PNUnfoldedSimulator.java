@@ -48,6 +48,8 @@ import com.google.common.base.Joiner;
  */
 public class PNUnfoldedSimulator extends PNSimulator {
 
+	public static final String RESOURCE_SEPARATOR = ",";
+
 	/**
 	 * Performs a simulation according to a given configuration {@link PNSimulatorConfig}
 	 * @param context {@link UIPluginContext} ProM plugin context
@@ -227,8 +229,11 @@ public class PNUnfoldedSimulator extends PNSimulator {
 		if (resources.size() == 1){
 			return resources.iterator().next();
 		} else {
-			return Joiner.on(",").join(resources);
+			return Joiner.on(RESOURCE_SEPARATOR).join(resources);
 		}
+	}
+	public static String[] getResources(String resourceString){
+		return resourceString.split(RESOURCE_SEPARATOR);
 	}
 
 	/**

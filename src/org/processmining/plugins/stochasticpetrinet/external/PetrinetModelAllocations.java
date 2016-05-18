@@ -184,7 +184,7 @@ public class PetrinetModelAllocations {
 		return localProbabilities;
 	}
 
-	public Set<Allocatable> getLocationAllocations() {
+	public Set<Allocatable> getAllLocationAllocations() {
 		Set<Allocatable> locations = new HashSet<Allocatable>();
 		for (Set<Allocation> allocations : locationAllocations.values()){
 			for (Allocation alloc : allocations){
@@ -194,6 +194,10 @@ public class PetrinetModelAllocations {
 			}
 		}
 		return locations;
+	}
+	
+	public Map<Transition, Set<Allocation>> getLocationAllocations(){
+		return locationAllocations;
 	}
 	
 	public double getReverseEntropy(AllocType type){

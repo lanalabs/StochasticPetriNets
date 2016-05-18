@@ -2,7 +2,7 @@ package org.processmining.plugins.stochasticpetrinet.external.sensor;
 
 public class SensorInterval implements Comparable<SensorInterval>{
 
-	private static final String SEPARATOR = ";";
+	public static final String SEPARATOR = ";";
 	
 	private long startTime;
 	private long endTime;

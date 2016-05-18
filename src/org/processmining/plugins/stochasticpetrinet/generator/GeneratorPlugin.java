@@ -34,6 +34,7 @@ public class GeneratorPlugin {
 		context.addConnection(connection);
 		FinalMarkingConnection fmConnection = new FinalMarkingConnection((PetrinetGraph)netAndMarkings[0], (Marking)netAndMarkings[2]);
 		context.addConnection(fmConnection);
+		context.getFutureResult(0).setLabel(config.getName());
 		return netAndMarkings;
 	}
 }

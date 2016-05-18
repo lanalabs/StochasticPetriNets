@@ -29,7 +29,7 @@ public class PnmlExportStochasticNet {
 		serializer.write(convertToPNML(context, net), file);
 	}
 
-	public void exportPetriNetToPNMLFile(PluginContext context, StochasticNet net, Writer writer) throws Exception {
+	public void exportPetriNetToPNMLFile(PluginContext context, Petrinet net, Writer writer) throws Exception {
 		Serializer serializer = new Persister();
 		serializer.write(convertToPNML(context, net), writer);
 	}

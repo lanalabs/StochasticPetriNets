@@ -163,11 +163,8 @@ public class PNSimulator {
 			arrivalDistribution = new ExponentialDistribution(config.arrivalRate);
 			transitionRemainingTimes = new HashMap<Transition, Long>();
 			random.setSeed(config.seed);
-			
-			XAttributeMap attributeMap = new XAttributeMapImpl();
-			attributeMap.put(CONCEPT_NAME, new XAttributeLiteralImpl(CONCEPT_NAME, config.logName + " (simulated from "
-					+ petriNet.getLabel() + ")"));
-			log = XFactoryRegistry.instance().currentDefault().createLog(attributeMap);
+			log = XFactoryRegistry.instance().currentDefault().createLog();
+			XConceptExtension.instance().assignName(log, config.logName + " (from "+ petriNet.getLabel() + ")");
 
 			Date traceStart = new Date();
 			

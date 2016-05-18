@@ -1,5 +1,6 @@
 package org.processmining.plugins.stochasticpetrinet.simulator;
 
+import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.model.XLog;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
@@ -41,6 +42,7 @@ public class PNSimulatorPlugin {
 		Semantics<Marking, Transition> semantics = StochasticNetUtils.getSemantics(petriNet);
 		PNSimulator simulator = new PNSimulator();
 		XLog log = simulator.simulate(context, petriNet, semantics);
+		context.getFutureResult(0).setLabel(XConceptExtension.instance().extractName(log));
 		return log; 
 	}
 

@@ -15,6 +15,7 @@ import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.GregorianCalendar;
 import java.util.HashMap;
@@ -28,6 +29,9 @@ import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeMap;
+import java.util.TreeSet;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 
@@ -78,6 +82,7 @@ import org.processmining.framework.plugin.PluginParameterBinding;
 import org.processmining.framework.plugin.ProMFuture;
 import org.processmining.framework.plugin.Progress;
 import org.processmining.framework.plugin.RecursiveCallException;
+import org.processmining.framework.plugin.annotations.Plugin;
 import org.processmining.framework.plugin.events.ConnectionObjectListener;
 import org.processmining.framework.plugin.events.Logger.MessageLevel;
 import org.processmining.framework.plugin.events.ProgressEventListener.ListenerList;
@@ -85,6 +90,7 @@ import org.processmining.framework.plugin.impl.FieldSetException;
 import org.processmining.framework.plugin.impl.PluginManagerImpl;
 import org.processmining.framework.providedobjects.ProvidedObjectManager;
 import org.processmining.framework.providedobjects.impl.ProvidedObjectManagerImpl;
+import org.processmining.framework.util.Cast;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.connections.petrinets.behavioral.FinalMarkingConnection;
 import org.processmining.models.connections.petrinets.behavioral.InitialMarkingConnection;
@@ -122,7 +128,6 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.TransClasses;
 import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
-import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGen;
 import org.processmining.plugins.pnalignanalysis.conformance.AlignmentPrecGenRes;
 import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
 import org.processmining.plugins.stochasticpetrinet.distribution.DiracDeltaDistribution;
@@ -733,6 +738,10 @@ public class StochasticNetUtils {
 	}
 	
 	public static String debugTrace(XTrace trace){
+		return debugTrace(trace, false);
+	}
+	
+	public static String debugTrace(XTrace trace, boolean bareEventsOnly){
 		DateFormat format = new SimpleDateFormat();
 		String s = "";
 		for (XEvent e : trace){
@@ -741,18 +750,20 @@ public class StochasticNetUtils {
 			}
 			Date eventTime = getTraceDate(e);
 			s += XConceptExtension.instance().extractName(e);
-			if (XLifecycleExtension.instance().extractTransition(e)!=null){
-				s+= "+"+XLifecycleExtension.instance().extractTransition(e);
-			}
-			if (XOrganizationalExtension.instance().extractResource(e)!=null){
-				s+= " by "+XOrganizationalExtension.instance().extractResource(e);
-			}
-			XAttribute location = e.getAttributes().get(PNSimulator.LOCATION_ROOM);
-			if (location != null){
-				s+= " in "+location.toString();
-			}
-			if (eventTime != null){
-				s += "("+format.format(eventTime)+")"; 
+			if (!bareEventsOnly){
+				if (XLifecycleExtension.instance().extractTransition(e)!=null){
+					s+= "+"+XLifecycleExtension.instance().extractTransition(e);
+				}
+				if (XOrganizationalExtension.instance().extractResource(e)!=null){
+					s+= " by "+XOrganizationalExtension.instance().extractResource(e);
+				}
+				XAttribute location = e.getAttributes().get(PNSimulator.LOCATION_ROOM);
+				if (location != null){
+					s+= " in "+location.toString();
+				}
+				if (eventTime != null){
+					s += "("+format.format(eventTime)+")"; 
+				}
 			}
 		}
 		return s;
@@ -821,8 +832,14 @@ public class StochasticNetUtils {
 		PNRepResult pnRepResult  = replayWithILP.replayLog(context, flattener.getNet(), log, flattener.getMap(), parameter);
 		
 		try{
+//			AlignmentPrecGen precGeneralization = new AlignmentPrecGen();
+			
+//			AlignmentPrecGenRes resultOrig = precGeneralization.measureConformanceAssumingCorrectAlignment(context, flattener.getMap(), pnRepResult, flattener.getNet(), flattener.getInitMarking(), false);
 			PrecisionAligner aligner = new PrecisionAligner();
 			AlignmentPrecGenRes result = aligner.measureConformanceAssumingCorrectAlignment(context, flattener.getMap(), pnRepResult, flattener.getNet(), flattener.getInitMarking(), false);
+			
+//			System.out.println("precision: "+ resultOrig.getPrecision()+ "\t generalization:"+resultOrig.getGeneralization());
+//			System.out.println("precisNew: "+ result.getPrecision()+ "\t generalizatNew:"+result.getGeneralization());
 			
 			pnRepResult.getInfo().put(PRECISION_MEASURE, result.getPrecision());
 			pnRepResult.getInfo().put(GENERALIZATION_MEASURE, result.getGeneralization());
@@ -1368,6 +1385,22 @@ public class StochasticNetUtils {
 		}
 		return sortedLog;
 	}
+	
+	public static XLog flattenLifecycles(XLog log) {
+		XLog merged = XFactoryRegistry.instance().currentDefault().createLog(log.getAttributes());
+		for (XTrace trace : log){
+			XTrace newTrace =  XFactoryRegistry.instance().currentDefault().createTrace(trace.getAttributes());
+			for (XEvent event : trace){
+				XEvent newEvent = XFactoryRegistry.instance().currentDefault().createEvent(event.getAttributes());
+				String name = XConceptExtension.instance().extractName(event);
+				String lc = XLifecycleExtension.instance().extractTransition(event);
+				XConceptExtension.instance().assignName(newEvent, name+"_"+lc);
+				newTrace.add(newEvent);
+			}
+			merged.add(newTrace);
+		}
+		return merged;
+	}
 
 	public static String formatMillisToHumanReadableTime(long millis){
 		return String.format("%02d:%02d:%02d", TimeUnit.MILLISECONDS.toHours(millis),
@@ -1522,6 +1555,7 @@ public class StochasticNetUtils {
 		}
 		return eClassName;
 	}
+	
 	/**
 	 * Aligns the petri net to a log and return the distance.
 	 * TODO: incorporate further quality criteria!
@@ -1530,23 +1564,23 @@ public class StochasticNetUtils {
 	 * @param first
 	 * @return
 	 */
-	public static Map<QualityCriterion, Double> getDistance(PetrinetWithMarkings petriNet, XLog log) {
+	public static Map<QualityCriterion, Object> getDistance(PetrinetWithMarkings petriNet, XLog log) {
 		double distance = 0;
-		Map<QualityCriterion, Double> qualities = new HashMap<>();
+		Map<QualityCriterion, Object> qualities = new HashMap<>();
 		
 		PNRepResult result = (PNRepResult) replayLog(null, petriNet.petrinet, log, false, false);
 		distance = Double.valueOf(result.getInfo().get(PNRepResult.TRACEFITNESS).toString());
 		qualities.put(QualityCriterion.FITNESS, distance);
-		qualities.put(QualityCriterion.PRECISION1, Double.valueOf(result.getInfo().get("Precision").toString()));
-		qualities.put(QualityCriterion.GENERALIZATION1, Double.valueOf(result.getInfo().get("Generalization").toString()));
+		qualities.put(QualityCriterion.PRECISION1, Double.valueOf(result.getInfo().get(PRECISION_MEASURE).toString()));
+		qualities.put(QualityCriterion.GENERALIZATION1, Double.valueOf(result.getInfo().get(GENERALIZATION_MEASURE).toString()));
 		
 		TransEvClassMapping evMapping = getEvClassMapping(petriNet.petrinet, log);
 		
-		AlignmentPrecGen precisionGen = new AlignmentPrecGen();
-		AlignmentPrecGenRes precGenRes = precisionGen.measureConformanceAssumingCorrectAlignment(getDummyConsoleProgressContext(), evMapping, result,
-				petriNet.petrinet, petriNet.initialMarking, false);
-		qualities.put(QualityCriterion.PRECISION, precGenRes.getPrecision());
-		qualities.put(QualityCriterion.GENERALIZATION, precGenRes.getGeneralization());
+		PrecisionAligner precisionGen = new PrecisionAligner();
+//		AlignmentPrecGenRes precGenRes = precisionGen.measureConformanceAssumingCorrectAlignment(getDummyConsoleProgressContext(), evMapping, result,
+//				petriNet.petrinet, petriNet.initialMarking, false);
+//		qualities.put(QualityCriterion.PRECISION, precGenRes.getPrecision());
+//		qualities.put(QualityCriterion.GENERALIZATION, precGenRes.getGeneralization());
 		qualities.put(QualityCriterion.SIMPLICITY, (double)petriNet.petrinet.getNodes().size()+petriNet.petrinet.getEdges().size());
 		
 //		System.out.println("Unaligned traces:");
@@ -1661,8 +1695,127 @@ public class StochasticNetUtils {
 		}
 
 		public <T, C extends Connection> T tryToFindOrConstructFirstObject(Class<T> type, Class<C> connectionType,
-				String role, Object... input) throws ConnectionCannotBeObtained {return null;}
+				String role, Object... input) throws ConnectionCannotBeObtained {
+			return findOrConstructAllObjects(true, type, null, connectionType, role, input).iterator().next();
+		}
+		private <T, C extends Connection> Collection<T> findOrConstructAllObjects(boolean stopAtFirst, Class<T> type,
+				String name, Class<C> connectionType, String role, Object... input) throws ConnectionCannotBeObtained {
 
+			Collection<T> accepted = new ArrayList<T>();
+			try {
+				for (C conn : getConnectionManager().getConnections(connectionType, this, input)) {
+					Object object = conn.getObjectWithRole(role);
+					if (type.isAssignableFrom(object.getClass())) {
+						accepted.add(Cast.<T>cast(object));
+					}
+				}
+			} catch (Exception e) {
+				// Don't care, let's try to construct later
+			}
+			if (!accepted.isEmpty()) {
+				return accepted;
+			}
+			try {
+				return constructAllObjects(stopAtFirst, type, name, input);
+			} catch (Exception e) {
+				throw new ConnectionCannotBeObtained(e.getMessage(), connectionType);
+			}
+		}
+
+		private <T, C extends Connection> Collection<T> constructAllObjects(boolean stopAtFirst, Class<T> type,
+				String name, Object... input) throws CancellationException, InterruptedException, ExecutionException {
+			Class<?>[] types;
+			if (input != null) {
+				types = new Class<?>[input.length];
+				for (int i = 0; i < input.length; i++) {
+					types[i] = input[i].getClass();
+				}
+			} else {
+				types = new Class<?>[0];
+				input = new Object[0];
+			}
+
+			// Find available plugins
+			Set<Pair<Integer, PluginParameterBinding>> set = getPluginManager().find(Plugin.class, type,
+					getPluginContextType(), true, false, false, types);
+
+			if (set.isEmpty()) {
+				throw new RuntimeException("No plugin available to build this type of object: " + type.toString());
+			}
+
+			// Filter on the given name, if given.
+			if (name != null) {
+				Set<Pair<Integer, PluginParameterBinding>> filteredSet = new HashSet<Pair<Integer, PluginParameterBinding>>();
+				for (Pair<Integer, PluginParameterBinding> pair : set) {
+					if (name.equals(pair.getSecond().getPlugin().getName())) {
+						filteredSet.add(pair);
+					}
+				}
+				set.clear();
+				set.addAll(filteredSet);
+			}
+
+			if (set.isEmpty()) {
+				throw new RuntimeException("No named plugin available to build this type of object: " + name + ", "
+						+ type.toString());
+			}
+
+			SortedSet<Pair<Integer, PluginParameterBinding>> plugins = new TreeSet<Pair<Integer, PluginParameterBinding>>(
+					new Comparator<Pair<Integer, PluginParameterBinding>>() {
+
+						public int compare(Pair<Integer, PluginParameterBinding> arg0,
+								Pair<Integer, PluginParameterBinding> arg1) {
+							int c = arg0.getSecond().getPlugin().getReturnNames().size()
+									- arg1.getSecond().getPlugin().getReturnNames().size();
+							if (c == 0) {
+								c = arg0.getSecond().compareTo(arg1.getSecond());
+							}
+							if (c == 0) {
+								c = arg0.getFirst() - arg1.getFirst();
+							}
+							return c;
+						}
+
+					});
+			plugins.addAll(set);
+
+			Collection<T> result = new ArrayList<T>(stopAtFirst ? 1 : plugins.size());
+
+			// get the first available plugin
+			ExecutionException ex = null;
+			for (Pair<Integer, PluginParameterBinding> pair : plugins) {
+				PluginParameterBinding binding = pair.getSecond();
+				// create a context to execute this plugin in
+				PluginContext child = createChildContext("Computing: " + type.toString());
+				getPluginLifeCycleEventListeners().firePluginCreated(child);
+
+				// Invoke the binding
+				PluginExecutionResult pluginResult = binding.invoke(child, input);
+
+				// synchronize on the required result and continue
+				try {
+					pluginResult.synchronize();
+
+					// get all results and pass them to the framework as provided objects
+					getProvidedObjectManager().createProvidedObjects(child);
+					result.add(pluginResult.<T>getResult(pair.getFirst()));
+					if (stopAtFirst) {
+						break;
+					}
+				} catch (ExecutionException e) {
+					// Try next plugin if stop at first, otherwise rethrow
+					ex = e;
+				} finally {
+					child.getParentContext().deleteChild(child);
+				}
+			}
+			if (result.isEmpty()) {
+				assert (ex != null);
+				throw ex;
+			}
+			return result;
+		}	
+		
 		public <T, C extends Connection> T tryToFindOrConstructFirstNamedObject(Class<T> type, String name,
 				Class<C> connectionType, String role, Object... input) throws ConnectionCannotBeObtained {return null;}
 

@@ -82,16 +82,17 @@ public class AllocationBasedNetGenerator {
 	 * Generates a net based on a basis and a number of cases that are drawn randomly from the model.
 	 * Puts all traces in one big unfolded model.
 	 * 
-	 * @param base
-	 * @param allocations
-	 * @param resources
-	 * @param numCases
-	 * @param meanTimeBetweenArrivals
-	 * @param noise the noise represents the probability that something goes NOT according to process knowledge
+	 * @param base StochasticNet
+	 * @param allocations  PetrinetModelAllocations
+	 * @param resources Set<Allocatable>
+	 * @param numCases int
+	 * @param meanTimeBetweenArrivals double 
+	 * @param noise double the noise represents the probability that something goes NOT according to process knowledge
 	 *        (examples are a swap in activities, a change in a duration distribution, a change in the allocated resource set) 
+	 * @param startTime the start time of the simulation
 	 * @return
 	 */
-	public static Object[] generateNet(StochasticNet base, PetrinetModelAllocations allocations, Set<Allocatable> resources, int numCases, double meanTimeBetweenArrivals, double noise){
+	public static Object[] generateNet(StochasticNet base, PetrinetModelAllocations allocations, Set<Allocatable> resources, int numCases, double meanTimeBetweenArrivals, double noise, long startTime){
 		
 		arrivalDistribution = new ExponentialDistribution(meanTimeBetweenArrivals);
 		
@@ -115,13 +116,16 @@ public class AllocationBasedNetGenerator {
 		StochasticNetSemantics semantics = new StochasticNetSemanticsImpl();
 		semantics.initialize(base.getTransitions(), baseMarking);
 		
-		long arrivalTime = 0;
+		double arrivalTime = startTime / base.getTimeUnit().getUnitFactorToMillis();
 		
 		// go through all cases and add their flows:
 		for (int caseId = 1; caseId <= numCases; caseId++){
+			double sample = arrivalDistribution.sample();
+			while (sample > 3*meanTimeBetweenArrivals){
+				sample = arrivalDistribution.sample();
+			}
+			arrivalTime += sample;
 			insertCasePath(caseId, arrivalTime, net, baseMarking, base, semantics, allocations, allocatablePlaces, initialMarking, noise);
-			arrivalTime += (long) (arrivalDistribution.sample());
-
 		}
 		
 		return new Object[]{net,initialMarking}; 
@@ -144,7 +148,7 @@ public class AllocationBasedNetGenerator {
 	 * @param noise the noise represents the probability that something goes NOT according to process knowledge
 	 *        (examples are a swap in activities, a change in a duration distribution, a change in the allocated resource set) 
 	 */
-	private static void insertCasePath(int caseId, long arrivalTime, StochasticNet net, Marking baseMarking, StochasticNet base,
+	private static void insertCasePath(int caseId, double arrivalTime, StochasticNet net, Marking baseMarking, StochasticNet base,
 			StochasticNetSemantics semantics, PetrinetModelAllocations allocations, Map<Allocatable, Place> allocatablePlaces, Marking initialMarking, double noise) {
 			
 		int stepTransition = 1;
@@ -163,7 +167,7 @@ public class AllocationBasedNetGenerator {
 		List<Transition> transitionsToExecuteInSequence = getTransitionSequence(semantics,base, baseMarking);
 		applyNoise(transitionsToExecuteInSequence, noise);
 		Map<Integer, Place> transitionPlaceMapping = getTransitionPlaceMapping(transitionsToExecuteInSequence, allocations, allocatablePlaces);
-		applyNoise(transitionPlaceMapping, noise, convertAllocatablesToPlaces(allocations.getLocationAllocations(),allocatablePlaces));
+		applyNoise(transitionPlaceMapping, noise, convertAllocatablesToPlaces(allocations.getAllLocationAllocations(),allocatablePlaces));
 		
 		for (int pos = 0; pos < transitionsToExecuteInSequence.size(); pos++){
 			TimedTransition next = (TimedTransition) transitionsToExecuteInSequence.get(pos);
