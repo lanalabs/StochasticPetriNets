@@ -1,10 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
-	<classpathentry kind="src" path="src-test"/>
 	<classpathentry kind="src" output="tests/bin-test" path="tests/src-test"/>
 	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="con" path="org.apache.ivyde.eclipse.cpcontainer.IVYDE_CONTAINER/?project=InductiveMiner&amp;ivyXmlPath=ivy.xml&amp;confs=*&amp;ivySettingsPath=ivysettings.xml&amp;loadSettingsOnDemand=false&amp;ivyUserDir=&amp;propertyFiles="/>
 	<classpathentry kind="lib" path="stdlib/ProM-Contexts.jar"/>
 	<classpathentry kind="lib" path="stdlib/ProM-Framework.jar"/>
 	<classpathentry kind="lib" path="stdlib/ProM-Models.jar"/>
@@ -29,11 +27,12 @@
 	<classpathentry kind="lib" path="stdlib/xstream-1.3.1.jar"/>
 	<classpathentry kind="lib" path="stdlib/axis.jar"/>
 	<classpathentry kind="lib" path="stdlib/simmetrics.jar"/>
-	<classpathentry kind="lib" path="lib/tree-edit-distance.jar"/>
 	<classpathentry kind="lib" path="stdlib/TableLayout-20050920.jar"/>
 	<classpathentry kind="lib" path="packagelib/ModelRepair-lib/pnapi-java.jar"/>
 	<classpathentry kind="lib" path="packagelib/ModelRepair-lib/uma.jar"/>
-	<classpathentry kind="lib" path="packagelib/LpSolve-lib/lpsolve55j.jar"/>
 	<classpathentry kind="lib" path="stdlib/Spex.jar"/>
+	<classpathentry kind="con" path="org.apache.ivyde.eclipse.cpcontainer.IVYDE_CONTAINER/?project=InductiveMiner&amp;ivyXmlPath=ivy.xml&amp;confs=*&amp;ivySettingsPath=ivysettings.xml&amp;loadSettingsOnDemand=false&amp;ivyUserDir=&amp;propertyFiles="/>
+	<classpathentry kind="lib" path="lib/IntervalTree.jar"/>
+	<classpathentry kind="lib" path="lib/javassist.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
