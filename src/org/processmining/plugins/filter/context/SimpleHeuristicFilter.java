@@ -1,5 +1,6 @@
 package org.processmining.plugins.filter.context;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import org.deckfour.xes.factory.XFactoryRegistry;
@@ -8,8 +9,6 @@ import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
-
-import com.google.gwt.dev.util.collect.HashMap;
 
 public class SimpleHeuristicFilter {
 

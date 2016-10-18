@@ -14,18 +14,17 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Transition
 import org.processmining.models.graphbased.directed.petrinet.impl.PetrinetFactory;
 import org.processmining.models.semantics.petrinet.Marking;
 
-public class OverfitMiner {
+public class OverfitMiner extends AbstractMiner {
 
 	private static final String SEPARATOR = "|";
-	private Map<String, String> eventNames;
-	private int counter;
+
 	private int placeCounter; 
 	
 	private Map<String, Place> prefixPlaces;
 	private Map<String, Place> suffixPlaces;
-	
+
 	public OverfitMiner(){
-		this.counter = 1;
+
 		this.placeCounter = 1;
 	}
 	
@@ -33,8 +32,7 @@ public class OverfitMiner {
 	public Object[] mine(UIPluginContext context, XLog log) {
 		prefixPlaces = new HashMap<String, Place>();
 		suffixPlaces = new HashMap<String, Place>();
-		eventNames = new HashMap<String, String>();
-		
+
 		Petrinet net = PetrinetFactory.newPetrinet("overfitting net");
 		Place startPlace = net.addPlace("start");
 		Marking initialMarking = new Marking();
@@ -105,22 +103,10 @@ public class OverfitMiner {
 	private String getTraceString(XTrace trace) {
 		StringBuilder traceBuilder = new StringBuilder();
 		for (XEvent e : trace){
-			String eventString = getEventString(e);
+			String eventString = String.valueOf(getEventId(e));
 			traceBuilder.append(eventString);
 			traceBuilder.append(SEPARATOR);
 		}
 		return traceBuilder.toString();
 	}
-
-
-	private String getEventString(XEvent e) {
-		if (!eventNames.containsKey(XConceptExtension.instance().extractName(e))){
-			eventNames.put(XConceptExtension.instance().extractName(e), ""+counter++);
-		}
-		return eventNames.get(XConceptExtension.instance().extractName(e));
-	}
-	
-	
-
-	
 }
