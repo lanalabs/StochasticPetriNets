@@ -23,7 +23,6 @@
 	<classpathentry kind="lib" path="lib/simple-xml-2.7.jar"/>
 	<classpathentry kind="lib" path="lib/SparseBitSet-1.0.jar"/>
 	<classpathentry kind="lib" path="lib/FastDTW.jar"/>
-	<classpathentry kind="lib" path="stdlib/weka.jar"/>
 	<classpathentry kind="lib" path="stdlib/xstream-1.3.1.jar"/>
 	<classpathentry kind="lib" path="stdlib/axis.jar"/>
 	<classpathentry kind="lib" path="stdlib/simmetrics.jar"/>
