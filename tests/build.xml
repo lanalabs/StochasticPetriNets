@@ -36,12 +36,6 @@
 	
 	<!-- classes of ProM framework in which the plugin shall be executed -->
 	<path id="classpath.prom">
-      	<fileset dir="${home}/packagelib/">
-        	<include name="**/*.jar"/>
-      	</fileset>
-      	<fileset dir="${home}/stdlib/">
-        	<include name="**/*.jar"/>
-      	</fileset>
 	</path>
 	
 	<!-- include compiled classes, libraries, and test-case files -->
@@ -55,8 +49,6 @@
       	<fileset dir="${home}/">
 			<include name="ivy/**/*.jar" />
 			<include name="lib/**/*.jar" />
-			<include name="stdlib/**/*.jar" />
-			<include name="packagelib/**/*.jar" />
       	</fileset>
 		<path refid="classpath.prom" />
 		<pathelement location="${dir.test-bin}"/>
@@ -70,10 +62,10 @@
 	
 	<!-- definitions for cobertura, to generate code coverage reports -->
 	<path id="classpath.cobertura">
-		<pathelement location="${test.basedir}/libs-external/cobertura-2.0.3.jar" />
-		<fileset dir="${test.basedir}/libs-external/lib-cobertura-2.0.3/">
-			<include name="**/*.jar"/>
-		</fileset>
+      	<fileset dir="${test.basedir}/libs-external">
+      		<include name="cobertura-2.1.1.jar" />
+        	<include name="lib-cobertura-2.1.1/**/*.jar" />
+      	</fileset>
 		<path refid="classpath.run" />
 		<!--<pathelement location="${test.basedir}/libs-external/lib-cobertura-2.0.3/log4j-1.2.9.jar" />
 		<pathelement location="${test.basedir}/libs-external/lib-cobertura-2.0.3/asm-4.1.jar" />
