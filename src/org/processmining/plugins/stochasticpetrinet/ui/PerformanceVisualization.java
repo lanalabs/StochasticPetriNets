@@ -33,8 +33,7 @@ import org.processmining.models.semantics.petrinet.Marking;
 @Plugin(name = "Stochastic Petri Net Visualizer",
 		returnLabels = { "Visualized Stochastic Petri Net" },
 		returnTypes = { JComponent.class },
-		parameterLabels = { StochasticNet.PARAMETER_LABEL },
-		userAccessible = false)
+		parameterLabels = { StochasticNet.PARAMETER_LABEL })
 @Visualizer
 public class PerformanceVisualization {
 	private static PlotPanelFreeChart plotForTransition;
@@ -45,7 +44,7 @@ public class PerformanceVisualization {
 
 
 	@PluginVariant(requiredParameterLabels = { 0 })
-	protected JComponent visualize(PluginContext context, PetrinetGraph sNet) {
+	protected JComponent visualize(PluginContext context, StochasticNet sNet) {
 		
 		myPanel = new JPanel();
 		myPanel.setLayout(new BorderLayout());
