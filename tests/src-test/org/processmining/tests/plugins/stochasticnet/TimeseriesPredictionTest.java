@@ -24,6 +24,9 @@ public class TimeseriesPredictionTest {
 
 	@Test
 	public void testTwoConflictingTransitions() throws Exception {
+
+		System.out.println("LD_LIBRARY_PATH: "+System.getenv("LD_LIBRARY_PATH"));
+
 		Object[] netAndMarking = TestUtils.loadModel("Race_ABC_enriched2",true);
 		
 		StochasticNet net = (StochasticNet) netAndMarking[0];

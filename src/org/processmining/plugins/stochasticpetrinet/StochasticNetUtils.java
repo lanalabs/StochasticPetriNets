@@ -158,6 +158,9 @@ public class StochasticNetUtils {
 
 	private static Random random = new Random(1);
 
+	private static PluginContext context = getDummyConsoleProgressContext();
+
+
 	public static double getRandomDouble() {
 		return random.nextDouble();
 	}
@@ -681,7 +684,6 @@ public class StochasticNetUtils {
 	 * Gets the mean duration of all the traces in the log in milliseconds
 	 * 
 	 * @param log
-	 * @param timeUnitFactor
 	 * @return
 	 */
 	public static double getMeanDuration(XLog log) {
@@ -734,8 +736,6 @@ public class StochasticNetUtils {
 	 * @param log
 	 *            the Log that contains time information (time stamps) for
 	 *            performance analysis
-	 * @param parameters
-	 *            different replay parameters.
 	 * @param getManifest
 	 * @param addSmallDeltaCosts
 	 *            specifies, if a small cost should be added to increase the
@@ -781,23 +781,23 @@ public class StochasticNetUtils {
 		return replayLog(context, net, log, parameters, getManifest);
 	}
 
-	public static SyncReplayResult replayTrace(XLog originalTrace, TransEvClassMapping mapping, Petrinet net,
+	public static Pair<SyncReplayResult,PNManifestFlattener> replayTrace(XLog originalTrace, TransEvClassMapping mapping, Petrinet net,
 			Marking initialMarking, Marking finalMarking, XEventClassifier classifier) throws Exception {
-		PNRepResult repResult = replayLogWithMapping(originalTrace, mapping, net, initialMarking, finalMarking,
+		Pair<PNRepResult,PNManifestFlattener>  repResult = replayLogWithMapping(originalTrace, mapping, net, initialMarking, finalMarking,
 				classifier);
-		if (repResult.size() > 0) {
-			SyncReplayResult result = repResult.iterator().next();
-			return result;
+		if (repResult.getFirst().size() > 0) {
+			SyncReplayResult result = repResult.getFirst().iterator().next();
+			return new Pair<>(result,repResult.getSecond());
 		}
 		throw new IllegalArgumentException("Could not replay trace on Model:\n" + debugTrace(originalTrace.get(0)));
 	}
 
-	protected static PNRepResult replayLogWithMapping(XLog originalTrace, TransEvClassMapping mapping, Petrinet net,
+	protected static Pair<PNRepResult,PNManifestFlattener> replayLogWithMapping(XLog originalTrace, TransEvClassMapping mapping, Petrinet net,
 			Marking initialMarking, Marking finalMarking, XEventClassifier classifier) {
 		TransClasses transClasses = new TransClasses(net, new DefTransClassifier());
 		PNManifestReplayerParameter parameters = getParameters(originalTrace, mapping, net, initialMarking,
 				finalMarking, classifier, transClasses);
-		PNRepResult repResult = (PNRepResult) replayLog(null, net, originalTrace, parameters, false);
+		Pair<PNRepResult,PNManifestFlattener> repResult = (Pair<PNRepResult,PNManifestFlattener>) replayLog(context, net, originalTrace, parameters, false);
 		return repResult;
 	}
 
@@ -923,7 +923,7 @@ public class StochasticNetUtils {
 				return null;
 			}
 		} else {
-			return pnRepResult;
+			return new Pair<>(pnRepResult,flattener);
 		}
 	}
 
@@ -1011,7 +1011,7 @@ public class StochasticNetUtils {
 	/**
 	 * Checks, whether the R-engine is accessible over JRI
 	 * 
-	 * @see {@link http://stats.math.uni-augsburg.de/JRI/}
+	 * @see {@link {http://stats.math.uni-augsburg.de/JRI/}}
 	 * @return
 	 */
 	public static boolean splinesSupported() {
@@ -1291,13 +1291,17 @@ public class StochasticNetUtils {
 			Transition transition = transitionIter.next();
 			if (transition instanceof TimedTransition) {
 				TimedTransition tt = (TimedTransition) transition;
-				if (!tt.getDistributionType().equals(DistributionType.IMMEDIATE)
-						&& !tt.getDistributionType().equals(DistributionType.EXPONENTIAL)) {
-					tt.setDistributionType(DistributionType.EXPONENTIAL);
+
+				if (!tt.getDistributionType().equals(DistributionType.IMMEDIATE)) {
 					double mean = tt.getDistribution().getNumericalMean();
-					tt.setDistributionParameters(new double[] { mean });
-					tt.setDistribution(null);
-					tt.setDistribution(tt.initDistribution(0));
+					if (mean <= 0) {
+						tt.setImmediate(true);
+					} else if (!tt.getDistributionType().equals(DistributionType.EXPONENTIAL)) {
+						tt.setDistributionType(DistributionType.EXPONENTIAL);
+						tt.setDistributionParameters(new double[]{mean});
+						tt.setDistribution(null);
+						tt.setDistribution(tt.initDistribution(0));
+					}
 				}
 			}
 		}
@@ -1681,14 +1685,14 @@ public class StochasticNetUtils {
 	 * further quality criteria!
 	 * 
 	 * @param petriNet
-	 * @param first
-	 * @return
+	 * @param log
+	 * @return Map of {@link QualityCriterion} to (mostly) Double
 	 */
 	public static Map<QualityCriterion, Object> getDistance(PetrinetWithMarkings petriNet, XLog log) {
 		double distance = 0;
 		Map<QualityCriterion, Object> qualities = new HashMap<>();
 
-		PNRepResult result = (PNRepResult) replayLog(null, petriNet.petrinet, log, false, false);
+		PNRepResult result =  ((Pair<PNRepResult,PNManifestFlattener>) replayLog(null, petriNet.petrinet, log, false, false)).getFirst();
 		distance = Double.valueOf(result.getInfo().get(PNRepResult.TRACEFITNESS).toString());
 		qualities.put(QualityCriterion.FITNESS, distance);
 		qualities.put(QualityCriterion.PRECISION1, Double.valueOf(result.getInfo().get(PRECISION_MEASURE).toString()));

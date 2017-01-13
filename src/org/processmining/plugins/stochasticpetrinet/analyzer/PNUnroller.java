@@ -15,6 +15,7 @@ import org.deckfour.xes.classification.XEventClass;
 import org.deckfour.xes.classification.XEventClasses;
 import org.deckfour.xes.classification.XEventClassifier;
 import org.deckfour.xes.model.XLog;
+import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
@@ -28,6 +29,7 @@ import org.processmining.models.graphbased.directed.petrinet.impl.StochasticNetI
 import org.processmining.models.semantics.IllegalTransitionException;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
+import org.processmining.plugins.astar.petrinet.manifestreplay.PNManifestFlattener;
 import org.processmining.plugins.connectionfactories.logpetrinet.TransEvClassMapping;
 import org.processmining.plugins.manifestanalysis.visualization.performance.PerfCounter;
 import org.processmining.plugins.petrinet.manifestreplayer.EvClassPattern;
@@ -60,22 +62,22 @@ public class PNUnroller {
 		// assume that event class matches with each transition.
 		// first construct alignment 
 		long start = System.currentTimeMillis();
-		SyncReplayResult replayResult = StochasticNetUtils.replayTrace(originalTrace, mapping, net, initialMarking, finalMarking, classifier);
+		Pair<SyncReplayResult,PNManifestFlattener> replayResult = StochasticNetUtils.replayTrace(originalTrace, mapping, net, initialMarking, finalMarking, classifier);
 		long now = System.currentTimeMillis();
 		if (debug){
 			System.out.println((now-start)+"ms for replaying the trace.");
 			start = now;
 		}
-		PetrinetGraph constructPN = constructPN(net, initialMarking, replayResult.getStepTypes(), replayResult.getNodeInstance());
+		PetrinetGraph constructPN = constructPN(net, initialMarking, replayResult.getFirst().getStepTypes(), replayResult.getFirst().getNodeInstance(), replayResult.getSecond());
 		if (debug) System.out.println((System.currentTimeMillis()-start)+"ms for constructing the net.");
 		return constructPN;
 	}
 	
-	public PetrinetGraph unrollPNbasedOnAlignment(AllSyncReplayResult replayResult, int alignmentIndex, Petrinet net, Marking initialMarking) throws Exception{
-		List<StepTypes> stepTypes = replayResult.getStepTypesLst().get(alignmentIndex);
-		List<Object> nodeInstances = replayResult.getNodeInstanceLst().get(alignmentIndex);
-		return constructPN(net, initialMarking, stepTypes, nodeInstances);
-	}
+//	public PetrinetGraph unrollPNbasedOnAlignment(AllSyncReplayResult replayResult, int alignmentIndex, Petrinet net, Marking initialMarking) throws Exception{
+//		List<StepTypes> stepTypes = replayResult.getStepTypesLst().get(alignmentIndex);
+//		List<Object> nodeInstances = replayResult.getNodeInstanceLst().get(alignmentIndex);
+//		return constructPN(net, initialMarking, stepTypes, nodeInstances, replayResult.getSecond());
+//	}
 	
 	public Map<Transition,Double> replayTraceUnrolledPN(PetrinetGraph net, XLog originalTrace, XEventClasses ec) throws Exception {
 		// parameters inits
@@ -193,12 +195,13 @@ public class PNUnroller {
 	/**
 	 * 
 	 * @param net
-	 * @param nodeInstances 
-	 * @param stepTypes 
+	 * @param stepTypes
+	 * @param nodeInstances
+	 * @param second
 	 * @return
 	 * @throws Exception
 	 */
-	private PetrinetGraph constructPN(Petrinet net, Marking initialMarking, List<StepTypes> stepTypes, List<Object> nodeInstances) {
+	private PetrinetGraph constructPN(Petrinet net, Marking initialMarking, List<StepTypes> stepTypes, List<Object> nodeInstances, PNManifestFlattener second) {
 		Map<Place,Place> mappingPlaces = new HashMap<Place,Place>();
 		Map<Transition,Transition> mappingTransitions = new HashMap<Transition,Transition>();
 //		List<Place> incomingPlaces = new ArrayList<Place>();
@@ -238,7 +241,7 @@ public class PNUnroller {
 			} else {
 				Transition nodeInstance = (Transition) nodeInstances.get(i);
 				Collection<Transition> transitions = semantics.getExecutableTransitions();
-				Transition selectedTrans = getNameEqualTransition(transitions,nodeInstance);
+				Transition selectedTrans = second.getOrigTransFor(nodeInstance);
 				if ((stepType.equals(StepTypes.LMGOOD) || stepType.equals(StepTypes.MINVI) || stepType.equals(StepTypes.MREAL)) && selectedTrans != null) {
 					// find out how often the transition has been used
 					int countTrans = transitionCounter.get(selectedTrans.getLabel());

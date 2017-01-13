@@ -61,7 +61,6 @@ public class SliceSampler {
 	
 	/**
 	 * Samples a number of times to reach the ergodic state of the markov chain.
-	 * @param function
 	 */
 	private void burnIn() {
 		for (int i = 0; i < burnIn; i++){
@@ -78,7 +77,7 @@ public class SliceSampler {
 	 * @return double sample x
 	 */
 	private double slice(UnivariateFunction function) {
-		assert(function.value(x)>y);
+		assert(function.value(x)>=y);
 		assert(y>0);
 		//sample vertically:
 		double yMax = function.value(x); 

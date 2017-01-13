@@ -23,7 +23,7 @@ import org.processmining.plugins.stochasticpetrinet.distribution.BernsteinExpone
 
 public class ToStochasticNet {
 	
-	public static final DistributionType[] SUPPORTED_CONVERSION_TYPES = new DistributionType[]{DistributionType.NORMAL, DistributionType.BERNSTEIN_EXPOLYNOMIAL};
+	public static final DistributionType[] SUPPORTED_CONVERSION_TYPES = new DistributionType[]{DistributionType.EXPONENTIAL, DistributionType.NORMAL, DistributionType.BERNSTEIN_EXPOLYNOMIAL};
 
 	@PluginVariant(variantLabel = "From any Marked Petrinet", requiredParameterLabels = { 0, 1 })
 	public static Object[] fromPetrinet(PluginContext context, PetrinetGraph net, Marking marking)
@@ -143,6 +143,14 @@ public class ToStochasticNet {
 								target.setDistributionType(type);
 								target.setDistributionParameters(tt.getDistribution().getNumericalMean(),
 										Math.sqrt(tt.getDistribution().getNumericalVariance()));
+								target.setPriority(tt.getPriority());
+								target.setWeight(tt.getWeight());
+								target.setTrainingData(tt.getTrainingData());
+								target.setDistribution(target.initDistribution(0));
+								break;
+							case EXPONENTIAL:
+								target.setDistributionType(type);
+								target.setDistributionParameters(tt.getDistribution().getNumericalMean());
 								target.setPriority(tt.getPriority());
 								target.setWeight(tt.getWeight());
 								target.setTrainingData(tt.getTrainingData());

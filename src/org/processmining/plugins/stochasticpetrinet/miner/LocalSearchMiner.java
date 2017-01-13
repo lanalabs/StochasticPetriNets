@@ -2,7 +2,9 @@ package org.processmining.plugins.stochasticpetrinet.miner;
 
 import org.deckfour.xes.model.XLog;
 import org.processmining.framework.plugin.PluginContext;
+import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
+import org.processmining.plugins.astar.petrinet.manifestreplay.PNManifestFlattener;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.miner.distance.DistanceFunction;
@@ -21,7 +23,7 @@ public class LocalSearchMiner extends OptimalMiner{
 
 	protected boolean updateDistances(XLog log, PetrinetGraph model) {
 		boolean improved = false;
-		currentAlignment = (PNRepResult) StochasticNetUtils.replayLog(context, currentGraph, currentLog, false, true);
+		currentAlignment = ((Pair<PNRepResult, PNManifestFlattener>) StochasticNetUtils.replayLog(context, currentGraph, currentLog, false, true)).getFirst();
 
 		currentDistance = computeDistance(log, model);
 		double dist = function.getFinalDistance(currentDistance);

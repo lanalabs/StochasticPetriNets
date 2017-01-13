@@ -27,8 +27,8 @@ public class TimePredictor extends AbstractTimePredictor {
 	
 	protected DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime,
 			Marking initialMarking, boolean useOnlyPastTrainingData) {
-		//Semantics<Marking,Transition> semantics = getCurrentStateWithAlignment(model, initialMarking, observedEvents);
-		Semantics<Marking,Transition> semantics = getCurrentState(model, initialMarking, observedEvents);
+		Semantics<Marking,Transition> semantics = getCurrentStateWithAlignment(model, initialMarking, observedEvents);
+		//Semantics<Marking,Transition> semantics = getCurrentState(model, initialMarking, observedEvents);
 		if (semantics.getCurrentState() == null){
 			System.out.println("Debug me!");
 		}

@@ -15,10 +15,12 @@ import org.processmining.contexts.uitopia.annotations.Visualizer;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.Plugin;
+import org.processmining.framework.plugin.annotations.PluginVariant;
 import org.processmining.models.connections.petrinets.behavioral.InitialMarkingConnection;
 import org.processmining.models.graphbased.AttributeMap;
 import org.processmining.models.graphbased.ViewSpecificAttributeMap;
 import org.processmining.models.graphbased.directed.DirectedGraphNode;
+import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.elements.Place;
 import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
@@ -28,17 +30,22 @@ import org.processmining.models.jgraph.elements.ProMGraphCell;
 import org.processmining.models.jgraph.visualization.ProMJGraphPanel;
 import org.processmining.models.semantics.petrinet.Marking;
 
-
-
-public class PerformanceVisualizer {
+@Plugin(name = "Stochastic Petri Net Visualizer",
+		returnLabels = { "Visualized Stochastic Petri Net" },
+		returnTypes = { JComponent.class },
+		parameterLabels = { StochasticNet.PARAMETER_LABEL },
+		userAccessible = false)
+@Visualizer
+public class PerformanceVisualization {
 	private static PlotPanelFreeChart plotForTransition;
 	
 	private static ProMJGraphPanel graphPanel;
 	
 	private static JPanel myPanel;
-	@Plugin(name = "Stochastic Petri Net Visualizer", returnLabels = { "Visualized Stochastic Petri Net" }, returnTypes = { JComponent.class }, parameterLabels = { StochasticNet.PARAMETER_LABEL }, userAccessible = false)
-	@Visualizer
-	public static JComponent visualize(PluginContext context, StochasticNet sNet) {
+
+
+	@PluginVariant(requiredParameterLabels = { 0 })
+	protected JComponent visualize(PluginContext context, PetrinetGraph sNet) {
 		
 		myPanel = new JPanel();
 		myPanel.setLayout(new BorderLayout());

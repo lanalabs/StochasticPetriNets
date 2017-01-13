@@ -13,6 +13,7 @@ import java.util.Locale;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
+import org.apache.commons.lang3.time.DurationFormatUtils;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.deckfour.xes.classification.XEventAndClassifier;
 import org.deckfour.xes.classification.XEventClassifier;
@@ -447,9 +448,7 @@ public class PredictionExperimentPlugin {
 	 * @param config
 	 *            {@link PredictionExperimentConfig} stores parameters used to
 	 *            make predictions
-	 * @param initialMarking
-	 * @param meanDurationMillies
-	 *            mean duration of historical traces seen up till now
+     *
 	 * @return Pairs of predicted durations and real durations for each trace in
 	 *         the log and each monitoring iteration defined in
 	 *         {@link PredictionExperimentConfig#getMonitoringIterations()}
@@ -579,8 +578,7 @@ public class PredictionExperimentPlugin {
 					long passed = now - start;
 					long passedMilliesPerIteration = passed / (int) pos;
 					long estimated = passedMilliesPerIteration * (log.size() - (int) pos);
-					Date date = new Date(estimated);
-					estimate = formatter.format(date);
+					estimate = DurationFormatUtils.formatDuration(estimated, "HH:mm:ss:SS");
 				}
 				String percent = format.format(pos++ / log.size());
 				String s = "Finished prediction of trace " + (traceId) + " of " + traceCount + " (" + percent

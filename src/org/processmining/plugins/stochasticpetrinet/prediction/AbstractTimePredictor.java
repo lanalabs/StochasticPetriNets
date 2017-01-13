@@ -1,13 +1,6 @@
 package org.processmining.plugins.stochasticpetrinet.prediction;
 
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import org.apache.commons.math3.distribution.TDistribution;
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
@@ -21,11 +14,14 @@ import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.framework.util.Pair;
+import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.IllegalTransitionException;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
+import org.processmining.models.semantics.petrinet.impl.PetrinetSemanticsFactory;
+import org.processmining.plugins.astar.petrinet.manifestreplay.PNManifestFlattener;
 import org.processmining.plugins.connectionfactories.logpetrinet.TransEvClassMapping;
 import org.processmining.plugins.petrinet.replayresult.StepTypes;
 import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
@@ -160,10 +156,10 @@ public abstract class AbstractTimePredictor {
 //			
 //			foundTransition = findAndExecuteTransition(semantics, transitionName, time);
 //			if (!foundTransition){
-			LinkedList<Pair<Marking, Transition>> transitionQueue = new LinkedList<Pair<Marking, Transition>>();
+			ArrayList<Pair<Marking, Transition>> transitionQueue = new ArrayList<Pair<Marking, Transition>>();
 			addAllEnabledTransitions(semantics, transitionQueue);
 			while (!foundTransition && transitionQueue.size() > 0) {
-				Pair<Marking, Transition> currentState = transitionQueue.poll();
+				Pair<Marking, Transition> currentState = transitionQueue.remove(0);
 				semantics.setCurrentState(currentState.getFirst());
 				Transition enabledTransition = currentState.getSecond();
 				try {
@@ -190,8 +186,11 @@ public abstract class AbstractTimePredictor {
 	}
 	
 	public static Semantics<Marking, Transition> getCurrentStateWithAlignment(StochasticNet model, Marking initialMarking, XTrace observedEvents){
-		Semantics<Marking, Transition> semantics = StochasticNetUtils.getSemantics(model);
-		semantics.initialize(model.getTransitions(), initialMarking);
+		Semantics<Marking, Transition> stochasticSemantics = StochasticNetUtils.getSemantics(model);
+		// when replaying, don't worry about temporal semantics, just use plain Petri net ones.
+		Semantics<Marking, Transition> plainSemantics = PetrinetSemanticsFactory.regularPetrinetSemantics(Petrinet.class);
+		stochasticSemantics.initialize(model.getTransitions(), initialMarking);
+		plainSemantics.initialize(model.getTransitions(), initialMarking);
 		
 		XLog log = XFactoryRegistry.instance().currentDefault().createLog();
 //		log.getClassifiers().add(new XEventNameClassifier());
@@ -200,10 +199,10 @@ public abstract class AbstractTimePredictor {
 		
 		try {
 			
-			SyncReplayResult result = StochasticNetUtils.replayTrace(log, mapping, model, initialMarking, StochasticNetUtils.getFinalMarking(null, model), new XEventAndClassifier(new XEventNameClassifier(), new XEventLifeTransClassifier()));
+			Pair<SyncReplayResult, PNManifestFlattener> result = StochasticNetUtils.replayTrace(log, mapping, model, initialMarking, StochasticNetUtils.getFinalMarking(null, model), new XEventAndClassifier(new XEventNameClassifier(), new XEventLifeTransClassifier()));
 			//SyncReplayResult result = StochasticNetUtils.replayTrace(log, mapping, model, initialMarking, StochasticNetUtils.getFinalMarking(null, model), new XEventNameClassifier());
-			List<StepTypes> stepTypes = result.getStepTypes();
-			List<Object> nodeInstances = result.getNodeInstance();
+			List<StepTypes> stepTypes = result.getFirst().getStepTypes();
+			List<Object> nodeInstances = result.getFirst().getNodeInstance();
 			
 			// advance the model to the last synchronous move
 			
@@ -225,11 +224,11 @@ public abstract class AbstractTimePredictor {
 					// move on model (or on both) advance model until we reached the last synchronous move
 					if (i<=lastSynchronousMove){
 						Transition nodeInstance = (Transition) nodeInstances.get(i);
-						Collection<Transition> transitions = semantics.getExecutableTransitions();
-						Transition selectedTrans = getTransition(transitions,nodeInstance);
+						Collection<Transition> transitions = plainSemantics.getExecutableTransitions();
+						Transition selectedTrans = result.getSecond().getOrigTransFor(nodeInstance);
 						try {
 							if (selectedTrans != null){
-								semantics.executeExecutableTransition(selectedTrans);
+								plainSemantics.executeExecutableTransition(selectedTrans);
 							} else {
 								System.err.println("Debug me!");
 							}
@@ -242,7 +241,8 @@ public abstract class AbstractTimePredictor {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return semantics;
+		stochasticSemantics.setCurrentState(plainSemantics.getCurrentState());
+		return stochasticSemantics;
 	}
 
 
@@ -256,11 +256,20 @@ public abstract class AbstractTimePredictor {
 	}
 
 	protected static void addAllEnabledTransitions(
-			Semantics<Marking, Transition> semantics, Collection<Pair<Marking, Transition>> searchState) {
+			Semantics<Marking, Transition> semantics, ArrayList<Pair<Marking, Transition>> searchState) {
 		for (Transition t : semantics.getExecutableTransitions()){
-//			if (t.isInvisible()){
+			if (t.isInvisible()){
+				// visit invisible states first and add them before the visible ones
+				boolean added = false;
+				for (int i = 0; i < searchState.size() && !added; i++){
+					if (!searchState.get(i).getSecond().isInvisible() || i == searchState.size()-1){
+						searchState.add(i, new Pair<Marking,Transition>(semantics.getCurrentState(),t));
+						added = true;
+					}
+				}
+			} else {
 				searchState.add(new Pair<Marking,Transition>(semantics.getCurrentState(),t));
-//			}
+			}
 		}
 	}
 

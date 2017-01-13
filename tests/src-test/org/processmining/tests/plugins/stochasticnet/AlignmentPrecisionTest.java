@@ -2,9 +2,11 @@ package org.processmining.tests.plugins.stochasticnet;
 
 import org.deckfour.xes.model.XLog;
 import org.junit.Test;
+import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.StochasticNetSemanticsImpl;
+import org.processmining.plugins.astar.petrinet.manifestreplay.PNManifestFlattener;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
@@ -24,7 +26,7 @@ public class AlignmentPrecisionTest {
 		PNSimulatorConfig config = new PNSimulatorConfig(numberOfTracesToSimulate);
 		XLog simulatedLog = simulator.simulate(null, net, new StochasticNetSemanticsImpl(), config, marking);
 
-		PNRepResult result = (PNRepResult)StochasticNetUtils.replayLog(null, net, simulatedLog, false, true);
+		PNRepResult result = ((Pair<PNRepResult,PNManifestFlattener>) StochasticNetUtils.replayLog(null, net, simulatedLog, false, true)).getFirst();
 		System.out.println(result.getInfo().toString());
 	}
 }
