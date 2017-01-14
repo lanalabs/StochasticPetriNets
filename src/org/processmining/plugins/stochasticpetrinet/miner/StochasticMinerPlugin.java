@@ -1,6 +1,7 @@
 package org.processmining.plugins.stochasticpetrinet.miner;
 
 import org.deckfour.xes.model.XLog;
+import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.Plugin;
@@ -64,7 +65,7 @@ public class StochasticMinerPlugin {
 			help = "Discovers a fitting Petri net with inductive miner and enriches it with stochastic information (time information required in the log).)."
     )
     @UITopiaVariant(affiliation = "Vienna University of Economics and Business", author = "A. Solti", email = "andreas.rogge-solti@wu.ac.at", uiLabel = UITopiaVariant.USEPLUGIN)
-	public static Object[] discoverStochNetMode(PluginContext context, XLog log){
+	public static Object[] discoverStochNetMode(UIPluginContext context, XLog log){
         MiningParameters params = new MiningParametersIMf();
         params.setNoiseThreshold(0.0f); // to guarantee perfect fitness
         Object[] result = IMPetriNet.minePetriNet(context, log, params);
@@ -113,9 +114,9 @@ public class StochasticMinerPlugin {
 
 
         PerformanceEnricherConfig config = new PerformanceEnricherConfig(StochasticNet.DistributionType.GAUSSIAN_KERNEL, StochasticNet.TimeUnit.HOURS, StochasticNet.ExecutionPolicy.RACE_ENABLING_MEMORY, null);
-        Manifest manifest = (Manifest) StochasticNetUtils.replayLog(context, net, log, true, true);
+        //Manifest manifest = (Manifest) StochasticNetUtils.replayLog(context, net, log, true, true);
 
-        Object[] enrichedResult = PerformanceEnricherPlugin.transform(context, manifest, config);
+        Object[] enrichedResult = PerformanceEnricherPlugin.transform(context, net, log);
 
         return enrichedResult;
 	}
