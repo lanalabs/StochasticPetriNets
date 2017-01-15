@@ -460,10 +460,13 @@ public class StochasticManifestCollector {
 				}
 				if (executionPolicy.equals(ExecutionPolicy.RACE_ENABLING_MEMORY)){
 					for (Integer disabled : disabledTransitions){
-						Double censoredTime = ageVariables.remove(disabled);
-						if (censoredTime != null && censoredTime > 0){ // ignore losing against immediate transitions
-							// only add to censored times, if transition had some progress before losing against the current transition
-							censoredTimes.get(disabled).add(censoredTime); 
+						Transition t = idx2Trans[disabled];
+						if (!t.isInvisible()) { // invisible transitions are by default immediate
+							Double censoredTime = ageVariables.remove(disabled);
+							if (censoredTime != null && censoredTime > 0) { // ignore losing against immediate transitions
+								// only add to censored times, if transition had some progress before losing against the current transition
+								censoredTimes.get(disabled).add(censoredTime);
+							}
 						}
 					}
 				}

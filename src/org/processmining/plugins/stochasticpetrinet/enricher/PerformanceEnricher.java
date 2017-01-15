@@ -269,7 +269,7 @@ public class PerformanceEnricher {
 		    }
 	    	newTimedTransition.setDistributionType(DistributionType.UNIFORM);
 	    	newTimedTransition.setDistributionParameters(new double[]{lowerLimit,upperLimit});
-		} else if (containsOnlyZeros(transitionStats)){
+		} else if (containsOnlyZeros(transitionStats) || newTimedTransition.isInvisible()){
 			// immediate transition
 			newTimedTransition.setImmediate(true);
 		} else if (getIsDeterministic(transitionStats, censoredStats, traceFitness)){
