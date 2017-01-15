@@ -46,6 +46,7 @@ import org.processmining.models.semantics.petrinet.impl.StochasticNetSemanticsIm
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.distribution.GaussianKernelDistribution;
 import org.processmining.plugins.stochasticpetrinet.distribution.timeseries.StatefulTimeseriesDistribution;
+import org.uncommons.maths.random.MersenneTwisterRNG;
 import org.utils.datastructures.ComparablePair;
 import org.utils.datastructures.LimitedTreeMap;
 import org.utils.datastructures.Triple;
@@ -71,7 +72,7 @@ public class PNSimulator {
 	public static final String CONCEPT_NAME = "concept:name";
 	public static final String SIMULATED_LOG_PROBABILITY = "simulated:logProbability";
 
-	protected static Random random = new Random(new Date().getTime());
+	protected static Random random = new MersenneTwisterRNG();
 
 	protected RealDistribution arrivalDistribution;
 	
@@ -798,10 +799,10 @@ public class PNSimulator {
 					transitions.add(t);
 					probability = indexAndProbability.getSecond();
 				}
-				
+
 				// compute mean durations (indirectly proportional to firing rates) and assume exponential distributions for computing the probability (we don't want to do costly integration now)
 				double cumulativeRates = 0;
-				
+
 				// select according to race policy:
 				// they are all timed: (truly concurrent or racing for shared tokens)
 				SortedMap<Long,Transition> times = new TreeMap<>();
@@ -819,7 +820,7 @@ public class PNSimulator {
 						long millis = System.currentTimeMillis()-now;
 						if (millis > 100){
 							System.out.println("sampling took: "+millis+"ms. constraint "+samplingConstraint+", transition: "+transition.getLabel()+" type: "+((TimedTransition)transition).getDistributionType());
-						} 
+						}
 						// make sure transition duration is bigger than constraint (sometimes floating point arithmetic might sample values that are overflowing, or just about the constraint.
 						if (!transitionRemainingTimes.containsKey(transition) && transitionRemainingTime+startOfTransition < constraint){
 							transitionRemainingTimes.put(transition, (long) (samplingConstraint*config.unitFactor.getUnitFactorToMillis())+1);
@@ -833,7 +834,7 @@ public class PNSimulator {
 					double rate = getFiringrate(transition);
 					firingRates.put(transition, rate);
 					cumulativeRates += rate;
-					
+
 				}
 				Transition nextTransition = times.get(times.firstKey());
 				probability *= firingRates.get(nextTransition) / cumulativeRates;

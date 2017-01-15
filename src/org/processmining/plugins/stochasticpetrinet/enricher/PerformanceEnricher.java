@@ -166,9 +166,20 @@ public class PerformanceEnricher {
 				markingBasedSelections.remove(raceConditionMarking);
 			}
 		}
-			
-		WeightsOptimizer optimizer = new WeightsOptimizer(weights, markingBasedSelections);
-		weights = optimizer.optimizeWeights();
+		boolean freechoice = true; //TODO: check if net is really free choice
+		if (freechoice && !mineConfig.getPolicy().equals(ExecutionPolicy.GLOBAL_PRESELECTION)){
+			//weights are simply the relative counts of firings
+			for (String marking : markingBasedSelections.keySet()){
+				int[] firings = markingBasedSelections.get(marking);
+				for(int i = 0; i < firings.length; i++){
+					weights[i] += firings[i];
+				}
+			}
+		} else {
+			WeightsOptimizer optimizer = new WeightsOptimizer(weights, markingBasedSelections);
+			weights = optimizer.optimizeWeights();
+		}
+
 		
 		int i = 0;
 		for (Transition timedTransition : sNet.getTransitions()){
@@ -229,7 +240,6 @@ public class PerformanceEnricher {
 	 * @param transitionStats observed transition durations
 	 * @param censoredStats unobserved transition durations (right censored, i.e., some other transition was faster...)
 	 * @param traceFitness 
-	 * @param typeToMine
 	 * @param maxTraceLength the duration of the trace in model-units (ms divided by unit factor)
 	 * @return String reporting special notes during estimation (e.g. for undefined log values) 
 	 */

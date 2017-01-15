@@ -114,13 +114,14 @@ public class SimpleHistogramDistribution extends AbstractRealDistribution{
 	}
 	
 	public double sample(double constraint){
-		// find index of constraint and sample above:
-		// assume that samples are ordered.
-		int indexOfConstraint = StochasticNetUtils.getIndexBinarySearch(samples, constraint);
-		
 		if (constraint > samples[samples.length -1]){
 			return constraint;
 		}
+
+		// find index of constraint and sample above:
+		// assume that samples are ordered.
+		int indexOfConstraint = constraint > 0 ? StochasticNetUtils.getIndexBinarySearch(samples, constraint) : 0;
+		
 		if (constraint > samples[indexOfConstraint]){
 			indexOfConstraint++;
 		}

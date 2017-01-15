@@ -94,15 +94,16 @@ public class StochasticMinerPlugin {
                         visibleTransitions.add(transition);
                     }
                 }
-                if (immediateTransitions.size()>0 && visibleTransitions.size()>0){
+                if (visibleTransitions.size()>0){
                     // add immediate transitions before the visible ones to allow for a probabilistic decision
                     // even when using race condition semantics.
                     for (Transition t : visibleTransitions){
                         net.removeArc(place, t);
-                        Transition choiceTransition = net.addTransition("tau choice"+newPlaceCount++);
-
                         // this operation should be soundness preserving, as it is one of inverted Murata's reduction rules
                         Place choicePlace = net.addPlace("newPlace"+newPlaceCount);
+                        Transition choiceTransition = net.addTransition("tau choice"+newPlaceCount++);
+                        choiceTransition.setInvisible(true);
+
                         net.addArc(place, choiceTransition);
                         net.addArc(choiceTransition,choicePlace);
                         net.addArc(choicePlace, t);

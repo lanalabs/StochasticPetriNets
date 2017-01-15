@@ -426,8 +426,8 @@ public class StochasticNetUtils {
 			long nanos = System.nanoTime();
 			sample = ((SimpleHistogramDistribution) distribution).sample(positiveConstraint);
 			nanos = System.nanoTime() - nanos;
-			if (nanos > 100000) {
-				System.out.println("Took " + (nanos / 1000) + "ms to sample from histogram");
+			if (nanos > 100000000) {
+				System.out.println("Took " + (nanos / 1000000) + "ms to sample from histogram");
 			}
 		} else if (distribution instanceof DiracDeltaDistribution) {
 			sample = distribution.sample();
@@ -564,6 +564,27 @@ public class StochasticNetUtils {
 			}
 		}
 		return result;
+	}
+
+	public static Pair<XLog,XLog> splitTracesBasedOnRatio(XLog log, double ratio) {
+		XLog result1 = XFactoryRegistry.instance().currentDefault().createLog(log.getAttributes());
+		XLog result2 = XFactoryRegistry.instance().currentDefault().createLog(log.getAttributes());
+
+		for (int i = 0; i < log.size(); i++) {
+			XTrace t = log.get(i);
+			XTrace copy = XFactoryRegistry.instance().currentDefault().createTrace(t.getAttributes());
+			for (XEvent e : t) {
+				// keep this one
+				XEvent copyEvent = XFactoryRegistry.instance().currentDefault().createEvent(e.getAttributes());
+				copy.add(copyEvent);
+			}
+			if ((double) i / log.size() <= ratio) {
+				result1.add(copy);
+			} else {
+				result2.add(copy);
+			}
+		}
+		return new Pair<>(result1, result2);
 	}
 
 	/**

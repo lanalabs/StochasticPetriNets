@@ -15,6 +15,7 @@ import org.processmining.contexts.uitopia.annotations.Visualizer;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.Plugin;
+import org.processmining.framework.plugin.annotations.PluginLevel;
 import org.processmining.framework.plugin.annotations.PluginVariant;
 import org.processmining.models.connections.petrinets.behavioral.InitialMarkingConnection;
 import org.processmining.models.graphbased.AttributeMap;
@@ -30,11 +31,7 @@ import org.processmining.models.jgraph.elements.ProMGraphCell;
 import org.processmining.models.jgraph.visualization.ProMJGraphPanel;
 import org.processmining.models.semantics.petrinet.Marking;
 
-@Plugin(name = "Stochastic Petri Net Visualizer",
-		returnLabels = { "Visualized Stochastic Petri Net" },
-		returnTypes = { JComponent.class },
-		parameterLabels = { StochasticNet.PARAMETER_LABEL })
-@Visualizer
+
 public class PerformanceVisualization {
 	private static PlotPanelFreeChart plotForTransition;
 	
@@ -43,8 +40,14 @@ public class PerformanceVisualization {
 	private static JPanel myPanel;
 
 
-	@PluginVariant(requiredParameterLabels = { 0 })
-	protected JComponent visualize(PluginContext context, StochasticNet sNet) {
+	@Plugin(name = "Stochastic Petri Net Visualizer",
+			level = PluginLevel.Regular,
+			returnLabels = { "Visualized Stochastic Petri Net" },
+			returnTypes = { JComponent.class },
+			parameterLabels = { "Stochastic Petri Net" },
+			userAccessible = true)
+	@Visualizer
+	public JComponent visualize(PluginContext context, StochasticNet sNet) {
 		
 		myPanel = new JPanel();
 		myPanel.setLayout(new BorderLayout());
