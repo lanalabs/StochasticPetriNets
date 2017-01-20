@@ -206,7 +206,7 @@ public class PredictionExperimentPlugin {
 		Iterator<List<PredictionData>> caseIterator = results.iterator();
 		int caseId = 0;
 		StringBuilder sb = new StringBuilder();
-		sb.append(getHeader(getMaxIterations(results)));
+		sb.append(getHeader(getMaxIterations(results)).replaceAll(" ","_"));
 		//		String predictionsCSV = getHeader(getMaxIterations(results));;
 
 		int[] predictionfailsOverall = new int[predictionTypes];
