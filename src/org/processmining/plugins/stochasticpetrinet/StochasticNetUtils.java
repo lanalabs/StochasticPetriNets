@@ -1701,19 +1701,11 @@ public class StochasticNetUtils {
 		return eClassName;
 	}
 
-	/**
-	 * Aligns the petri net to a log and return the distance. TODO: incorporate
-	 * further quality criteria!
-	 * 
-	 * @param petriNet
-	 * @param log
-	 * @return Map of {@link QualityCriterion} to (mostly) Double
-	 */
-	public static Map<QualityCriterion, Object> getDistance(PetrinetWithMarkings petriNet, XLog log) {
+	public static Map<QualityCriterion, Object> getDistance(PluginContext context, PetrinetWithMarkings petriNet, XLog log){
 		double distance = 0;
 		Map<QualityCriterion, Object> qualities = new HashMap<>();
 
-		PNRepResult result =  ((Pair<PNRepResult,PNManifestFlattener>) replayLog(null, petriNet.petrinet, log, false, false)).getFirst();
+		PNRepResult result =  ((Pair<PNRepResult,PNManifestFlattener>) replayLog(context, petriNet.petrinet, log, false, false)).getFirst();
 		distance = Double.valueOf(result.getInfo().get(PNRepResult.TRACEFITNESS).toString());
 		qualities.put(QualityCriterion.FITNESS, distance);
 		qualities.put(QualityCriterion.PRECISION1, Double.valueOf(result.getInfo().get(PRECISION_MEASURE).toString()));
@@ -1742,6 +1734,18 @@ public class StochasticNetUtils {
 		//		}
 
 		return qualities;
+	}
+
+	/**
+	 * Aligns the petri net to a log and return the distance. TODO: incorporate
+	 * further quality criteria!
+	 * 
+	 * @param petriNet
+	 * @param log
+	 * @return Map of {@link QualityCriterion} to (mostly) Double
+	 */
+	public static Map<QualityCriterion, Object> getDistance(PetrinetWithMarkings petriNet, XLog log) {
+		return getDistance(getDummyConsoleProgressContext(), petriNet, log);
 	}
 
 	public static PluginContext getDummyConsoleProgressContext() {
