@@ -2144,10 +2144,14 @@ public class StochasticNetUtils {
 		}
 
 		public Connection getConnection(ConnectionID id) throws ConnectionCannotBeObtained {
-			return null;
+			if (connections.containsKey(id)) {
+				return connections.get(id);
+			}
+			throw new ConnectionCannotBeObtained("No connection with id "+id.toString(), null);
 		}
 
 		public void clear() {
+			this.connections.clear();
 		}
 
 		public <T extends Connection> T addConnection(T connection) {
