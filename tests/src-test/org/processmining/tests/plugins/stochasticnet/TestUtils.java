@@ -1,23 +1,11 @@
 package org.processmining.tests.plugins.stochasticnet;
 
-import java.awt.Dimension;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-
-import javax.swing.JComponent;
-import javax.swing.JFrame;
-
 import org.deckfour.xes.classification.XEventClassifier;
 import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.extension.std.XLifecycleExtension;
 import org.deckfour.xes.extension.std.XLifecycleExtension.StandardModel;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
-import org.deckfour.xes.in.XUniversalParser;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
 import org.deckfour.xes.model.XTrace;
@@ -31,6 +19,7 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Transition
 import org.processmining.models.jgraph.ProMJGraphVisualizer;
 import org.processmining.models.jgraph.visualization.ProMJGraphPanel;
 import org.processmining.models.semantics.petrinet.Marking;
+import org.processmining.plugins.log.OpenNaiveLogFilePlugin;
 import org.processmining.plugins.log.logfilters.impl.EventLogFilter;
 import org.processmining.plugins.pnml.importing.StochasticNetDeserializer;
 import org.processmining.plugins.pnml.simple.PNMLRoot;
@@ -40,6 +29,14 @@ import org.processmining.plugins.stochasticpetrinet.enricher.experiment.Performa
 import org.processmining.plugins.stochasticpetrinet.enricher.experiment.PerformanceEnricherExperimentResult;
 import org.simpleframework.xml.Serializer;
 import org.simpleframework.xml.core.Persister;
+
+import javax.swing.*;
+import java.awt.*;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.Arrays;
 
 /**
  * Contains shared functionality of the test cases.
@@ -185,12 +182,14 @@ public class TestUtils {
 	 * @throws Exception
 	 */
 	public static XLog loadLog(File file) throws Exception {
-		XUniversalParser parser = new XUniversalParser();
-		Collection<XLog> logs = parser.parse(file);
-		if (logs.size() > 0){
-			return logs.iterator().next();
-		}
-		return null;
+		OpenNaiveLogFilePlugin loader = new OpenNaiveLogFilePlugin();
+		return (XLog) loader.importFile(StochasticNetUtils.getDummyUIContext(), file);
+//		XUniversalParser parser = new XUniversalParser();
+//		Collection<XLog> logs = parser.parse(file);
+//		if (logs.size() > 0){
+//			return logs.iterator().next();
+//		}
+//		return null;
 	}
 	
 	/**

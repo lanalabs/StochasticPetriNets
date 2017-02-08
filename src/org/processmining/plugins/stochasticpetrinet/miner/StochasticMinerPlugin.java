@@ -1,9 +1,13 @@
 package org.processmining.plugins.stochasticpetrinet.miner;
 
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
+
 import org.deckfour.xes.model.XLog;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
-import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.plugin.annotations.Plugin;
 import org.processmining.models.graphbased.directed.petrinet.Petrinet;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
@@ -14,19 +18,9 @@ import org.processmining.models.graphbased.directed.petrinet.elements.Transition
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.InductiveMiner.mining.MiningParameters;
 import org.processmining.plugins.InductiveMiner.mining.MiningParametersIMf;
-import org.processmining.plugins.InductiveMiner.mining.MiningParametersIMi;
 import org.processmining.plugins.InductiveMiner.plugins.IMPetriNet;
-import org.processmining.plugins.etm.factory.InductiveMinerWrapper;
-import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
-import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
-import org.processmining.plugins.stochasticpetrinet.enricher.PerformanceEnricher;
 import org.processmining.plugins.stochasticpetrinet.enricher.PerformanceEnricherConfig;
 import org.processmining.plugins.stochasticpetrinet.enricher.PerformanceEnricherPlugin;
-
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
 
 /**
  * Not yet implemented. Use implementation based on Process Trees for now.

@@ -67,6 +67,7 @@ import org.deckfour.xes.model.impl.XTraceImpl;
 import org.deckfour.xes.out.XesXmlSerializer;
 import org.json.simple.JSONObject;
 import org.json.simple.JSONValue;
+import org.processmining.contexts.uitopia.UIContext;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.framework.connections.Connection;
 import org.processmining.framework.connections.ConnectionCannotBeObtained;
@@ -84,6 +85,7 @@ import org.processmining.framework.plugin.Progress;
 import org.processmining.framework.plugin.RecursiveCallException;
 import org.processmining.framework.plugin.annotations.Plugin;
 import org.processmining.framework.plugin.events.ConnectionObjectListener;
+import org.processmining.framework.plugin.events.Logger;
 import org.processmining.framework.plugin.events.Logger.MessageLevel;
 import org.processmining.framework.plugin.events.ProgressEventListener.ListenerList;
 import org.processmining.framework.plugin.impl.FieldSetException;
@@ -1748,10 +1750,88 @@ public class StochasticNetUtils {
 		return getDistance(getDummyConsoleProgressContext(), petriNet, log);
 	}
 
+	public static UIPluginContext getDummyUIContext() {
+		return new FakePluginContext(getDummyConsoleProgressContext());
+	}
+
 	public static PluginContext getDummyConsoleProgressContext() {
 		PluginContext context = new DummyConsolePluginContext();
 		return context;
 	}
+
+	/**
+	 * Created by andreas on 25/01/2017.
+	 */
+	static public class FakePluginContext extends UIPluginContext {
+		private PluginContext context;
+
+		private static UIPluginContext MAIN_PLUGINCONTEXT;
+
+		static {
+			UIContext MAIN_CONTEXT = new UIContext();
+			MAIN_PLUGINCONTEXT = MAIN_CONTEXT.getMainPluginContext().createChildContext("");
+		}
+
+		protected FakePluginContext(UIPluginContext context, String label) {
+			super(context, label);
+		}
+
+		public FakePluginContext(PluginContext context){
+			super(MAIN_PLUGINCONTEXT, "fake_Context");
+			this.context = context;
+		}
+
+		@Override
+		public ConnectionManager getConnectionManager() {
+			return this.context.getConnectionManager();
+		}
+
+		@Override
+		public <T extends Connection> T addConnection(T c) {
+			return this.context.addConnection(c);
+		}
+
+		@Override
+		public void clear() {
+			this.context.clear();
+		}
+
+		@Override
+		public Progress getProgress() {
+			return context.getProgress();
+		}
+
+		@Override
+		public ProMFuture<?> getFutureResult(int i) {
+			return context.getFutureResult(i);
+		}
+
+		@Override
+		public void setFuture(PluginExecutionResult futureToBe) {
+			context.setFuture(futureToBe);
+		}
+
+		@Override
+		public PluginExecutionResult getResult() {
+			return context.getResult();
+		}
+
+		@Override
+		public void log(String message, Logger.MessageLevel level) {
+			context.log(message, level);
+		}
+
+		@Override
+		public void log(String message) {
+			context.log(message);
+		}
+
+		@Override
+		public void log(Throwable exception) {
+			context.log(exception);
+		}
+	}
+
 
 	static public class DummyConsolePluginContext implements PluginContext {
 		private Progress progress;
