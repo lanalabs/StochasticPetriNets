@@ -4,28 +4,28 @@ import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.Root;
 
-@Root(name="place",strict=false)
-public class PNMLPlace extends AbstractPNMLElement{
-	@Attribute
-	private String id;
-	
-	@Element(name="initialMarking",required=false)
-	private PNMLText initialMarking = null;
+@Root(name = "place", strict = false)
+public class PNMLPlace extends AbstractPNMLElement {
+    @Attribute
+    private String id;
 
-	public String getId() {
-		return id;
-	}
+    @Element(name = "initialMarking", required = false)
+    private PNMLText initialMarking = null;
 
-	public void setId(String id) {
-		this.id = id;
-	}
+    public String getId() {
+        return id;
+    }
 
-	public PNMLText getInitialMarking() {
-		return initialMarking;
-	}
+    public void setId(String id) {
+        this.id = id;
+    }
 
-	public void setInitialMarking(PNMLText initialMarking) {
-		this.initialMarking = initialMarking;
-	}
-	
+    public PNMLText getInitialMarking() {
+        return initialMarking;
+    }
+
+    public void setInitialMarking(PNMLText initialMarking) {
+        this.initialMarking = initialMarking;
+    }
+
 }

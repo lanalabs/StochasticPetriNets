@@ -13,7 +13,7 @@ public abstract class AbstractMiner {
     protected Map<String, Integer> eventNames;
     protected int counter;
 
-    public AbstractMiner(){
+    public AbstractMiner() {
         this.counter = 1;
     }
 
@@ -22,8 +22,8 @@ public abstract class AbstractMiner {
         return getEventId(name);
     }
 
-    protected Integer getEventId(String name){
-        if (!eventNames.containsKey(name)){
+    protected Integer getEventId(String name) {
+        if (!eventNames.containsKey(name)) {
             eventNames.put(name, counter++);
         }
         return eventNames.get(name);

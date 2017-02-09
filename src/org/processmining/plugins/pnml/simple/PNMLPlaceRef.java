@@ -4,29 +4,29 @@ import org.simpleframework.xml.Attribute;
 import org.simpleframework.xml.Element;
 import org.simpleframework.xml.Root;
 
-@Root(name="place")
+@Root(name = "place")
 public class PNMLPlaceRef {
 
-	@Attribute(name="idref")
-	private String idRef;
-	
-	@Element(name="text")
-	private int tokens;
+    @Attribute(name = "idref")
+    private String idRef;
 
-	public String getIdRef() {
-		return idRef;
-	}
+    @Element(name = "text")
+    private int tokens;
 
-	public void setIdRef(String idRef) {
-		this.idRef = idRef;
-	}
+    public String getIdRef() {
+        return idRef;
+    }
 
-	public int getTokens() {
-		return tokens;
-	}
+    public void setIdRef(String idRef) {
+        this.idRef = idRef;
+    }
 
-	public void setTokens(int tokens) {
-		this.tokens = tokens;
-	}
-	
+    public int getTokens() {
+        return tokens;
+    }
+
+    public void setTokens(int tokens) {
+        this.tokens = tokens;
+    }
+
 }

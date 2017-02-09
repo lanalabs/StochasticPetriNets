@@ -7,22 +7,22 @@ import java.util.Set;
 
 public class JaccardSimilarity {
 
-	public static <E extends Comparable<E>> double getSimilarity(E[] x, E[] y){
-		return getSimilarity(Arrays.asList(x), Arrays.asList(y));
-	}
-	
-	public static <E extends Comparable<E>> double getSimilarity(Collection<E> x, Collection<E> y) {
-		if (x.size() == 0 || y.size() == 0) {
-			return 0.0;
-		}
+    public static <E extends Comparable<E>> double getSimilarity(E[] x, E[] y) {
+        return getSimilarity(Arrays.asList(x), Arrays.asList(y));
+    }
 
-		Set<E> unionXY = new HashSet<E>(x);
-		unionXY.addAll(y);
+    public static <E extends Comparable<E>> double getSimilarity(Collection<E> x, Collection<E> y) {
+        if (x.size() == 0 || y.size() == 0) {
+            return 0.0;
+        }
 
-		Set<E> intersectionXY = new HashSet<E>(x);
-		intersectionXY.retainAll(y);
+        Set<E> unionXY = new HashSet<E>(x);
+        unionXY.addAll(y);
 
-		return (double) intersectionXY.size() / (double) unionXY.size();
+        Set<E> intersectionXY = new HashSet<E>(x);
+        intersectionXY.retainAll(y);
 
-	}
+        return (double) intersectionXY.size() / (double) unionXY.size();
+
+    }
 }

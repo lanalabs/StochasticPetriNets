@@ -1,58 +1,51 @@
 package org.processmining.plugins.stochasticpetrinet.distribution;
 
 import org.apache.commons.math3.distribution.AbstractRealDistribution;
+import org.apache.commons.math3.random.RandomGenerator;
 
-public class RAbstractDistribution extends AbstractRealDistribution{
+public class RAbstractDistribution extends AbstractRealDistribution {
 
-	protected String method;
-	
-	public RAbstractDistribution(){
-		method = "";
-	}
-	
-	public double density(double x) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    protected String method;
 
-	public double cumulativeProbability(double x) {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    public RAbstractDistribution(RandomGenerator randomGenerator) {
+        super(randomGenerator);
+        method = "";
+    }
 
-	public double getNumericalMean() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    public double density(double x) {
+        return 0;
+    }
 
-	public double getNumericalVariance() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    public double cumulativeProbability(double x) {
+        return 0;
+    }
 
-	public double getSupportLowerBound() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    public double getNumericalMean() {
+        return 0;
+    }
 
-	public double getSupportUpperBound() {
-		// TODO Auto-generated method stub
-		return 0;
-	}
+    public double getNumericalVariance() {
+        return 0;
+    }
 
-	public boolean isSupportLowerBoundInclusive() {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    public double getSupportLowerBound() {
+        return 0;
+    }
 
-	public boolean isSupportUpperBoundInclusive() {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    public double getSupportUpperBound() {
+        return 0;
+    }
 
-	public boolean isSupportConnected() {
-		// TODO Auto-generated method stub
-		return false;
-	}
+    public boolean isSupportLowerBoundInclusive() {
+        return false;
+    }
+
+    public boolean isSupportUpperBoundInclusive() {
+        return false;
+    }
+
+    public boolean isSupportConnected() {
+        return false;
+    }
 
 }

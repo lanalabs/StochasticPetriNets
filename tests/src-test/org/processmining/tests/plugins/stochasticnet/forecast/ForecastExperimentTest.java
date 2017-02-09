@@ -1,13 +1,28 @@
 package org.processmining.tests.plugins.stochasticnet.forecast;
 
+import net.sourceforge.cobertura.javancss.ccl.FileUtil;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.deckfour.xes.extension.std.XConceptExtension;
+import org.deckfour.xes.extension.std.XTimeExtension;
+import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.model.XLog;
+import org.deckfour.xes.model.XTrace;
 import org.junit.Test;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.miner.StochasticMinerPlugin;
+import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
+import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeSeriesConfiguration;
+import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeseriesPredictor;
+import org.processmining.plugins.stochasticpetrinet.simulator.PNTimeSeriesSimulator;
 import org.processmining.tests.plugins.stochasticnet.TestUtils;
+
+import java.io.File;
+import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Created by andreas on 2/8/17.
@@ -24,18 +39,73 @@ public class ForecastExperimentTest {
 
         // split in training and test log:
         Pair<XLog, XLog> trainingLogTestLog = StochasticNetUtils.splitTracesBasedOnRatio(log, 0.5);
-
-        // discover a "good" Petri net
-        Object[] discoveredModel = StochasticMinerPlugin.discoverStochNetMode(StochasticNetUtils.getDummyUIContext(), trainingLogTestLog.getFirst());
-        StochasticNet net = (StochasticNet) discoveredModel[0];
-        StochasticNetUtils.exportAsDOTFile(net, "out", "out.dot");
+        XLog trainingLog = trainingLogTestLog.getFirst();
 
         // use training log to enrich three models:
-        // a stochastic petri net, a time series petri net, and a transition system with probailities (Markov Chain)
+        // a stochastic petri net, a time series petri net, and a transition system with probabilities (Markov Chain)
+
+        TimeUnit timeunit = TimeUnit.HOURS;
+
+        // discover a "good" Petri net
+        Object[] discoveredModel = StochasticMinerPlugin.discoverStochNetModel(StochasticNetUtils.getDummyUIContext(), trainingLog);
+        StochasticNet net = (StochasticNet) discoveredModel[0];
+        Marking initialMarking = (Marking) discoveredModel[1];
+        // StochasticNetUtils.exportAsDOTFile(net, "out", "out.dot");
+
+        // simulate the same number of traces as given in the first half with an exponential arrival rate:
+        TimeSeriesConfiguration configuration = new TimeSeriesConfiguration();
+        PNTimeSeriesSimulator timeSeriesSimulator = new PNTimeSeriesSimulator(configuration);
+
+        configuration.setTimeSeriesType(TimeSeriesConfiguration.TimeSeriesType.NAIVE_METHOD);
+        TimePredictor predictor = new TimePredictor(false);
 
 
 
 
+        long starttime  = XTimeExtension.instance().extractTimestamp(trainingLog.get(0).get(0)).getTime(); // assume constant interarrival rate for now
+        Pair<Long,Long> tracebounds = StochasticNetUtils.getBufferedTraceBounds(trainingLog.get(trainingLog.size()-1));
+        long endTime = tracebounds.getSecond();
+        double meanTimeBetweenArrivals = ((endTime - starttime) / timeunit.toMillis(1)) / trainingLog.size();
+        ExponentialDistribution arrivalDist = new ExponentialDistribution(meanTimeBetweenArrivals);
+        long simulationTime = endTime;
+        XTrace observedEvents = XFactoryRegistry.instance().currentDefault().createTrace();
+        Map<String, List<Pair<Double,Double>>> results = new HashMap<>();
+        results.put("Timeseries_", new ArrayList<Pair<Double, Double>>());
+        results.put("GSPN_", new ArrayList<Pair<Double, Double>>());
+        for (int i = 0; i < trainingLogTestLog.getSecond().size(); i++){
+            simulationTime += (long)(arrivalDist.sample()*timeunit.toMillis(1));
+            Pair<Double,Double> predictionAndConfidence = predictor.predict(net, observedEvents, new Date(simulationTime), initialMarking);
+            results.get("Timeseries_").add(predictionAndConfidence);
+
+            predictionAndConfidence = predictor.predict(net, observedEvents, new Date(simulationTime), initialMarking);
+            results.get("GSPN_").add(predictionAndConfidence);
+
+        }
+
+        Map<Integer, Double> realDurations = new HashMap<>();
+        for (XTrace result : trainingLogTestLog.getSecond()){
+            tracebounds = StochasticNetUtils.getBufferedTraceBounds(trainingLog.get(trainingLog.size()-1),0);
+            double durationInHours = (tracebounds.getSecond()-tracebounds.getFirst()) / (double)timeunit.toMillis(1);
+            realDurations.put(realDurations.size(), durationInHours);
+        }
+
+
+        FileUtils.write(new File("prediction_results.csv"), getOutput(results, realDurations, ","));
+        // enrich the net with time series:
+    }
+
+    private String getOutput(Map<String, List<Pair<Double, Double>>> results, Map<Integer, Double> realDurations, String separator) {
+        StringBuilder builder = new StringBuilder();
+
+        for (String key : results.keySet()){
+            int i = 0;
+            for (Pair<Double,Double> prediction : results.get(key)){
+                builder.append(i).append(separator).append(key).append(separator).append(prediction.getFirst()).append(separator).append(prediction.getSecond());
+                builder.append(separator).append(realDurations.get(i)).append("\n");
+                i++;
+            }
+        }
+        return builder.toString();
     }
 
 

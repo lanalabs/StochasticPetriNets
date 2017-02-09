@@ -4,14 +4,14 @@ import java.util.List;
 
 public class PredictionExperimentResult {
 
-	private List<List<PredictionData>> predictionResults;
-	
-	public List<List<PredictionData>> getPredictionResults() {
-		return predictionResults;
-	}
+    private List<List<PredictionData>> predictionResults;
 
-	public void setPredictionResults(List<List<PredictionData>> predictionResults) {
-		this.predictionResults = predictionResults;
-	}
-	
+    public List<List<PredictionData>> getPredictionResults() {
+        return predictionResults;
+    }
+
+    public void setPredictionResults(List<List<PredictionData>> predictionResults) {
+        this.predictionResults = predictionResults;
+    }
+
 }

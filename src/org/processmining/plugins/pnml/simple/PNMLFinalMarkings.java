@@ -1,19 +1,20 @@
 package org.processmining.plugins.pnml.simple;
 
-import java.util.List;
-
 import org.simpleframework.xml.ElementList;
 import org.simpleframework.xml.Root;
 
-@Root(name="finalmarkings")
-public class PNMLFinalMarkings {
-	@ElementList(inline=true)
-	private List<PNMLMarking> markings;
+import java.util.List;
 
-	public List<PNMLMarking> getMarkings() {
-		return markings;
-	}
-	public void setMarkings(List<PNMLMarking> markings) {
-		this.markings = markings;
-	}
+@Root(name = "finalmarkings")
+public class PNMLFinalMarkings {
+    @ElementList(inline = true)
+    private List<PNMLMarking> markings;
+
+    public List<PNMLMarking> getMarkings() {
+        return markings;
+    }
+
+    public void setMarkings(List<PNMLMarking> markings) {
+        this.markings = markings;
+    }
 }

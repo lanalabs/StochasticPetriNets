@@ -1,37 +1,37 @@
 package org.utils.datastructures;
 
-public class Triple<K,L,M> {
-	private K first;
-	private L second;
-	private M third;
-	
-	public Triple(K first, L second, M third){
-		this.first = first;
-		this.second = second;
-		this.third = third;
-	}
+public class Triple<K, L, M> {
+    private K first;
+    private L second;
+    private M third;
 
-	public K getFirst() {
-		return first;
-	}
+    public Triple(K first, L second, M third) {
+        this.first = first;
+        this.second = second;
+        this.third = third;
+    }
 
-	public void setFirst(K first) {
-		this.first = first;
-	}
+    public K getFirst() {
+        return first;
+    }
 
-	public L getSecond() {
-		return second;
-	}
+    public void setFirst(K first) {
+        this.first = first;
+    }
 
-	public void setSecond(L second) {
-		this.second = second;
-	}
+    public L getSecond() {
+        return second;
+    }
 
-	public M getThird() {
-		return third;
-	}
+    public void setSecond(L second) {
+        this.second = second;
+    }
 
-	public void setThird(M third) {
-		this.third = third;
-	}
+    public M getThird() {
+        return third;
+    }
+
+    public void setThird(M third) {
+        this.third = third;
+    }
 }

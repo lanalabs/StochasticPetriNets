@@ -1,11 +1,11 @@
 package org.processmining.plugins.stochasticpetrinet.prediction.timeseries;
 
-import java.util.Date;
-
 import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.model.XTrace;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
+import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.models.semantics.petrinet.impl.EfficientStochasticNetSemanticsImpl;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
@@ -15,65 +15,72 @@ import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNTimeSeriesSimulator;
 
-public class TimeseriesPredictor extends AbstractTimePredictor{
+import java.util.Date;
 
-	
-	private PNSimulator simulator;
+public class TimeseriesPredictor extends AbstractTimePredictor {
 
-	public TimeseriesPredictor(){
-		this(new TimeSeriesConfiguration());
-	}
-	
-	public TimeseriesPredictor(TimeSeriesConfiguration config){
-		// perform a headless simulation
-		this.simulator = new PNTimeSeriesSimulator(config);
-	}
-	
-	
-	
-	protected DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime,
-			Marking initialMarking, boolean useOnlyPastTrainingData) {
 
-		EfficientStochasticNetSemanticsImpl semantics = (EfficientStochasticNetSemanticsImpl) TimePredictor
-				.getCurrentStateWithAlignment(model, initialMarking, observedEvents);
-		Marking currentMarking = semantics.getCurrentState();
+    private PNSimulator simulator;
 
-		PNSimulatorConfig config = new PNSimulatorConfig(1, model.getTimeUnit());
-		config.setSimulateTraceless(true);
-		Long lastEventTime;
-		if (observedEvents.isEmpty()) {
-			lastEventTime = currentTime.getTime();
-		} else {
-			lastEventTime = XTimeExtension.instance().extractTimestamp(observedEvents.get(observedEvents.size() - 1))
-					.getTime();
-		}
+    public TimeseriesPredictor() {
+        this(new TimeSeriesConfiguration());
+    }
 
-		DescriptiveStatistics stats = new DescriptiveStatistics();
-		//long now = System.currentTimeMillis();
+    public TimeseriesPredictor(TimeSeriesConfiguration config) {
+        // perform a headless simulation
+        this.simulator = new PNTimeSeriesSimulator(config);
+    }
 
-		StochasticNetUtils.useCache(true);
-		double errorPercent = 100; // percentage in error of 99% confidence band
-		int i = 0;
-		long now = System.currentTimeMillis();
-		while (errorPercent > ERROR_BOUND_PERCENT && i < MAX_RUNS) {
-			i++;
-			//			long now = System.currentTimeMillis();
-			stats.addValue((Long) simulator.simulateOneTrace(model, semantics, config, currentMarking, lastEventTime,
-					currentTime.getTime(), i, false, null));
-			//			System.out.println("Took "+(System.currentTimeMillis()-now)+" ms to sample one trace!");
-			semantics.setCurrentState(currentMarking);
-			if (i % 100 == 0) {
-				// update error:
-				errorPercent = getErrorPercent(stats);
-			}
-		}
-		long timeTaken = System.currentTimeMillis() - now;
-		if (timeTaken > 1000){
-			System.out.println("Took " + timeTaken + "ms to sample one case.");
-		}
-		return stats;
-	}
-	
+
+    protected DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime,
+                                                       Marking initialMarking, boolean useOnlyPastTrainingData) {
+
+        EfficientStochasticNetSemanticsImpl semantics = null;
+        if (observedEvents.isEmpty()){
+            semantics = (EfficientStochasticNetSemanticsImpl) StochasticNetUtils.getSemantics(model);
+            semantics.initialize(model.getTransitions(), initialMarking);
+        } else {
+            semantics = (EfficientStochasticNetSemanticsImpl) TimePredictor
+                    .getCurrentStateWithAlignment(model, initialMarking, observedEvents);
+        }
+        Marking currentMarking = semantics.getCurrentState();
+
+        PNSimulatorConfig config = new PNSimulatorConfig(1, model.getTimeUnit());
+        config.setSimulateTraceless(true);
+        Long lastEventTime;
+        if (observedEvents.isEmpty()) {
+            lastEventTime = currentTime.getTime();
+        } else {
+            lastEventTime = XTimeExtension.instance().extractTimestamp(observedEvents.get(observedEvents.size() - 1))
+                    .getTime();
+        }
+
+        DescriptiveStatistics stats = new DescriptiveStatistics();
+        //long now = System.currentTimeMillis();
+
+        StochasticNetUtils.useCache(true);
+        double errorPercent = 100; // percentage in error of 99% confidence band
+        int i = 0;
+        long now = System.currentTimeMillis();
+        while (errorPercent > ERROR_BOUND_PERCENT && i < MAX_RUNS) {
+            i++;
+            //			long now = System.currentTimeMillis();
+            stats.addValue((Long) simulator.simulateOneTrace(model, semantics, config, currentMarking, lastEventTime,
+                    currentTime.getTime(), i, false, null));
+            //			System.out.println("Took "+(System.currentTimeMillis()-now)+" ms to sample one trace!");
+            semantics.setCurrentState(currentMarking);
+            if (i % 100 == 0) {
+                // update error:
+                errorPercent = getErrorPercent(stats);
+            }
+        }
+        long timeTaken = System.currentTimeMillis() - now;
+        if (timeTaken > 1000) {
+            System.out.println("Took " + timeTaken + "ms to sample one case.");
+        }
+        return stats;
+    }
+
 
 //	private List<Set<Transition>> getConflictingTransitions(Semantics<Marking, Transition> semantics){
 //		// assume free choice!

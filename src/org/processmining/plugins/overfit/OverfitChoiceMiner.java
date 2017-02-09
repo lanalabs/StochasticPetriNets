@@ -16,7 +16,7 @@ import java.util.Map;
 
 /**
  * Assumes the log to have dedicated start and end events embracing each trace.
- *
+ * <p>
  * Created by andreas on 9/15/16.
  */
 public class OverfitChoiceMiner extends AbstractMiner {
@@ -24,9 +24,9 @@ public class OverfitChoiceMiner extends AbstractMiner {
     private final double threshold;
     private final int window;
     Map<int[], Place> statePlaces;
-    Table<int[],int[], Integer> transitionTable;
-    
-    public OverfitChoiceMiner(double threshold){
+    Table<int[], int[], Integer> transitionTable;
+
+    public OverfitChoiceMiner(double threshold) {
         this.statePlaces = new HashMap<>();
         this.threshold = threshold;
         this.window = 1;
@@ -38,9 +38,9 @@ public class OverfitChoiceMiner extends AbstractMiner {
         Marking initialMarking = new Marking();
         initialMarking.add(startPlace);
 
-        if (context != null && context.getProgress()!= null){
+        if (context != null && context.getProgress() != null) {
             context.getProgress().setMinimum(0);
-            context.getProgress().setMaximum(log.size()*2);
+            context.getProgress().setMaximum(log.size() * 2);
             context.getProgress().setValue(0);
         }
         transitionTable = HashBasedTable.create();
@@ -55,10 +55,10 @@ public class OverfitChoiceMiner extends AbstractMiner {
                 }
                 int[] state = new int[this.window];
                 int[] previousState = null;
-                for (int w = 0; w < this.window; w++){
-                    state[w] = getEventId(trace, i + w -this.window);
-                    if (previousState != null){
-                        if (! transitionTable.contains(previousState, state)){
+                for (int w = 0; w < this.window; w++) {
+                    state[w] = getEventId(trace, i + w - this.window);
+                    if (previousState != null) {
+                        if (!transitionTable.contains(previousState, state)) {
                             transitionTable.put(previousState, state, 1);
                         } else {
                             int count = transitionTable.get(previousState, state) + 1;
@@ -71,11 +71,11 @@ public class OverfitChoiceMiner extends AbstractMiner {
         }
         if (context != null && context.getProgress() != null) {
             int progress = transitionTable.rowKeySet().size();
-            context.getProgress().setMaximum(progress*2);
+            context.getProgress().setMaximum(progress * 2);
             context.getProgress().setValue(progress);
         }
 
-        for (int[] rowKey : transitionTable.rowKeySet()){
+        for (int[] rowKey : transitionTable.rowKeySet()) {
 
             Map<int[], Integer> targets = transitionTable.row(rowKey);
         }
@@ -88,7 +88,7 @@ public class OverfitChoiceMiner extends AbstractMiner {
     }
 
     private Integer getEventId(XTrace trace, int i) {
-        if (i < 0){
+        if (i < 0) {
             return -1;
         }
         String eventName = XConceptExtension.instance().extractName(trace.get(i));
@@ -106,12 +106,12 @@ public class OverfitChoiceMiner extends AbstractMiner {
 
         public BoundaryEvents checkTrace(XTrace trace) {
             String thisStartEvent = XConceptExtension.instance().extractName(trace.get(0));
-            String thisEndEvent = XConceptExtension.instance().extractName(trace.get(trace.size()-1));
-            if (startEvent == null){
+            String thisEndEvent = XConceptExtension.instance().extractName(trace.get(trace.size() - 1));
+            if (startEvent == null) {
                 startEvent = thisStartEvent;
                 endEvent = thisEndEvent;
             }
-            if (!startEvent.equals(thisStartEvent) || !endEvent.equals(thisEndEvent)){
+            if (!startEvent.equals(thisStartEvent) || !endEvent.equals(thisEndEvent)) {
                 throw new IllegalArgumentException("all traces are assumed to start/end with a dedicated start/end event!\n" +
                         "Please add artificial start/end events to the traces before using this miner.");
             }

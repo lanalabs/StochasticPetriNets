@@ -2,34 +2,35 @@ package org.processmining.plugins.pnml.simple;
 
 import org.simpleframework.xml.Element;
 
-@Element(name="name")
+@Element(name = "name")
 public class PNMLName {
-	@Element(name="text", required=false)
-	private String value;
-	
-	@Element(name="graphics",required=false)
-	private PNMLGraphics graphics;
-	
-	public PNMLName(){}
-	
-	public PNMLName(String name){
-		this.value = name;
-	}
+    @Element(name = "text", required = false)
+    private String value;
 
-	public String getValue() {
-		return value;
-	}
+    @Element(name = "graphics", required = false)
+    private PNMLGraphics graphics;
 
-	public void setValue(String value) {
-		this.value = value;
-	}
+    public PNMLName() {
+    }
 
-	public PNMLGraphics getGraphics() {
-		return graphics;
-	}
+    public PNMLName(String name) {
+        this.value = name;
+    }
 
-	public void setGraphics(PNMLGraphics graphics) {
-		this.graphics = graphics;
-	}
+    public String getValue() {
+        return value;
+    }
+
+    public void setValue(String value) {
+        this.value = value;
+    }
+
+    public PNMLGraphics getGraphics() {
+        return graphics;
+    }
+
+    public void setGraphics(PNMLGraphics graphics) {
+        this.graphics = graphics;
+    }
 
 }

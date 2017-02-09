@@ -6,181 +6,187 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeU
 
 /**
  * Configuration settings for the stochastic Petri net generator {@link Generator}.
- * 
- * @author Andreas Rogge-Solti
  *
+ * @author Andreas Rogge-Solti
  */
 public class GeneratorConfig {
 
-	public static int DEFAULT_TRANSITION_SIZE = 50;
-	
-	/**
-	 * Stores how many transitions should be added to the net
-	 */
-	private int transitionSize;
-	
-	/**
-	 * Stores whether loops should be added to the net as well.
-	 */
-	private boolean containsLoops;
+    public static int DEFAULT_TRANSITION_SIZE = 50;
 
-	/**
-	 * desired degree of sequences in percent
-	 * range: 0-100
-	 * real percentage values will be computed based on other degrees
-	 * such that these degrees are rather weights. 
-	 */
-	private int degreeOfParallelism;
-	
-	/**
-	 * desired degree of sequences in percent
-	 * range: 0-100
-	 */
-	private int degreeOfSequences;
-	
-	/**
-	 * degree of exclusive choices in percent
-	 * range: 0-100
-	 */
-	private int degreeOfExclusiveChoices;
-	
-	private int degreeOfLoops;
-	
-	private DistributionType distributionType;
-	
-	private String name;
+    /**
+     * Stores how many transitions should be added to the net
+     */
+    private int transitionSize;
 
-	private TimeUnit timeUnit;
+    /**
+     * Stores whether loops should be added to the net as well.
+     */
+    private boolean containsLoops;
 
-	private ExecutionPolicy executionPolicy;
-	
-	/** specifies whether immediate transitions should be visible and are recorded in the log */
-	private boolean immedateTransitionsInvisible;
-	
-	/** A start transition that signals the start of a process (useful for measuring the duration of the first real activity */
-	private boolean createDedicatedImmediateStartTransition;
+    /**
+     * desired degree of sequences in percent
+     * range: 0-100
+     * real percentage values will be computed based on other degrees
+     * such that these degrees are rather weights.
+     */
+    private int degreeOfParallelism;
 
-	/** Allows to introduce parallelism only in later stage of generation (to avoid huge parts of the model to be in parallel.) */
-	private boolean parallelismOnlyInParts;
-	
-	public GeneratorConfig(){
-		transitionSize = DEFAULT_TRANSITION_SIZE;
-		name="generated net";
-		containsLoops = false;
-		degreeOfParallelism = 1;
-		degreeOfExclusiveChoices = 1;
-		degreeOfSequences = 1;
-		degreeOfLoops = 0;
-		distributionType = DistributionType.NORMAL;
-		timeUnit = TimeUnit.MINUTES;
-		executionPolicy = ExecutionPolicy.RACE_ENABLING_MEMORY;
-		immedateTransitionsInvisible = true;
-		createDedicatedImmediateStartTransition = false;
-		parallelismOnlyInParts = false;
-	}
+    /**
+     * desired degree of sequences in percent
+     * range: 0-100
+     */
+    private int degreeOfSequences;
 
-	public int getTransitionSize() {
-		return transitionSize;
-	}
+    /**
+     * degree of exclusive choices in percent
+     * range: 0-100
+     */
+    private int degreeOfExclusiveChoices;
 
-	public void setTransitionSize(int nodeSize) {
-		this.transitionSize = nodeSize;
-	}
+    private int degreeOfLoops;
 
-	public boolean isContainsLoops() {
-		return containsLoops;
-	}
+    private DistributionType distributionType;
 
-	public void setContainsLoops(boolean containsLoops) {
-		this.containsLoops = containsLoops;
-	}
+    private String name;
 
-	public int getDegreeOfParallelism() {
-		return degreeOfParallelism;
-	}
+    private TimeUnit timeUnit;
 
-	public void setDegreeOfParallelism(int degreeOfParallelism) {
-		this.degreeOfParallelism = degreeOfParallelism;
-	}
+    private ExecutionPolicy executionPolicy;
 
-	public int getDegreeOfSequences() {
-		return degreeOfSequences;
-	}
+    /**
+     * specifies whether immediate transitions should be visible and are recorded in the log
+     */
+    private boolean immedateTransitionsInvisible;
 
-	public void setDegreeOfSequences(int degreeOfSequences) {
-		this.degreeOfSequences = degreeOfSequences;
-	}
+    /**
+     * A start transition that signals the start of a process (useful for measuring the duration of the first real activity
+     */
+    private boolean createDedicatedImmediateStartTransition;
 
-	public int getDegreeOfExclusiveChoices() {
-		return degreeOfExclusiveChoices;
-	}
+    /**
+     * Allows to introduce parallelism only in later stage of generation (to avoid huge parts of the model to be in parallel.)
+     */
+    private boolean parallelismOnlyInParts;
 
-	public void setDegreeOfExclusiveChoices(int degreeOfExclusiveChoices) {
-		this.degreeOfExclusiveChoices = degreeOfExclusiveChoices;
-	}
-	
-	public int getDegreeOfLoops() {
-		return degreeOfLoops;
-	}
+    public GeneratorConfig() {
+        transitionSize = DEFAULT_TRANSITION_SIZE;
+        name = "generated net";
+        containsLoops = false;
+        degreeOfParallelism = 1;
+        degreeOfExclusiveChoices = 1;
+        degreeOfSequences = 1;
+        degreeOfLoops = 0;
+        distributionType = DistributionType.NORMAL;
+        timeUnit = TimeUnit.MINUTES;
+        executionPolicy = ExecutionPolicy.RACE_ENABLING_MEMORY;
+        immedateTransitionsInvisible = true;
+        createDedicatedImmediateStartTransition = false;
+        parallelismOnlyInParts = false;
+    }
 
-	public void setDegreeOfLoops(int degreeOfLoops) {
-		this.degreeOfLoops = degreeOfLoops;
-	}
+    public int getTransitionSize() {
+        return transitionSize;
+    }
 
-	public String getName() {
-		return name;
-	}
-	public void setName(String name){
-		this.name = name;
-	}
+    public void setTransitionSize(int nodeSize) {
+        this.transitionSize = nodeSize;
+    }
 
-	public DistributionType getDistributionType() {
-		return distributionType;
-	}
+    public boolean isContainsLoops() {
+        return containsLoops;
+    }
 
-	public void setDistributionType(DistributionType distributionType) {
-		this.distributionType = distributionType;
-	}
+    public void setContainsLoops(boolean containsLoops) {
+        this.containsLoops = containsLoops;
+    }
 
-	public TimeUnit getTimeUnit() {
-		return timeUnit;
-	}
-	
-	public void setTimeUnit(TimeUnit timeUnit) {
-		this.timeUnit = timeUnit;
-	}
+    public int getDegreeOfParallelism() {
+        return degreeOfParallelism;
+    }
 
-	public ExecutionPolicy getExecutionPolicy() {
-		return executionPolicy;
-	}
+    public void setDegreeOfParallelism(int degreeOfParallelism) {
+        this.degreeOfParallelism = degreeOfParallelism;
+    }
 
-	public void setExecutionPolicy(ExecutionPolicy executionPolicy) {
-		this.executionPolicy = executionPolicy;
-	}
+    public int getDegreeOfSequences() {
+        return degreeOfSequences;
+    }
 
-	public boolean isImmedateTransitionsInvisible() {
-		return immedateTransitionsInvisible;
-	}
+    public void setDegreeOfSequences(int degreeOfSequences) {
+        this.degreeOfSequences = degreeOfSequences;
+    }
 
-	public void setImmedateTransitionsInvisible(boolean immedateTransitionsInvisible) {
-		this.immedateTransitionsInvisible = immedateTransitionsInvisible;
-	}
+    public int getDegreeOfExclusiveChoices() {
+        return degreeOfExclusiveChoices;
+    }
 
-	public boolean isCreateDedicatedImmediateStartTransition() {
-		return createDedicatedImmediateStartTransition;
-	}
+    public void setDegreeOfExclusiveChoices(int degreeOfExclusiveChoices) {
+        this.degreeOfExclusiveChoices = degreeOfExclusiveChoices;
+    }
 
-	public void setCreateDedicatedImmediateStartTransition(boolean createDedicatedImmediateStartTransition) {
-		this.createDedicatedImmediateStartTransition = createDedicatedImmediateStartTransition;
-	}
+    public int getDegreeOfLoops() {
+        return degreeOfLoops;
+    }
 
-	public boolean isParallelismOnlyInParts() {
-		return parallelismOnlyInParts;
-	}
+    public void setDegreeOfLoops(int degreeOfLoops) {
+        this.degreeOfLoops = degreeOfLoops;
+    }
 
-	public void setParallelismOnlyInParts(boolean parallelismOnlyInParts) {
-		this.parallelismOnlyInParts = parallelismOnlyInParts;
-	}
-	
-	
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public DistributionType getDistributionType() {
+        return distributionType;
+    }
+
+    public void setDistributionType(DistributionType distributionType) {
+        this.distributionType = distributionType;
+    }
+
+    public TimeUnit getTimeUnit() {
+        return timeUnit;
+    }
+
+    public void setTimeUnit(TimeUnit timeUnit) {
+        this.timeUnit = timeUnit;
+    }
+
+    public ExecutionPolicy getExecutionPolicy() {
+        return executionPolicy;
+    }
+
+    public void setExecutionPolicy(ExecutionPolicy executionPolicy) {
+        this.executionPolicy = executionPolicy;
+    }
+
+    public boolean isImmedateTransitionsInvisible() {
+        return immedateTransitionsInvisible;
+    }
+
+    public void setImmedateTransitionsInvisible(boolean immedateTransitionsInvisible) {
+        this.immedateTransitionsInvisible = immedateTransitionsInvisible;
+    }
+
+    public boolean isCreateDedicatedImmediateStartTransition() {
+        return createDedicatedImmediateStartTransition;
+    }
+
+    public void setCreateDedicatedImmediateStartTransition(boolean createDedicatedImmediateStartTransition) {
+        this.createDedicatedImmediateStartTransition = createDedicatedImmediateStartTransition;
+    }
+
+    public boolean isParallelismOnlyInParts() {
+        return parallelismOnlyInParts;
+    }
+
+    public void setParallelismOnlyInParts(boolean parallelismOnlyInParts) {
+        this.parallelismOnlyInParts = parallelismOnlyInParts;
+    }
+
+
 }

@@ -20,66 +20,66 @@ import gnu.trove.procedure.TLongProcedure;
  * An {@code OnlineNormalEstimator} provides an object that estimates means,
  * variances, and standard deviations for a stream of numbers presented one at a
  * time. Given a set of samples {@code x[0],...,x[N-1]}, the mean is defined by:
- * 
+ * <p>
  * <blockquote>
- * 
+ * <p>
  * <pre>
  * mean(x) = (1/N) * <big><big>&Sigma;</big></big><sub>i &lt; N</sub> x[i]
  * </pre>
- * 
+ * <p>
  * </blockquote>
- * 
+ * <p>
  * The variance is defined as the average squared difference from the mean:
- * 
+ * <p>
  * <blockquote>
- * 
+ * <p>
  * <pre>
  * var(x) = (1/N) * <big><big>&Sigma;</big></big><sub>i &lt; N</sub> (x[i] - mean(x))<sup>2</sup>
  * </pre>
- * 
+ * <p>
  * </blockquote>
- * 
+ * <p>
  * and the standard deviation is the square root of variance:
- * 
+ * <p>
  * <blockquote>
- * 
+ * <p>
  * <pre>
  * dev(x) = sqrt(var(x))
  * </pre>
- * 
+ * <p>
  * </blockquote>
- * 
+ * <p>
  * <p>
  * By convention, the mean and variance of a zero-length sequence of numbers are
  * both returned as 0.0.
- * 
+ * <p>
  * <p>
  * The above functions provide the maximum likelihood estimates of the mean,
  * variance and standard deviation for a normal distribution generating the
  * values. That is, the estimated parameters are the parameters which assign the
  * observed data sequence the highest probability.
- * 
+ * <p>
  * <p>
  * Unfortunately, the maximum likelihood variance and deviation estimates are
  * biased in that they tend to underestimate variance in general. The unbiased
  * estimates adjust counts downward by one, thus adjusting variance and
  * deviation upwards:
- * 
+ * <p>
  * <blockquote>
- * 
+ * <p>
  * <pre>
  * varUnbiased(x) = (N / (N-1)) * var(x)
  * devUnbiased(x) = sqrt(varUnbiased(x))
  * </pre>
- * 
+ * <p>
  * </blockquote>
- * 
+ * <p>
  * Note that {@code var'(x) >= var(x)} and {@code dev'(x) >= dev(x)}.
- * 
- * 
+ * <p>
+ * <p>
  * <p>
  * <b>Welford's Algorithm</b>
- * 
+ * <p>
  * <p>
  * This class use's Welford's algorithm for estimation. This algorithm is far
  * more numerically stable than either using two passes calculating sums, and
@@ -87,14 +87,14 @@ import gnu.trove.procedure.TLongProcedure;
  * statistics, which are the two moments, the sum, and sum of squares of all
  * entries. The algorithm keeps member variables in the class, and performs the
  * following update when seeing a new variable {@code x}:
- * 
+ * <p>
  * <blockquote>
- * 
+ * <p>
  * <pre>
  * long n = 0;
  * double mu = 0.0;
  * double sq = 0.0;
- * 
+ *
  * void update(double x) {
  *     ++n;
  *     double muNew = mu + (x - mu)/n;
@@ -104,20 +104,20 @@ import gnu.trove.procedure.TLongProcedure;
  * double mean() { return mu; }
  * double var() { return n > 1 ? sq/n : 0.0; }
  * </pre>
- * 
+ * <p>
  * </blockquote>
- * 
+ * <p>
  * <p>
  * <b>Welford's Algorithm with Deletes</b>
  * </p>
- * 
+ * <p>
  * LingPipe extends the Welford's algorithm to support deletes by value. Given
  * current values of {@code n}, {@code mu}, {@code sq}, and any {@code x} added
  * at some point, we can compute the previous values of {@code n}, {@code mu},
  * {@code sq}. The delete method is:
- * 
+ * <p>
  * <blockquote>
- * 
+ * <p>
  * <pre>
  * void delete(double x) {
  * 	if (n == 0)
@@ -127,166 +127,163 @@ import gnu.trove.procedure.TLongProcedure;
  * 		mu = 0.0;
  * 		sq = 0.0;
  * 		return;
- * 	}
+ *    }
  * 	muOld = (n * mu - x) / (n - 1);
  * 	sq -= (x - mu) * (x - muOld);
  * 	mu = muOld;
  * 	--n;
  * }
  * </pre>
- * 
+ * <p>
  * </blockquote>
- * 
+ * <p>
  * Because the data are exchangable for mean and variance calculations (that is,
  * permutations of the inputs produce the same mean and variance), the order of
  * removal does not need to match the order of addition.
- * 
+ * <p>
  * <p>
  * <b>References</b>
  * </p>
- * 
+ * <p>
  * <ul>
- * 
+ * <p>
  * <li>Knuth, Donald E. (1998) <i>The Art of Computer Programming, Volume 2:
  * Seminumerical Algorithms, 3rd Edition.</i> Boston: Addison-Wesley. Page 232.</li>
- * 
+ * <p>
  * <li>Welford, B. P. (1962) Note on a method for calculating corrected sums of
  * squares and products. <i>Technometrics</i> <b>4</b>(3):419--420.</li>
- * 
+ * <p>
  * <li>Cook, John D. <a
  * href="http://www.johndcook.com/standard_deviation.html">Accurately computing
  * running variance</a>.</li>
- * 
+ * <p>
  * </ul>
- * 
+ *
  * @author Bob Carpenter
  * @version 3.8.1
  * @since Lingpipe3.8
  */
 public class OnlineNormalEstimator implements TLongProcedure {
 
-	private long mN = 0L;
-	private double mM = 0.0;
-	private double mS = 0.0;
-	private long countBelowZero = 0;
+    private long mN = 0L;
+    private double mM = 0.0;
+    private double mS = 0.0;
+    private long countBelowZero = 0;
 
-	/**
-	 * Construct an instance of an online normal estimator that has seen no
-	 * data.
-	 */
-	public OnlineNormalEstimator() {
-		/* intentionally blank */
-	}
+    /**
+     * Construct an instance of an online normal estimator that has seen no
+     * data.
+     */
+    public OnlineNormalEstimator() {
+        /* intentionally blank */
+    }
 
-	/**
-	 * Add the specified value to the collection of samples for this estimator.
-	 * 
-	 * @param x
-	 *            Value to add.
-	 */
-	public boolean execute(long x){
-		if (x < 0) countBelowZero++;
-		
-		++mN;
-		double nextM = mM + (x - mM) / mN;
-		mS += (x - mM) * (x - nextM);
-		mM = nextM;
-		
-		return true;
-	}
-	
-	/**
-	 * Removes the specified value from the sample set. See the class
-	 * documentation above for the algorithm.
-	 * 
-	 * @param x
-	 *            Value to remove from sample.
-	 * @throws IllegalStateException
-	 *             If the current number of samples is 0.
-	 */
-	public void unHandle(double x) {
-		if (mN == 0L) {
-			String msg = "Cannot unhandle after 0 samples.";
-			throw new IllegalStateException(msg);
-		}
-		if (mN == 1L) {
-			mN = 0L;
-			mM = 0.0;
-			mS = 0.0;
-			return;
-		}
-		double mOld = (mN * mM - x) / (mN - 1L);
-		mS -= (x - mM) * (x - mOld);
-		mM = mOld;
-		--mN;
-	}
+    /**
+     * Add the specified value to the collection of samples for this estimator.
+     *
+     * @param x Value to add.
+     */
+    public boolean execute(long x) {
+        if (x < 0) countBelowZero++;
 
-	/**
-	 * Returns the number of samples seen by this estimator.
-	 * 
-	 * @return The number of samples seen by this estimator.
-	 */
-	public long numSamples() {
-		return mN;
-	}
+        ++mN;
+        double nextM = mM + (x - mM) / mN;
+        mS += (x - mM) * (x - nextM);
+        mM = nextM;
 
-	/**
-	 * Returns the mean of the samples.
-	 * 
-	 * @return The mean of the samples.
-	 */
-	public double mean() {
-		return mM;
-	}
+        return true;
+    }
 
-	/**
-	 * Returns the maximum likelihood estimate of the variance of the samples.
-	 * 
-	 * @return Maximum likelihood variance estimate.
-	 */
-	public double variance() {
-		return mN > 1 ? mS / mN : 0.0;
-	}
+    /**
+     * Removes the specified value from the sample set. See the class
+     * documentation above for the algorithm.
+     *
+     * @param x Value to remove from sample.
+     * @throws IllegalStateException If the current number of samples is 0.
+     */
+    public void unHandle(double x) {
+        if (mN == 0L) {
+            String msg = "Cannot unhandle after 0 samples.";
+            throw new IllegalStateException(msg);
+        }
+        if (mN == 1L) {
+            mN = 0L;
+            mM = 0.0;
+            mS = 0.0;
+            return;
+        }
+        double mOld = (mN * mM - x) / (mN - 1L);
+        mS -= (x - mM) * (x - mOld);
+        mM = mOld;
+        --mN;
+    }
 
-	/**
-	 * Returns the unbiased estimate of the variance of the samples.
-	 * 
-	 * @return Unbiased variance estimate.
-	 */
-	public double varianceUnbiased() {
-		return mN > 1 ? mS / (mN - 1) : 0.0;
-	}
+    /**
+     * Returns the number of samples seen by this estimator.
+     *
+     * @return The number of samples seen by this estimator.
+     */
+    public long numSamples() {
+        return mN;
+    }
 
-	/**
-	 * Returns the maximum likelihood estimate of the standard deviation of the
-	 * samples.
-	 * 
-	 * @return Maximum likelihood standard deviation estimate.
-	 */
-	public double standardDeviation() {
-		return Math.sqrt(variance());
-	}
+    /**
+     * Returns the mean of the samples.
+     *
+     * @return The mean of the samples.
+     */
+    public double mean() {
+        return mM;
+    }
 
-	/**
-	 * Returns the unbiased estimate of the standard deviation of the samples.
-	 * 
-	 * @return Unbiased standard deviation estimate.
-	 */
-	public double standardDeviationUnbiased() {
-		return Math.sqrt(varianceUnbiased());
-	}
+    /**
+     * Returns the maximum likelihood estimate of the variance of the samples.
+     *
+     * @return Maximum likelihood variance estimate.
+     */
+    public double variance() {
+        return mN > 1 ? mS / mN : 0.0;
+    }
 
-	/**
-	 * Returns a string-based representation of the mean and standard deviation
-	 * and number of samples for this estimator.
-	 * 
-	 * @return String-based representation of this estimator.
-	 */
-	public String toString() {
-		return "Norm(" + "mean=" + mean() + ", stdDev=" + standardDeviation() + ")[numSamples=" + numSamples() + "]";
-	}
+    /**
+     * Returns the unbiased estimate of the variance of the samples.
+     *
+     * @return Unbiased variance estimate.
+     */
+    public double varianceUnbiased() {
+        return mN > 1 ? mS / (mN - 1) : 0.0;
+    }
 
-	public long getCountBelowZero(){
-		return countBelowZero;
-	}
+    /**
+     * Returns the maximum likelihood estimate of the standard deviation of the
+     * samples.
+     *
+     * @return Maximum likelihood standard deviation estimate.
+     */
+    public double standardDeviation() {
+        return Math.sqrt(variance());
+    }
+
+    /**
+     * Returns the unbiased estimate of the standard deviation of the samples.
+     *
+     * @return Unbiased standard deviation estimate.
+     */
+    public double standardDeviationUnbiased() {
+        return Math.sqrt(varianceUnbiased());
+    }
+
+    /**
+     * Returns a string-based representation of the mean and standard deviation
+     * and number of samples for this estimator.
+     *
+     * @return String-based representation of this estimator.
+     */
+    public String toString() {
+        return "Norm(" + "mean=" + mean() + ", stdDev=" + standardDeviation() + ")[numSamples=" + numSamples() + "]";
+    }
+
+    public long getCountBelowZero() {
+        return countBelowZero;
+    }
 }

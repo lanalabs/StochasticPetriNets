@@ -6,48 +6,33 @@ import org.rosuda.REngine.REXPDouble;
 import org.rosuda.REngine.REXPMismatchException;
 import org.rosuda.REngine.REngineException;
 import org.utils.datastructures.LimitedQueue;
-//
-//import java.util.ArrayList;
-//import java.util.List;
-//import java.util.Map;
-//
-//import org.processmining.models.graphbased.directed.petrinet.elements.TimedTransition;
-//import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
-//import org.processmining.plugins.stochasticpetrinet.enricher.StochasticManifestCollector;
-//import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.LimitedTreeMap;
-//import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeSeriesConfiguration.AvailableScripts;
-//import org.rosuda.REngine.REXPDouble;
-//import org.rosuda.REngine.REXPInteger;
-//import org.rosuda.REngine.REngineException;
-//import org.rosuda.REngine.RList;
-//import org.utils.datastructures.LimitedQueue;
-//
-public class AutoArimaTimeSeries extends RTimeSeries<Double>{
 
-	public AutoArimaTimeSeries() {
-		loadScriptJRI(AvailableScripts.AUTO_ARIMA_SCRIPT);
-	}
+public class AutoArimaTimeSeries extends RTimeSeries<Double> {
 
-	protected void fit(LimitedQueue<Observation<Double>> currentObservations) {
-		
-		double[] passedArguments = new double[currentObservations.size()]; 
-		
-		int i = 0;
-		for (Observation<Double> obs : currentObservations){
-			passedArguments[i] = obs.observation;
-			i++;
-		}
-		REXPDouble arguments = new REXPDouble(passedArguments);
-		
-		try {
-			rEngine.assign("data", arguments);
-			rEngine.parseAndEval(key + " <- getFit(y=data)"); 
-		} catch (REngineException e) {
-			e.printStackTrace();
-		} catch (REXPMismatchException e) {
-			e.printStackTrace();
-		}
-		
+    public AutoArimaTimeSeries() {
+        loadScriptJRI(AvailableScripts.AUTO_ARIMA_SCRIPT);
+    }
+
+    protected void fit(LimitedQueue<Observation<Double>> currentObservations) {
+
+        double[] passedArguments = new double[currentObservations.size()];
+
+        int i = 0;
+        for (Observation<Double> obs : currentObservations) {
+            passedArguments[i] = obs.observation;
+            i++;
+        }
+        REXPDouble arguments = new REXPDouble(passedArguments);
+
+        try {
+            rEngine.assign("data", arguments);
+            rEngine.parseAndEval(key + " <- getFit(y=data)");
+        } catch (REngineException e) {
+            e.printStackTrace();
+        } catch (REXPMismatchException e) {
+            e.printStackTrace();
+        }
+
 //			String[] parts = entry.getValue().split(StochasticManifestCollector.DELIMITER);
 //			decisions[i] = Integer.valueOf(parts[0]);
 //			durations[i] = Double.valueOf(parts[1]);
@@ -59,21 +44,21 @@ public class AutoArimaTimeSeries extends RTimeSeries<Double>{
 //		list.put(header[1], new REXPInteger(decisions));
 //		list.put(header[2], new REXPDouble(durations));
 //		list.put(header[3], new REXPInteger(systemLoads));
-	}
+    }
 
-	protected Prediction<Double> getPrediction(int h, Object... payload) {
-		try{
-			REXP exp = rEngine.parseAndEval("getForecast(fit="+key+", h="+h+")");
-			double[] forecastArray = exp.asDoubles();
-			Prediction<Double> pred = new Prediction<>(forecastArray[0], forecastArray[2], forecastArray[4]);
-			return pred;
-		} catch(REngineException ee){
-			ee.printStackTrace();
-		} catch (REXPMismatchException me) {
-			me.printStackTrace();
-		} 
-		return null;
-	}
+    protected Prediction<Double> getPrediction(int h, Object... payload) {
+        try {
+            REXP exp = rEngine.parseAndEval("getForecast(fit=" + key + ", h=" + h + ")");
+            double[] forecastArray = exp.asDoubles();
+            Prediction<Double> pred = new Prediction<>(forecastArray[0], forecastArray[2], forecastArray[4]);
+            return pred;
+        } catch (REngineException ee) {
+            ee.printStackTrace();
+        } catch (REXPMismatchException me) {
+            me.printStackTrace();
+        }
+        return null;
+    }
 //
 //	public AutoArimaTimeSeries(String key) {
 //		super(key);
@@ -178,12 +163,11 @@ public class AutoArimaTimeSeries extends RTimeSeries<Double>{
 //	
 //	
 
-	protected boolean isAvailable(Double observation) {
-		return !Double.isNaN(observation);
-	}
-	
+    protected boolean isAvailable(Double observation) {
+        return !Double.isNaN(observation);
+    }
 
-	
+
 //	String header[] = new String[]{"timestamp","decision","duration","systemLoad"};
 //	
 //	for (Transition t : conflictingTransitions){ // TODO: add training data to immediate transitions!
@@ -237,5 +221,5 @@ public class AutoArimaTimeSeries extends RTimeSeries<Double>{
 //	} catch (REngineException e){
 //		e.printStackTrace();
 //	}
-	
+
 }

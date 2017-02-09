@@ -1,10 +1,5 @@
 package org.processmining.plugins.stochasticpetrinet.miner;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
-
 import org.deckfour.xes.model.XLog;
 import org.processmining.contexts.uitopia.UIPluginContext;
 import org.processmining.contexts.uitopia.annotations.UITopiaVariant;
@@ -19,15 +14,21 @@ import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.InductiveMiner.mining.MiningParameters;
 import org.processmining.plugins.InductiveMiner.mining.MiningParametersIMf;
 import org.processmining.plugins.InductiveMiner.plugins.IMPetriNet;
+import org.processmining.plugins.petrinet.manifestreplayresult.Manifest;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.enricher.PerformanceEnricherConfig;
 import org.processmining.plugins.stochasticpetrinet.enricher.PerformanceEnricherPlugin;
+
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.Set;
 
 /**
  * Not yet implemented. Use implementation based on Process Trees for now.
  * See GeneralizedMinerPlugin in "GeneralizedConformance".
- * 
- * @author Andreas Rogge-Solti
  *
+ * @author Andreas Rogge-Solti
  */
 public class StochasticMinerPlugin {
 
@@ -52,14 +53,27 @@ public class StochasticMinerPlugin {
 //	}
 
     @Plugin(name = "Mine stochastic Petri net from log",
-			parameterLabels = { "Log"},
-			returnLabels = {StochasticNet.PARAMETER_LABEL, "Marking" },
-			returnTypes = { StochasticNet.class, Marking.class },
-			userAccessible = true,
-			help = "Discovers a fitting Petri net with inductive miner and enriches it with stochastic information (time information required in the log).)."
+            parameterLabels = {"Log"},
+            returnLabels = {StochasticNet.PARAMETER_LABEL, "Marking"},
+            returnTypes = {StochasticNet.class, Marking.class},
+            userAccessible = true,
+            help = "Discovers a fitting Petri net with inductive miner and enriches it with stochastic information (time information required in the log).)."
     )
     @UITopiaVariant(affiliation = "Vienna University of Economics and Business", author = "A. Solti", email = "andreas.rogge-solti@wu.ac.at", uiLabel = UITopiaVariant.USEPLUGIN)
-	public static Object[] discoverStochNetMode(UIPluginContext context, XLog log){
+    public static Object[] discoverStochNetMode(UIPluginContext context, XLog log) {
+        Petrinet net = getFittingPetrinetWithChoicesModeledAsImmediateTransitions(context, log);
+
+        return PerformanceEnricherPlugin.transform(context, net, log);
+    }
+
+    public static Object[] discoverStochNetModel(UIPluginContext context, XLog log) {
+        Petrinet net = getFittingPetrinetWithChoicesModeledAsImmediateTransitions(context, log);
+        PerformanceEnricherConfig config = new PerformanceEnricherConfig(StochasticNet.DistributionType.GAUSSIAN_KERNEL, StochasticNet.TimeUnit.HOURS, StochasticNet.ExecutionPolicy.RACE_ENABLING_MEMORY, null);
+        Manifest manifest = (Manifest) StochasticNetUtils.replayLog(context, net, log, true, true);
+        return PerformanceEnricherPlugin.transform(context, manifest, config);
+    }
+
+    public static Petrinet getFittingPetrinetWithChoicesModeledAsImmediateTransitions(UIPluginContext context, XLog log) {
         MiningParameters params = new MiningParametersIMf();
         params.setNoiseThreshold(0.0f); // to guarantee perfect fitness
         Object[] result = IMPetriNet.minePetriNet(context, log, params);
@@ -71,48 +85,40 @@ public class StochasticMinerPlugin {
         ArrayList<Place> places = new ArrayList<>(net.getPlaces());
 
         // alter structure of net: We need to represent all choices by conflicting "immediate" transitions
-        for (Place place : places){
+        for (Place place : places) {
             // check all places for outgoing arcs and see whether their transitions are visible or invisible
             Collection<PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode>> edges = net.getOutEdges(place);
             boolean inConflict = edges.size() > 1;
-            if (inConflict){
+            if (inConflict) {
                 // check whether we have mixed transition types:
                 Set<Transition> immediateTransitions = new HashSet<>();
                 Set<Transition> visibleTransitions = new HashSet<>();
 
-                for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : edges){
+                for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : edges) {
                     Transition transition = (Transition) edge.getTarget();
-                    if (transition.isInvisible()){
+                    if (transition.isInvisible()) {
                         immediateTransitions.add(transition);
                     } else {
                         visibleTransitions.add(transition);
                     }
                 }
-                if (visibleTransitions.size()>0){
+                if (visibleTransitions.size() > 0) {
                     // add immediate transitions before the visible ones to allow for a probabilistic decision
                     // even when using race condition semantics.
-                    for (Transition t : visibleTransitions){
+                    for (Transition t : visibleTransitions) {
                         net.removeArc(place, t);
                         // this operation should be soundness preserving, as it is one of inverted Murata's reduction rules
-                        Place choicePlace = net.addPlace("newPlace"+newPlaceCount);
-                        Transition choiceTransition = net.addTransition("tau choice"+newPlaceCount++);
+                        Place choicePlace = net.addPlace("newPlace" + newPlaceCount);
+                        Transition choiceTransition = net.addTransition("tau choice" + newPlaceCount++);
                         choiceTransition.setInvisible(true);
 
                         net.addArc(place, choiceTransition);
-                        net.addArc(choiceTransition,choicePlace);
+                        net.addArc(choiceTransition, choicePlace);
                         net.addArc(choicePlace, t);
                     }
                 }
             }
         }
-
-
-
-        PerformanceEnricherConfig config = new PerformanceEnricherConfig(StochasticNet.DistributionType.GAUSSIAN_KERNEL, StochasticNet.TimeUnit.HOURS, StochasticNet.ExecutionPolicy.RACE_ENABLING_MEMORY, null);
-        //Manifest manifest = (Manifest) StochasticNetUtils.replayLog(context, net, log, true, true);
-
-        Object[] enrichedResult = PerformanceEnricherPlugin.transform(context, net, log);
-
-        return enrichedResult;
-	}
+        return net;
+    }
 }

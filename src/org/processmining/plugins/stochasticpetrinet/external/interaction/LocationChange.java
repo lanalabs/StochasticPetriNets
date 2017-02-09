@@ -1,61 +1,61 @@
 package org.processmining.plugins.stochasticpetrinet.external.interaction;
 
-import java.awt.Color;
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class LocationChange implements Comparable<LocationChange>{
+public class LocationChange implements Comparable<LocationChange> {
 
-	private String resource;
-	private long duration;
-	
-	private long lastDuration;
-	
-	private List<String> areasPassed;
-	
-	public LocationChange(String resource){
-		this.resource = resource;
-		areasPassed = new ArrayList<String>();
-	}
+    private String resource;
+    private long duration;
 
-	public long getDuration() {
-		return duration;
-	}
+    private long lastDuration;
 
-	public void setDuration(long duration) {
-		this.duration = duration;
-	}
+    private List<String> areasPassed;
 
-	public List<String> getAreasPassed() {
-		return areasPassed;
-	}
+    public LocationChange(String resource) {
+        this.resource = resource;
+        areasPassed = new ArrayList<String>();
+    }
 
-	public void setAreasPassed(List<String> areasPassed) {
-		this.areasPassed = areasPassed;
-	}
+    public long getDuration() {
+        return duration;
+    }
 
-	public int compareTo(LocationChange o) {
-		return Long.compare(getFullDuration(), o.getFullDuration());
-	}
+    public void setDuration(long duration) {
+        this.duration = duration;
+    }
 
-	public void setLastActivityDuration(long lastDuration) {
-		this.lastDuration = lastDuration;
-	}
-	
-	public long getFullDuration(){
-		return this.lastDuration+this.duration;
-	}
+    public List<String> getAreasPassed() {
+        return areasPassed;
+    }
 
-	public String getResource() {
-		return resource;
-	}
+    public void setAreasPassed(List<String> areasPassed) {
+        this.areasPassed = areasPassed;
+    }
 
-	public void setResource(String resource) {
-		this.resource = resource;
-	}
+    public int compareTo(LocationChange o) {
+        return Long.compare(getFullDuration(), o.getFullDuration());
+    }
 
-	public Color getColor() {
-		return new Color(resource.hashCode());
-	}
-	
+    public void setLastActivityDuration(long lastDuration) {
+        this.lastDuration = lastDuration;
+    }
+
+    public long getFullDuration() {
+        return this.lastDuration + this.duration;
+    }
+
+    public String getResource() {
+        return resource;
+    }
+
+    public void setResource(String resource) {
+        this.resource = resource;
+    }
+
+    public Color getColor() {
+        return new Color(resource.hashCode());
+    }
+
 }

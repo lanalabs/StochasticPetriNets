@@ -1,90 +1,90 @@
 package org.processmining.plugins.stochasticpetrinet.enricher;
 
-import java.io.File;
-
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.DistributionType;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.ExecutionPolicy;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet.TimeUnit;
 
+import java.io.File;
+
 /**
  * Configuration to be used for the net to be mined.
- * @author Andreas Rogge-Solti
  *
+ * @author Andreas Rogge-Solti
  */
 public class PerformanceEnricherConfig {
-	
-	private DistributionType type;
-	private TimeUnit timeUnit;
-	private ExecutionPolicy policy;
-	
-	private File correlationMatrixFile;
-	
-	private boolean collectingLoadData;
-	
-	private TimeConstraints constraints;
-	
-	public PerformanceEnricherConfig(DistributionType distType, TimeUnit timeUnit, ExecutionPolicy executionPolicy, File correlationMatrixFile){
-		this(distType,timeUnit,executionPolicy,correlationMatrixFile, true);
-	}
-	
-	public PerformanceEnricherConfig(DistributionType distType, TimeUnit timeUnit, ExecutionPolicy executionPolicy, File correlationMatrixFile, boolean collectLoadData) {
-		this.type = distType;
-		this.timeUnit = timeUnit;
-		this.policy = executionPolicy;
-		this.correlationMatrixFile = correlationMatrixFile;
-		this.collectingLoadData = collectLoadData;
-	}
 
-	public DistributionType getType() {
-		return type;
-	}
+    private DistributionType type;
+    private TimeUnit timeUnit;
+    private ExecutionPolicy policy;
 
-	public void setType(DistributionType type) {
-		this.type = type;
-	}
+    private File correlationMatrixFile;
 
-	public Double getUnitFactor() {
-		return timeUnit.getUnitFactorToMillis();
-	}
+    private boolean collectingLoadData;
 
-	public void setUnitFactor(TimeUnit timeUnit) {
-		this.timeUnit = timeUnit;
-	}
+    private TimeConstraints constraints;
 
-	public ExecutionPolicy getPolicy() {
-		return policy;
-	}
+    public PerformanceEnricherConfig(DistributionType distType, TimeUnit timeUnit, ExecutionPolicy executionPolicy, File correlationMatrixFile) {
+        this(distType, timeUnit, executionPolicy, correlationMatrixFile, true);
+    }
 
-	public void setPolicy(ExecutionPolicy policy) {
-		this.policy = policy;
-	}
+    public PerformanceEnricherConfig(DistributionType distType, TimeUnit timeUnit, ExecutionPolicy executionPolicy, File correlationMatrixFile, boolean collectLoadData) {
+        this.type = distType;
+        this.timeUnit = timeUnit;
+        this.policy = executionPolicy;
+        this.correlationMatrixFile = correlationMatrixFile;
+        this.collectingLoadData = collectLoadData;
+    }
 
-	public File getCorrelationMatrixFile() {
-		return correlationMatrixFile;
-	}
+    public DistributionType getType() {
+        return type;
+    }
 
-	public void setCorrelationMatrixFile(File correlationMatrixFile) {
-		this.correlationMatrixFile = correlationMatrixFile;
-	}
+    public void setType(DistributionType type) {
+        this.type = type;
+    }
 
-	public TimeUnit getTimeUnit() {
-		return this.timeUnit;
-	}
+    public Double getUnitFactor() {
+        return timeUnit.getUnitFactorToMillis();
+    }
 
-	public boolean isCollectingLoadData() {
-		return collectingLoadData;
-	}
+    public void setUnitFactor(TimeUnit timeUnit) {
+        this.timeUnit = timeUnit;
+    }
 
-	public void setCollectingLoadData(boolean collectingLoadData) {
-		this.collectingLoadData = collectingLoadData;
-	}
+    public ExecutionPolicy getPolicy() {
+        return policy;
+    }
 
-	public TimeConstraints getConstraints() {
-		return constraints;
-	}
+    public void setPolicy(ExecutionPolicy policy) {
+        this.policy = policy;
+    }
 
-	public void setConstraints(TimeConstraints constraints) {
-		this.constraints = constraints;
-	}
-	
+    public File getCorrelationMatrixFile() {
+        return correlationMatrixFile;
+    }
+
+    public void setCorrelationMatrixFile(File correlationMatrixFile) {
+        this.correlationMatrixFile = correlationMatrixFile;
+    }
+
+    public TimeUnit getTimeUnit() {
+        return this.timeUnit;
+    }
+
+    public boolean isCollectingLoadData() {
+        return collectingLoadData;
+    }
+
+    public void setCollectingLoadData(boolean collectingLoadData) {
+        this.collectingLoadData = collectingLoadData;
+    }
+
+    public TimeConstraints getConstraints() {
+        return constraints;
+    }
+
+    public void setConstraints(TimeConstraints constraints) {
+        this.constraints = constraints;
+    }
+
 }

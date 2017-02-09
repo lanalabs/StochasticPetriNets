@@ -2,67 +2,66 @@ package org.processmining.plugins.stochasticpetrinet.miner.distance;
 
 /**
  * The score of a candidate Log-Model pair vs. a starting Log-Model Pair.
- *  
- * @author Andreas Rogge-Solti
  *
+ * @author Andreas Rogge-Solti
  */
 public class Distance {
 
-	private double fitness;
-	private double precision;
-	private double generalization;
-	
-	private double logDistance;
-	
-	private double modelDistance;
+    private double fitness;
+    private double precision;
+    private double generalization;
 
-	public double getFitness() {
-		return fitness;
-	}
+    private double logDistance;
 
-	public void setFitness(double fitness) {
-		this.fitness = fitness;
-	}
+    private double modelDistance;
 
-	public double getPrecision() {
-		return precision;
-	}
+    public double getFitness() {
+        return fitness;
+    }
 
-	public void setPrecision(double precision) {
-		this.precision = precision;
-	}
+    public void setFitness(double fitness) {
+        this.fitness = fitness;
+    }
 
-	public double getGeneralization() {
-		return generalization;
-	}
+    public double getPrecision() {
+        return precision;
+    }
 
-	public void setGeneralization(double generalization) {
-		this.generalization = generalization;
-	}
+    public void setPrecision(double precision) {
+        this.precision = precision;
+    }
 
-	public double getLogDistance() {
-		return logDistance;
-	}
+    public double getGeneralization() {
+        return generalization;
+    }
 
-	public void setLogDistance(double logDistance) {
-		this.logDistance = logDistance;
-	}
+    public void setGeneralization(double generalization) {
+        this.generalization = generalization;
+    }
 
-	public double getModelDistance() {
-		return modelDistance;
-	}
+    public double getLogDistance() {
+        return logDistance;
+    }
 
-	public void setModelDistance(double modelDistance) {
-		this.modelDistance = modelDistance;
-	}
-	
-	public Distance clone(){
-		Distance clone = new Distance();
-		clone.fitness = fitness;
-		clone.generalization = generalization;
-		clone.logDistance = logDistance;
-		clone.modelDistance = modelDistance;
-		clone.precision = precision;
-		return clone;
-	}
+    public void setLogDistance(double logDistance) {
+        this.logDistance = logDistance;
+    }
+
+    public double getModelDistance() {
+        return modelDistance;
+    }
+
+    public void setModelDistance(double modelDistance) {
+        this.modelDistance = modelDistance;
+    }
+
+    public Distance clone() {
+        Distance clone = new Distance();
+        clone.fitness = fitness;
+        clone.generalization = generalization;
+        clone.logDistance = logDistance;
+        clone.modelDistance = modelDistance;
+        clone.precision = precision;
+        return clone;
+    }
 }
