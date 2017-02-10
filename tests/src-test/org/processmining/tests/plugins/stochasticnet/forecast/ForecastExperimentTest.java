@@ -1,6 +1,5 @@
 package org.processmining.tests.plugins.stochasticnet.forecast;
 
-import net.sourceforge.cobertura.javancss.ccl.FileUtil;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.math3.distribution.ExponentialDistribution;
 import org.deckfour.xes.extension.std.XConceptExtension;
@@ -17,7 +16,6 @@ import org.processmining.plugins.stochasticpetrinet.miner.StochasticMinerPlugin;
 import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
 import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeSeriesConfiguration;
 import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeseriesPredictor;
-import org.processmining.plugins.stochasticpetrinet.simulator.PNTimeSeriesSimulator;
 import org.processmining.tests.plugins.stochasticnet.TestUtils;
 
 import java.io.File;
@@ -53,31 +51,40 @@ public class ForecastExperimentTest {
         // StochasticNetUtils.exportAsDOTFile(net, "out", "out.dot");
 
         // simulate the same number of traces as given in the first half with an exponential arrival rate:
+
+        Collection<TimeseriesPredictor> predictors = new ArrayList<>();
+
         TimeSeriesConfiguration configuration = new TimeSeriesConfiguration();
-        PNTimeSeriesSimulator timeSeriesSimulator = new PNTimeSeriesSimulator(configuration);
-
         configuration.setTimeSeriesType(TimeSeriesConfiguration.TimeSeriesType.NAIVE_METHOD);
-        TimePredictor predictor = new TimePredictor(false);
+        predictors.add(new TimeseriesPredictor(configuration));
+
+        configuration = new TimeSeriesConfiguration();
+        configuration.setTimeSeriesType(TimeSeriesConfiguration.TimeSeriesType.AUTO_ARIMA);
+        predictors.add(new TimeseriesPredictor(configuration));
 
 
-
+        TimePredictor gspnPredictor = new TimePredictor(false);
 
         long starttime  = XTimeExtension.instance().extractTimestamp(trainingLog.get(0).get(0)).getTime(); // assume constant interarrival rate for now
         Pair<Long,Long> tracebounds = StochasticNetUtils.getBufferedTraceBounds(trainingLog.get(trainingLog.size()-1));
         long endTime = tracebounds.getSecond();
-        double meanTimeBetweenArrivals = ((endTime - starttime) / timeunit.toMillis(1)) / trainingLog.size();
+        double meanTimeBetweenArrivals = ((double)(endTime - starttime) / timeunit.toMillis(1)) / (double)trainingLog.size();
         ExponentialDistribution arrivalDist = new ExponentialDistribution(meanTimeBetweenArrivals);
         long simulationTime = endTime;
         XTrace observedEvents = XFactoryRegistry.instance().currentDefault().createTrace();
         Map<String, List<Pair<Double,Double>>> results = new HashMap<>();
-        results.put("Timeseries_", new ArrayList<Pair<Double, Double>>());
+        for (TimeseriesPredictor predictor : predictors) {
+            results.put("Timeseries_"+predictor.getCode(), new ArrayList<Pair<Double, Double>>());
+        }
         results.put("GSPN_", new ArrayList<Pair<Double, Double>>());
         for (int i = 0; i < trainingLogTestLog.getSecond().size(); i++){
             simulationTime += (long)(arrivalDist.sample()*timeunit.toMillis(1));
-            Pair<Double,Double> predictionAndConfidence = predictor.predict(net, observedEvents, new Date(simulationTime), initialMarking);
-            results.get("Timeseries_").add(predictionAndConfidence);
+            for (TimeseriesPredictor predictor : predictors) {
+                Pair<Double, Double> predictionAndConfidence = predictor.predict(net, observedEvents, new Date(simulationTime), initialMarking);
+                results.get("Timeseries_" + predictor.getCode()).add(predictionAndConfidence);
+            }
 
-            predictionAndConfidence = predictor.predict(net, observedEvents, new Date(simulationTime), initialMarking);
+            Pair<Double, Double> predictionAndConfidence = gspnPredictor.predict(net, observedEvents, new Date(simulationTime), initialMarking);
             results.get("GSPN_").add(predictionAndConfidence);
 
         }

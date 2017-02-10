@@ -7,6 +7,7 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
 import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
+import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
 import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
 
@@ -27,7 +28,13 @@ public class TimePredictor extends AbstractTimePredictor {
 
     protected DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime,
                                                        Marking initialMarking, boolean useOnlyPastTrainingData) {
-        Semantics<Marking, Transition> semantics = getCurrentStateWithAlignment(model, initialMarking, observedEvents);
+        Semantics<Marking, Transition> semantics = null;
+        if (observedEvents.isEmpty()){
+            semantics = StochasticNetUtils.getSemantics(model);
+            semantics.initialize(model.getTransitions(), initialMarking);
+        } else {
+            semantics = getCurrentStateWithAlignment(model, initialMarking, observedEvents);
+        }
         //Semantics<Marking,Transition> semantics = getCurrentState(model, initialMarking, observedEvents);
         if (semantics.getCurrentState() == null) {
             System.out.println("Debug me!");
@@ -63,7 +70,7 @@ public class TimePredictor extends AbstractTimePredictor {
 //				error = getError(stats);
             }
         }
-        System.out.println("i " + i);
+        if (i > 300) System.out.println("i " + i);
         return stats;
     }
 }

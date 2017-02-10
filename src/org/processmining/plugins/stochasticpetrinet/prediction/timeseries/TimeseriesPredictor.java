@@ -20,6 +20,7 @@ import java.util.Date;
 public class TimeseriesPredictor extends AbstractTimePredictor {
 
 
+    private final TimeSeriesConfiguration config;
     private PNSimulator simulator;
 
     public TimeseriesPredictor() {
@@ -29,6 +30,7 @@ public class TimeseriesPredictor extends AbstractTimePredictor {
     public TimeseriesPredictor(TimeSeriesConfiguration config) {
         // perform a headless simulation
         this.simulator = new PNTimeSeriesSimulator(config);
+        this.config = config;
     }
 
 
@@ -81,6 +83,9 @@ public class TimeseriesPredictor extends AbstractTimePredictor {
         return stats;
     }
 
+    public String getCode(){
+        return config.getTimeseriesType().toString();
+    }
 
 //	private List<Set<Transition>> getConflictingTransitions(Semantics<Marking, Transition> semantics){
 //		// assume free choice!

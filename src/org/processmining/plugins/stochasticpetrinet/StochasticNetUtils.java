@@ -432,6 +432,22 @@ public class StochasticNetUtils {
      * @return index randomly chosen among the items
      */
     public static int getRandomIndex(double[] weights, Random random) {
+        double cumulative = 0;
+        for (int i = 0; i < weights.length; i++) {
+            cumulative += weights[i];
+        }
+        double randomIndexPosition = random.nextDouble() * cumulative;
+        cumulative = 0;
+        for (int i = 0; i < weights.length; i++) {
+            cumulative += weights[i];
+            if (cumulative >= randomIndexPosition) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public static int getRandomIndex_old(double[] weights, Random random) {
         if (weights.length == 1) {
             return 0; // only one option
         }

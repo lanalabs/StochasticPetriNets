@@ -1,5 +1,6 @@
 package org.processmining.models.semantics.petrinet.impl;
 
+import gnu.trove.map.hash.THashMap;
 import org.processmining.framework.providedobjects.SubstitutionType;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetEdge;
@@ -48,16 +49,17 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
                 places.add((Place) node);
             }
         }
-        this.dependentTransitions = new HashMap<Short, Set<Short>>();
+        this.dependentTransitions = new THashMap<Short, Set<Short>>();
         this.places = places.toArray(new Place[places.size()]);
-        placePositionInArray = new HashMap<Place, Short>();
+        placePositionInArray = new THashMap<Place, Short>();
+
         for (short i = 0; i < this.places.length; i++) {
             placePositionInArray.put(this.places[i], i);
         }
-        transitionPositionInArray = new HashMap<Transition, Short>();
+        transitionPositionInArray = new THashMap<Transition, Short>();
 
-        transitionInputs = new HashMap<Short, List<Pair<Short, Short>>>();
-        transitionOutputs = new HashMap<Short, List<Pair<Short, Short>>>();
+        transitionInputs = new THashMap<Short, List<Pair<Short, Short>>>();
+        transitionOutputs = new THashMap<Short, List<Pair<Short, Short>>>();
 
         transitionMatrix = new short[this.transitions.length][];
         for (short i = 0; i < this.transitions.length; i++) {

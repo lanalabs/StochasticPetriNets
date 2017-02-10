@@ -134,4 +134,8 @@ public class TimeSeriesConfiguration {
         }
         return null;
     }
+
+    public TimeSeriesType getTimeseriesType(){
+        return type;
+    }
 }
