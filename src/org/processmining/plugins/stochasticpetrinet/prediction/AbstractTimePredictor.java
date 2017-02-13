@@ -53,6 +53,11 @@ public abstract class AbstractTimePredictor {
     }
 
 
+    public Pair<Double, Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, boolean useOnlyPastTrainingData, Semantics<Marking, Transition> semantics) {
+        DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, useOnlyPastTrainingData, semantics);
+        return new Pair<Double, Double>(stats.getMean(), getConfidenceIntervalWidth(stats, CONFIDENCE_INTERVAL));
+    }
+
     /**
      * Does not care about final markings -> simulates net until no transitions are enabled any more...
      * Time
@@ -65,12 +70,19 @@ public abstract class AbstractTimePredictor {
      * @return {@link Pair} of doubles (the point predictor, and the associated 99 percent confidence interval)
      */
     public Pair<Double, Double> predict(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, boolean useOnlyPastTrainingData) {
-        DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking, useOnlyPastTrainingData);
-//		System.out.println("stopped simulation after "+i+" samples... with error: "+errorPercent+"%.");
+        Semantics<Marking, Transition> semantics = getSemantics(model, observedEvents, initialMarking);
+        return predict(model, observedEvents, currentTime, useOnlyPastTrainingData, semantics);
+    }
 
-//		StochasticNetUtils.useCache(false);
-        //System.out.println("Simulated 1000 traces in "+(System.currentTimeMillis()-now)+"ms ("+(useTime?"constrained":"unconstrained")+")");
-        return new Pair<Double, Double>(stats.getMean(), getConfidenceIntervalWidth(stats, CONFIDENCE_INTERVAL));
+    public final Semantics<Marking, Transition> getSemantics(StochasticNet model, XTrace observedEvents, Marking initialMarking){
+        Semantics<Marking, Transition> semantics = null;
+        if (observedEvents.isEmpty()){
+            semantics = StochasticNetUtils.getSemantics(model);
+            semantics.initialize(model.getTransitions(), initialMarking);
+        } else {
+            semantics = getCurrentStateWithAlignment(model, initialMarking, observedEvents);
+        }
+        return semantics;
     }
 
     /**
@@ -86,7 +98,8 @@ public abstract class AbstractTimePredictor {
      * @return
      */
     public Double computeRiskToMissTargetTime(StochasticNet model, XTrace observedEvents, Date currentTime, Date targetTime, Marking initialMarking, boolean useOnlyPastTrainingData) {
-        DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, initialMarking, useOnlyPastTrainingData);
+        Semantics<Marking, Transition> semantics = getSemantics(model, observedEvents, initialMarking);
+        DescriptiveStatistics stats = getPredictionStats(model, observedEvents, currentTime, useOnlyPastTrainingData, semantics);
         double[] sortedEstimates = stats.getSortedValues();
         long[] longArray = new long[sortedEstimates.length];
         for (int i = 0; i < sortedEstimates.length; i++) {
@@ -102,11 +115,11 @@ public abstract class AbstractTimePredictor {
      * @param model                   the model that is enriched by some training data
      * @param observedEvents          the current history of the trace (observed events so far)
      * @param currentTime             the current time at prediction
-     * @param initialMarking          the initial marking of the model that shows the starting point
      * @param useOnlyPastTrainingData indicator that tells us whether to only rely on training data that was observed in the past (relative to the currentTime)
+     * @param semantics               the semantics with the current marking of the model that shows the starting point
      * @return {@link DescriptiveStatistics} gathered from a set of simulated continuations of the current process
      */
-    protected abstract DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime, Marking initialMarking, boolean useOnlyPastTrainingData);
+    protected abstract DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime, boolean useOnlyPastTrainingData, Semantics<Marking, Transition> semantics);
 
     protected double getConfidenceIntervalWidth(DescriptiveStatistics summaryStatistics, double confidence) {
         int n = (int) summaryStatistics.getN() - 1;

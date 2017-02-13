@@ -13,7 +13,7 @@
 		<dependency org="prom" name="ApacheUtils" rev="latest" changing="true" transitive="true" />
     	<dependency org="prom" name="XESLite" rev="latest" changing="true" transitive="true" />
     	<dependency org="prom" name="EfficientStorage" rev="latest" changing="true" transitive="true" />
-    	<dependency org="prom" name="EvolutionaryTreeMiner" rev="latest" changing="true" transitive="true" />
+    	<!--<dependency org="prom" name="EvolutionaryTreeMiner" rev="latest" changing="true" transitive="true" />-->
     	<dependency org="prom" name="ModelRepair" rev="latest" changing="true" transitive="true" />
     	<dependency org="prom" name="ProcessTree" rev="latest" changing="true" transitive="true" />	
     	<dependency org="prom" name="PTConversions" rev="latest" changing="true" transitive="true" />

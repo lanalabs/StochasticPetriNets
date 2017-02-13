@@ -35,16 +35,7 @@ public class TimeseriesPredictor extends AbstractTimePredictor {
 
 
     protected DescriptiveStatistics getPredictionStats(StochasticNet model, XTrace observedEvents, Date currentTime,
-                                                       Marking initialMarking, boolean useOnlyPastTrainingData) {
-
-        EfficientStochasticNetSemanticsImpl semantics = null;
-        if (observedEvents.isEmpty()){
-            semantics = (EfficientStochasticNetSemanticsImpl) StochasticNetUtils.getSemantics(model);
-            semantics.initialize(model.getTransitions(), initialMarking);
-        } else {
-            semantics = (EfficientStochasticNetSemanticsImpl) TimePredictor
-                    .getCurrentStateWithAlignment(model, initialMarking, observedEvents);
-        }
+                                                       boolean useOnlyPastTrainingData, Semantics<Marking, Transition> semantics) {
         Marking currentMarking = semantics.getCurrentState();
 
         PNSimulatorConfig config = new PNSimulatorConfig(1, model.getTimeUnit());

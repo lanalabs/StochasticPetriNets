@@ -10,6 +10,8 @@ import org.deckfour.xes.model.XTrace;
 import org.junit.Test;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
+import org.processmining.models.graphbased.directed.petrinet.elements.Transition;
+import org.processmining.models.semantics.Semantics;
 import org.processmining.models.semantics.petrinet.Marking;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.miner.StochasticMinerPlugin;
@@ -59,6 +61,10 @@ public class ForecastExperimentTest {
         predictors.add(new TimeseriesPredictor(configuration));
 
         configuration = new TimeSeriesConfiguration();
+        configuration.setTimeSeriesType(TimeSeriesConfiguration.TimeSeriesType.DRIFT_METHOD);
+        predictors.add(new TimeseriesPredictor(configuration));
+
+        configuration = new TimeSeriesConfiguration();
         configuration.setTimeSeriesType(TimeSeriesConfiguration.TimeSeriesType.AUTO_ARIMA);
         predictors.add(new TimeseriesPredictor(configuration));
 
@@ -77,23 +83,31 @@ public class ForecastExperimentTest {
             results.put("Timeseries_"+predictor.getCode(), new ArrayList<Pair<Double, Double>>());
         }
         results.put("GSPN_", new ArrayList<Pair<Double, Double>>());
+
+        Semantics<Marking, Transition> semantics = StochasticNetUtils.getSemantics(net);
+        semantics.initialize(net.getTransitions(), initialMarking);
+        Marking semanticInitialMarking = new Marking(semantics.getCurrentState());
+
+
         for (int i = 0; i < trainingLogTestLog.getSecond().size(); i++){
             simulationTime += (long)(arrivalDist.sample()*timeunit.toMillis(1));
             for (TimeseriesPredictor predictor : predictors) {
-                Pair<Double, Double> predictionAndConfidence = predictor.predict(net, observedEvents, new Date(simulationTime), initialMarking);
+                semantics.setCurrentState(semanticInitialMarking);
+                Pair<Double, Double> predictionAndConfidence = predictor.predict(net, observedEvents, new Date(simulationTime), false, semantics);
                 results.get("Timeseries_" + predictor.getCode()).add(predictionAndConfidence);
             }
 
-            Pair<Double, Double> predictionAndConfidence = gspnPredictor.predict(net, observedEvents, new Date(simulationTime), initialMarking);
+            semantics.setCurrentState(semanticInitialMarking);
+            Pair<Double, Double> predictionAndConfidence = gspnPredictor.predict(net, observedEvents, new Date(simulationTime), false, semantics);
             results.get("GSPN_").add(predictionAndConfidence);
 
         }
 
         Map<Integer, Double> realDurations = new HashMap<>();
         for (XTrace result : trainingLogTestLog.getSecond()){
-            tracebounds = StochasticNetUtils.getBufferedTraceBounds(trainingLog.get(trainingLog.size()-1),0);
-            double durationInHours = (tracebounds.getSecond()-tracebounds.getFirst()) / (double)timeunit.toMillis(1);
-            realDurations.put(realDurations.size(), durationInHours);
+            tracebounds = StochasticNetUtils.getBufferedTraceBounds(result,0);
+            double durationInMillis = (tracebounds.getSecond()-tracebounds.getFirst());
+            realDurations.put(realDurations.size(), durationInMillis);
         }
 
 
@@ -103,6 +117,8 @@ public class ForecastExperimentTest {
 
     private String getOutput(Map<String, List<Pair<Double, Double>>> results, Map<Integer, Double> realDurations, String separator) {
         StringBuilder builder = new StringBuilder();
+
+        builder.append("numCase").append(separator).append("method").append(separator).append("prediction").append(separator).append("confidence_interval").append(separator).append("real_duration").append("\n");
 
         for (String key : results.keySet()){
             int i = 0;
