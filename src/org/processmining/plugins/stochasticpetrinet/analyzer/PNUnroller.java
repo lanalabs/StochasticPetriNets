@@ -1,5 +1,6 @@
 package org.processmining.plugins.stochasticpetrinet.analyzer;
 
+import gnu.trove.map.hash.THashMap;
 import org.deckfour.xes.classification.XEventClass;
 import org.deckfour.xes.classification.XEventClasses;
 import org.deckfour.xes.classification.XEventClassifier;
@@ -25,6 +26,7 @@ import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.Trans
 import org.processmining.plugins.petrinet.manifestreplayer.transclassifier.TransClasses;
 import org.processmining.plugins.petrinet.manifestreplayresult.ManifestEvClassPattern;
 import org.processmining.plugins.petrinet.replayresult.StepTypes;
+import org.processmining.plugins.replayer.replayresult.AllSyncReplayResult;
 import org.processmining.plugins.replayer.replayresult.SyncReplayResult;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
 import org.processmining.plugins.stochasticpetrinet.enricher.ReliableInvisibleTransitionPerfCounter;
@@ -54,16 +56,20 @@ public class PNUnroller {
             System.out.println((now - start) + "ms for replaying the trace.");
             start = now;
         }
-        PetrinetGraph constructPN = constructPN(net, initialMarking, replayResult.getFirst().getStepTypes(), replayResult.getFirst().getNodeInstance(), replayResult.getSecond());
+        Map<Transition, Transition> origTransMap = new THashMap<>();
+        for (Transition t : replayResult.getSecond().getFlatTransArr()){
+            origTransMap.put(t, replayResult.getSecond().getOrigTransFor(t));
+        }
+        PetrinetGraph constructPN = constructPN(net, initialMarking, replayResult.getFirst().getStepTypes(), replayResult.getFirst().getNodeInstance(), origTransMap);
         if (debug) System.out.println((System.currentTimeMillis() - start) + "ms for constructing the net.");
         return constructPN;
     }
 
-//	public PetrinetGraph unrollPNbasedOnAlignment(AllSyncReplayResult replayResult, int alignmentIndex, Petrinet net, Marking initialMarking) throws Exception{
-//		List<StepTypes> stepTypes = replayResult.getStepTypesLst().get(alignmentIndex);
-//		List<Object> nodeInstances = replayResult.getNodeInstanceLst().get(alignmentIndex);
-//		return constructPN(net, initialMarking, stepTypes, nodeInstances, replayResult.getSecond());
-//	}
+	public PetrinetGraph unrollPNbasedOnAlignment(AllSyncReplayResult replayResult, int alignmentIndex, Petrinet net, Marking initialMarking) throws Exception{
+		List<StepTypes> stepTypes = replayResult.getStepTypesLst().get(alignmentIndex);
+		List<Object> nodeInstances = replayResult.getNodeInstanceLst().get(alignmentIndex);
+		return constructPN(net, initialMarking, stepTypes, nodeInstances, null);
+	}
 
     public Map<Transition, Double> replayTraceUnrolledPN(PetrinetGraph net, XLog originalTrace, XEventClasses ec) throws Exception {
         // parameters inits
@@ -180,11 +186,11 @@ public class PNUnroller {
      * @param net
      * @param stepTypes
      * @param nodeInstances
-     * @param second
+     * @param origTransMap maps from new transitions in the efficient net to the original transitions
      * @return
      * @throws Exception
      */
-    private PetrinetGraph constructPN(Petrinet net, Marking initialMarking, List<StepTypes> stepTypes, List<Object> nodeInstances, PNManifestFlattener second) {
+    private PetrinetGraph constructPN(Petrinet net, Marking initialMarking, List<StepTypes> stepTypes, List<Object> nodeInstances, Map<Transition,Transition> origTransMap) {
         Map<Place, Place> mappingPlaces = new HashMap<Place, Place>();
         Map<Transition, Transition> mappingTransitions = new HashMap<Transition, Transition>();
 //		List<Place> incomingPlaces = new ArrayList<Place>();
@@ -224,7 +230,7 @@ public class PNUnroller {
             } else {
                 Transition nodeInstance = (Transition) nodeInstances.get(i);
                 Collection<Transition> transitions = semantics.getExecutableTransitions();
-                Transition selectedTrans = second.getOrigTransFor(nodeInstance);
+                Transition selectedTrans = origTransMap.get(nodeInstance);
                 if ((stepType.equals(StepTypes.LMGOOD) || stepType.equals(StepTypes.MINVI) || stepType.equals(StepTypes.MREAL)) && selectedTrans != null) {
                     // find out how often the transition has been used
                     int countTrans = transitionCounter.get(selectedTrans.getLabel());
