@@ -1475,7 +1475,35 @@ public class StochasticNetUtils {
         return sortedLog;
     }
 
+    public interface Renamer {
+        String getNewName(String name, String lifecycle);
+    }
     public static XLog flattenLifecycles(XLog log) {
+        return renameLog(log, new Renamer() {
+            @Override
+            public String getNewName(String name, String lc) {
+                return name + "_" + lc;
+            }
+        });
+    }
+    public static XLog removeUnderScores(XLog log){
+        return renameLog(log, new Renamer() {
+            @Override
+            public String getNewName(String name, String lifecycle) {
+                return name.replaceAll("_", "§€§");
+            }
+        });
+    }
+    public static XLog replaceUnderscores(XLog log){
+        return renameLog(log, new Renamer() {
+            @Override
+            public String getNewName(String name, String lifecycle) {
+                return name.replaceAll("§€§", "_");
+            }
+        });
+    }
+
+    public static XLog renameLog(XLog log, Renamer renamer){
         XLog merged = XFactoryRegistry.instance().currentDefault().createLog(log.getAttributes());
         for (XTrace trace : log) {
             XTrace newTrace = XFactoryRegistry.instance().currentDefault().createTrace(trace.getAttributes());
@@ -1483,7 +1511,7 @@ public class StochasticNetUtils {
                 XEvent newEvent = XFactoryRegistry.instance().currentDefault().createEvent(event.getAttributes());
                 String name = XConceptExtension.instance().extractName(event);
                 String lc = XLifecycleExtension.instance().extractTransition(event);
-                XConceptExtension.instance().assignName(newEvent, name + "_" + lc);
+                XConceptExtension.instance().assignName(newEvent, renamer.getNewName(name, lc));
                 newTrace.add(newEvent);
             }
             merged.add(newTrace);
