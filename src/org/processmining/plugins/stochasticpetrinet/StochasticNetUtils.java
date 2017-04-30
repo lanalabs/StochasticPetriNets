@@ -1870,7 +1870,8 @@ public class StochasticNetUtils {
                 }
 
                 private void show() {
-                    if (show) {
+                    // limit textual output of progress to 1/1000
+                    if (show && current % 1000 == 0) {
                         System.out.println(message + " -> (" + current + " / " + max + " )");
                     }
                 }
