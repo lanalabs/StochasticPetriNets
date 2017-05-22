@@ -285,7 +285,8 @@ public class AllocationBasedNetGenerator {
         long currentTime = 0;
         PNSimulatorConfig config = new PNSimulatorConfig(1, base.getTimeUnit());
         while (!transitions.isEmpty()) {
-            Triple<Transition, Long, Double> transitionToFire = PNSimulator.pickTransition(semantics, transitions, transitionRemainingTimes, null, base, config, currentTime, 0L, false, false);
+
+            Triple<Transition, Long, Double> transitionToFire = new PNSimulator().pickTransition(semantics, transitions, transitionRemainingTimes, null, base, config, currentTime, 0L, false, false);
 
             TimedTransition origTransition = (TimedTransition) transitionToFire.getFirst();
             if (!origTransition.isInvisible()) {

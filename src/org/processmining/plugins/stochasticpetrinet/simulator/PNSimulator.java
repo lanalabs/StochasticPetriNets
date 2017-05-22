@@ -161,14 +161,14 @@ public class PNSimulator {
             if (context != null) {
                 context.log("Generating " + config.numberOfTraces + " traces...");
                 context.getProgress().setMinimum(0);
-                context.getProgress().setMaximum(config.numberOfTraces);
+                context.getProgress().setMaximum(1000);
             }
 
             if (!config.deterministicBoundedStateSpaceExploration) {
                 // do a trace by trace simulation (assumed independence from each other..)
-                for (int i = 0; i < config.numberOfTraces; i++) {
+                for (long i = 0; i < config.numberOfTraces; i++) {
                     if (context != null) {
-                        context.getProgress().setValue(i);
+                        context.getProgress().setValue((int) ((i/(double)config.numberOfTraces) * 1000));
                     }
 
                     traceStart = getNextArrivalDate(traceStart, config.unitFactor);
@@ -394,7 +394,7 @@ public class PNSimulator {
      * @return
      */
     public Object simulateOneTrace(PetrinetGraph petriNet, Semantics<Marking, Transition> semantics,
-                                   PNSimulatorConfig config, Marking initialMarking, long traceStart, long constraint, int i, boolean useTimeConstraint, Marking finalMarking) {
+                                   PNSimulatorConfig config, Marking initialMarking, long traceStart, long constraint, long i, boolean useTimeConstraint, Marking finalMarking) {
         XTrace trace = createTrace(i, config);
 
         transitionRemainingTimes = new HashMap<Transition, Long>();
@@ -456,7 +456,7 @@ public class PNSimulator {
         }
     }
 
-    protected XTrace createTrace(int i, PNSimulatorConfig config) {
+    protected XTrace createTrace(long i, PNSimulatorConfig config) {
         if (config.simulateTraceless) {
             return null;
         } else {
@@ -646,7 +646,7 @@ public class PNSimulator {
      * @param useOnlyPastTrainingData  a flag that tells us whether only data from the past is allowed for the computation of the remaining time
      * @return long milliseconds that the transition has to wait until it will fire.
      */
-    public static long getTransitionRemainingTime(Transition t, TimeUnit unitFactor, Map<Transition, Long> transitionRemainingTimes,
+    public long getTransitionRemainingTime(Transition t, TimeUnit unitFactor, Map<Transition, Long> transitionRemainingTimes,
                                                   long startOfTransition, double positiveConstraint, LimitedTreeMap<Integer,
             Map<Transition, RealDistribution>> cachedDurations, boolean useOnlyPastTrainingData) {
         // only sample for transitions, that have no memory of their previous enabled periods (stored in the transition clocks)
@@ -683,7 +683,7 @@ public class PNSimulator {
      * @param timedT             {@link TimedTransition} that captures information about the duration distribution from which the sample should be taken.
      * @return
      */
-    public static double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT, TimeUnit unitFactor, LimitedTreeMap<Integer, Map<Transition, RealDistribution>> cachedDurations, boolean useOnlyPastTrainingData) {
+    protected double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT, TimeUnit unitFactor, LimitedTreeMap<Integer, Map<Transition, RealDistribution>> cachedDurations, boolean useOnlyPastTrainingData) {
         RealDistribution dist;
         if (useOnlyPastTrainingData && !(timedT.getDistribution() instanceof StatefulTimeseriesDistribution)) {
             SortedMultiset<ComparablePair<Long, List<Object>>> sortedTrainingData = timedT.getTrainingDataUpTo(startOfTransition);
@@ -751,7 +751,7 @@ public class PNSimulator {
      * @param useOnlyPastTrainingData     flag that indicates whether only past training data is allowed to be used (rolling forecasts), or all training data is allowed to be used in distribution estimation (cross-validation)
      * @return The transition that is picked as the next one to fire with its duration in the current marking
      */
-    public static Triple<Transition, Long, Double> pickTransition(
+    public Triple<Transition, Long, Double> pickTransition(
             Semantics<Marking, Transition> semantics,
             Collection<Transition> transitions,
             Map<Transition, Long> transitionRemainingTimes,

@@ -4,34 +4,39 @@ import org.deckfour.xes.model.XLog;
 import org.processmining.framework.plugin.PluginContext;
 import org.processmining.framework.util.Pair;
 import org.processmining.models.graphbased.directed.petrinet.PetrinetGraph;
+import org.processmining.plugins.InductiveMiner.efficienttree.EfficientTree;
 import org.processmining.plugins.astar.petrinet.manifestreplay.PNManifestFlattener;
 import org.processmining.plugins.petrinet.replayresult.PNRepResult;
 import org.processmining.plugins.stochasticpetrinet.StochasticNetUtils;
+import org.processmining.plugins.stochasticpetrinet.miner.distance.Distance;
 import org.processmining.plugins.stochasticpetrinet.miner.distance.DistanceFunction;
 
-public class LocalSearchMiner extends OptimalMiner {
+public abstract class LocalSearchMiner<M> extends OptimalMiner<M> {
 
-    private static final int MAX_ITER = 10000;
-    private static final int MAX_MOVES_WITHOUT_IMPROVEMENT = 100;
+    protected static final int MAX_ITER = 10000;
+    protected static final int MAX_MOVES_WITHOUT_IMPROVEMENT = 100;
 
-    public LocalSearchMiner(DistanceFunction function, PluginContext context, XLog log, PetrinetGraph model) {
+    public LocalSearchMiner(DistanceFunction function, PluginContext context, XLog log, M model) {
         super(function, context, log, model);
-        updateDistances(currentLog, currentGraph);
+        updateDistances(currentLog, currentModel);
     }
 
-    PNRepResult currentAlignment;
-
-    protected boolean updateDistances(XLog log, PetrinetGraph model) {
+    /**
+     * Updates the distances with the current log and model
+     * @param log log
+     * @param model model
+     * @return whether the current log and model
+     */
+    protected final boolean updateDistances(XLog log, M model){
         boolean improved = false;
-        currentAlignment = ((Pair<PNRepResult, PNManifestFlattener>) StochasticNetUtils.replayLog(context, currentGraph, currentLog, false, true)).getFirst();
 
-        currentDistance = computeDistance(log, model);
-        double dist = function.getFinalDistance(currentDistance);
-        if (dist < bestDistance) {
+        Distance newDistance = computeDistance(log, model);
+        double newDist = function.getFinalDistance(newDistance);
+        if (newDist < bestDistance){
             improved = true;
-            bestDistance = dist;
-            bestModel = currentGraph;
-            bestLog = currentLog;
+            bestDistance = newDist;
+            bestModel = model;
+            bestLog = log;
         }
         return improved;
     }
@@ -42,31 +47,31 @@ public class LocalSearchMiner extends OptimalMiner {
         int movesWithoutImprovement = 0;
 
         while (iter < MAX_ITER && movesWithoutImprovement < MAX_MOVES_WITHOUT_IMPROVEMENT) {
-            moveInLog();
+            currentLog = moveInLog(currentLog, currentModel);
             movesWithoutImprovement++;
 
-            if (updateDistances(currentLog, currentGraph)) {
+            if (updateDistances(currentLog, currentModel)) {
                 movesWithoutImprovement = 0;
             }
 
-            moveInGraph();
+            currentModel = moveInModel(currentModel, currentLog);
             movesWithoutImprovement++;
 
-            if (updateDistances(currentLog, currentGraph)) {
+            if (updateDistances(currentLog, currentModel)) {
                 movesWithoutImprovement = 0;
             }
         }
     }
 
-    private void moveInGraph() {
-        // we assume that the alignment guides us in changing the graph.
-//		currentGraph.getN
-//		currentAlignment.
+    /**
+     * we assume that the alignment guides us in changing the graph.
+     */
+    protected abstract M moveInModel(M model, XLog log);
 
-    }
 
-    private XLog moveInLog() {
-        // TODO Auto-generated method stub
-        return null;
-    }
+    /**
+     * We assume that the alignment
+     * @return XLog adjusted to better fit the current
+     */
+    protected abstract XLog moveInLog(XLog log, M model);
 }

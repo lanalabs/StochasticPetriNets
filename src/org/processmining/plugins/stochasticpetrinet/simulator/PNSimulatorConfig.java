@@ -15,7 +15,7 @@ public class PNSimulatorConfig {
     /**
      * The number of traces to simulate
      */
-    int numberOfTraces;
+    long numberOfTraces;
 
     /**
      * Specifies, whether the simulation should actually produce a log, or rather just simulate and return only the last event's time stamp
@@ -76,7 +76,7 @@ public class PNSimulatorConfig {
     private static int counter = 1;
 
 
-    public PNSimulatorConfig(int numberOfTraces, StochasticNet net) {
+    public PNSimulatorConfig(long numberOfTraces, StochasticNet net) {
         this(numberOfTraces, net.getTimeUnit(), 1, 1, 10000, net.getExecutionPolicy());
     }
 
@@ -84,27 +84,27 @@ public class PNSimulatorConfig {
         this(1000);
     }
 
-    public PNSimulatorConfig(int numberOfTraces) {
+    public PNSimulatorConfig(long numberOfTraces) {
         this(numberOfTraces, TimeUnit.MINUTES);
     }
 
-    public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor) {
+    public PNSimulatorConfig(long numberOfTraces, TimeUnit unitFactor) {
         this(numberOfTraces, unitFactor, 1);
     }
 
-    public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor, long seed) {
+    public PNSimulatorConfig(long numberOfTraces, TimeUnit unitFactor, long seed) {
         this(numberOfTraces, unitFactor, seed, 1);
     }
 
-    public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate) {
+    public PNSimulatorConfig(long numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate) {
         this(numberOfTraces, unitFactor, seed, arrivalRate, 10000);
     }
 
-    public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace) {
+    public PNSimulatorConfig(long numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace) {
         this(numberOfTraces, unitFactor, seed, arrivalRate, maxEventsInOneTrace, ExecutionPolicy.RACE_ENABLING_MEMORY);
     }
 
-    public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace, ExecutionPolicy policy) {
+    public PNSimulatorConfig(long numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace, ExecutionPolicy policy) {
         this(numberOfTraces, unitFactor, seed, arrivalRate, maxEventsInOneTrace, policy, "Log" + counter++);
     }
 
@@ -117,7 +117,7 @@ public class PNSimulatorConfig {
      * @param policy              the {@link ExecutionPolicy} of the network, i.e., how to select the next transition (preselection/race), and how to deal with transitions that lose a race.
      * @param logName             the name of the generated log.
      */
-    public PNSimulatorConfig(int numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace, ExecutionPolicy policy, String logName) {
+    public PNSimulatorConfig(long numberOfTraces, TimeUnit unitFactor, long seed, double arrivalRate, int maxEventsInOneTrace, ExecutionPolicy policy, String logName) {
         this.seed = seed;
         this.numberOfTraces = numberOfTraces;
         this.arrivalRate = arrivalRate;

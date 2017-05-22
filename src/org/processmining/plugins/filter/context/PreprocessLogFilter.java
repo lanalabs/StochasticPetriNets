@@ -7,6 +7,7 @@ import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
 import org.deckfour.xes.info.XLogInfo;
+import org.deckfour.xes.info.XLogInfoFactory;
 import org.deckfour.xes.model.XAttributeMap;
 import org.deckfour.xes.model.XEvent;
 import org.deckfour.xes.model.XLog;
@@ -20,7 +21,7 @@ import java.util.*;
 public class PreprocessLogFilter {
     public static XLog renameUnderscores(XLog input) {
         String fromPattern = "_";
-        String toPattern = "$";
+        String toPattern = "#";
 
         XLog log = XFactoryRegistry.instance().currentDefault().createLog((XAttributeMap) input.getAttributes().clone());
 
@@ -41,7 +42,7 @@ public class PreprocessLogFilter {
         String splitPattern = "_";
 
         XLog log = XFactoryRegistry.instance().currentDefault().createLog((XAttributeMap) input.getAttributes().clone());
-        XLogInfo info = input.getInfo(new XEventNameClassifier());
+        XLogInfo info = XLogInfoFactory.createLogInfo(input, new XEventNameClassifier());
         XEventClasses classes = info.getEventClasses();
         Set<String> eventNames = new HashSet<>();
         for (XEventClass eventClass : classes.getClasses()){
@@ -53,8 +54,7 @@ public class PreprocessLogFilter {
             try {
                 Integer num = Integer.valueOf(parts[parts.length - 1]);
                 String neighborClass = eventClass.getId().substring(0, eventClass.getId().lastIndexOf(splitPattern));
-                if (num == 0 && eventNames.contains(neighborClass+splitPattern+"1")
-                        || num > 0 && eventNames.contains(neighborClass+splitPattern+(num-1))){
+                if (isContainingAllIterations(eventNames, num, neighborClass+splitPattern)){
                     renameMap.put(eventClass.getId(), neighborClass);
                 }
             } catch (NumberFormatException e){
@@ -73,6 +73,16 @@ public class PreprocessLogFilter {
             log.add(newTrace);
         }
         return log;
+    }
+
+    private static boolean isContainingAllIterations(Set<String> eventNames, Integer num, String neighborClass) {
+        if (num == -1){
+            return false;
+        } else if (num == 0 || num == 1){
+            return eventNames.contains(neighborClass+(num+1)) || eventNames.contains(neighborClass+(num - 1));
+        } else {
+            return eventNames.contains(neighborClass+(num-1)) && isContainingAllIterations(eventNames, num-1, neighborClass);
+        }
     }
 
     public static XLog reorderByTime(XLog input) {

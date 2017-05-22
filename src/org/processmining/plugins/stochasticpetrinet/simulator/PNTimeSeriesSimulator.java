@@ -376,7 +376,7 @@ public class PNTimeSeriesSimulator extends PNSimulator {
     /**
      *
      */
-    protected double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT, TimeUnit unitFactor) {
+    protected double sampleDurationForTransition(double positiveConstraint, long startOfTransition, TimedTransition timedT, TimeUnit unitFactor, LimitedTreeMap<Integer, Map<Transition, RealDistribution>> cachedDurations, boolean useOnlyPastTrainingData) {
         if (timedT.getTrainingData() != null) {
 //			try{
 //			String fitName = null;
