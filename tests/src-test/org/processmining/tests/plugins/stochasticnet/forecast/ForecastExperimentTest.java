@@ -2,6 +2,7 @@ package org.processmining.tests.plugins.stochasticnet.forecast;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.math3.distribution.ExponentialDistribution;
+import org.apache.commons.math3.stat.descriptive.DescriptiveStatistics;
 import org.deckfour.xes.extension.std.XConceptExtension;
 import org.deckfour.xes.extension.std.XTimeExtension;
 import org.deckfour.xes.factory.XFactoryRegistry;
@@ -18,6 +19,9 @@ import org.processmining.plugins.stochasticpetrinet.miner.StochasticMinerPlugin;
 import org.processmining.plugins.stochasticpetrinet.prediction.TimePredictor;
 import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeSeriesConfiguration;
 import org.processmining.plugins.stochasticpetrinet.prediction.timeseries.TimeseriesPredictor;
+import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulator;
+import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorConfig;
+import org.processmining.plugins.stochasticpetrinet.simulator.PNSimulatorPlugin;
 import org.processmining.tests.plugins.stochasticnet.TestUtils;
 
 import java.io.File;
@@ -30,9 +34,10 @@ import java.util.concurrent.TimeUnit;
 public class ForecastExperimentTest {
 
     public static final String TRAFFIC_LOG = "bpm2016/Road_Traffic_Fine_Management_Process.xes.gz";
+    public static final String TIMESERIES = "Timeseries_";
+    public static final String GSPN = "GSPN";
 
-    @Test
-    public void testMethod() throws Exception {
+    public void main(String...args) throws Exception {
         XLog log = TestUtils.loadLog(TRAFFIC_LOG);
         System.out.println("loaded log:    \t"+ XConceptExtension.instance().extractName(log));
         System.out.println("traces loaded: \t"+log.size());
@@ -46,10 +51,23 @@ public class ForecastExperimentTest {
 
         TimeUnit timeunit = TimeUnit.HOURS;
 
+        DescriptiveStatistics statsBefore = StochasticNetUtils.getDurationsStats(trainingLog);
+
         // discover a "good" Petri net
         Object[] discoveredModel = StochasticMinerPlugin.discoverStochNetModel(StochasticNetUtils.getDummyUIContext(), trainingLog);
         StochasticNet net = (StochasticNet) discoveredModel[0];
         Marking initialMarking = (Marking) discoveredModel[1];
+
+        PNSimulator simulator = new PNSimulator();
+        PNSimulatorConfig config = new PNSimulatorConfig(statsBefore.getN(), net);
+        XLog logSim = simulator.simulate(null, net, StochasticNetUtils.getSemantics(net), config, initialMarking);
+
+        DescriptiveStatistics statsSimulated = StochasticNetUtils.getDurationsStats(logSim);
+        System.out.println("stats before: "+statsBefore.toString());
+        System.out.println("stats after enrichment: "+statsSimulated.toString());
+        System.out.println("mean duration before in days: "+statsBefore.getMean() / TimeUnit.DAYS.toMillis(1));
+        System.out.println("mean duration after in days: "+statsSimulated.getMean() / TimeUnit.DAYS.toMillis(1));
+        System.out.println("bias in the mean in days: "+((statsSimulated.getMean() - statsBefore.getMean())/TimeUnit.DAYS.toMillis(1)));
         // StochasticNetUtils.exportAsDOTFile(net, "out", "out.dot");
 
         // simulate the same number of traces as given in the first half with an exponential arrival rate:
@@ -80,9 +98,9 @@ public class ForecastExperimentTest {
         XTrace observedEvents = XFactoryRegistry.instance().currentDefault().createTrace();
         Map<String, List<Pair<Double,Double>>> results = new HashMap<>();
         for (TimeseriesPredictor predictor : predictors) {
-            results.put("Timeseries_"+predictor.getCode(), new ArrayList<Pair<Double, Double>>());
+            results.put(TIMESERIES +predictor.getCode(), new ArrayList<Pair<Double, Double>>());
         }
-        results.put("GSPN_", new ArrayList<Pair<Double, Double>>());
+        results.put(GSPN, new ArrayList<Pair<Double, Double>>());
 
         Semantics<Marking, Transition> semantics = StochasticNetUtils.getSemantics(net);
         semantics.initialize(net.getTransitions(), initialMarking);
@@ -94,13 +112,12 @@ public class ForecastExperimentTest {
             for (TimeseriesPredictor predictor : predictors) {
                 semantics.setCurrentState(semanticInitialMarking);
                 Pair<Double, Double> predictionAndConfidence = predictor.predict(net, observedEvents, new Date(simulationTime), false, semantics);
-                results.get("Timeseries_" + predictor.getCode()).add(predictionAndConfidence);
+                results.get(TIMESERIES + predictor.getCode()).add(predictionAndConfidence);
             }
 
             semantics.setCurrentState(semanticInitialMarking);
             Pair<Double, Double> predictionAndConfidence = gspnPredictor.predict(net, observedEvents, new Date(simulationTime), false, semantics);
-            results.get("GSPN_").add(predictionAndConfidence);
-
+            results.get(GSPN).add(predictionAndConfidence);
         }
 
         Map<Integer, Double> realDurations = new HashMap<>();
@@ -112,7 +129,6 @@ public class ForecastExperimentTest {
 
 
         FileUtils.write(new File("prediction_results.csv"), getOutput(results, realDurations, ","));
-        // enrich the net with time series:
     }
 
     private String getOutput(Map<String, List<Pair<Double, Double>>> results, Map<Integer, Double> realDurations, String separator) {
