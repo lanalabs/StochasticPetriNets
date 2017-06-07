@@ -23,5 +23,7 @@
         <dependency org="prom" name="ILPMiner" rev="latest" changing="true" transitive="true" />
         <dependency org="prom" name="PNetAlignmentAnalysis" rev="latest" changing="true" transitive="true" />
         <dependency org="prom" name="InductiveMiner" rev="latest" changing="true" transitive="true" />
+
+		<dependency org="org.hamcrest" name="hamcrest-all" rev="1.3"/>
      </dependencies>
 </ivy-module>

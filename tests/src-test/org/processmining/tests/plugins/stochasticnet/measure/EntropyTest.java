@@ -5,7 +5,9 @@ import org.processmining.models.graphbased.directed.petrinet.StochasticNet;
 import org.processmining.plugins.stochasticpetrinet.measures.ComputedMeasures;
 import org.processmining.plugins.stochasticpetrinet.measures.MeasureConfig;
 import org.processmining.plugins.stochasticpetrinet.measures.MeasurePlugin;
+import org.processmining.plugins.stochasticpetrinet.measures.MeasureProvider;
 import org.processmining.plugins.stochasticpetrinet.measures.entropy.EntropyCalculatorApproximate;
+import org.processmining.plugins.stochasticpetrinet.measures.entropy.EntropyCalculatorQuantile;
 import org.processmining.tests.plugins.stochasticnet.TestUtils;
 
 public class EntropyTest {
@@ -173,5 +175,29 @@ public class EntropyTest {
 		ComputedMeasures measures = plugin.getMeasure(null, model);
 		System.out.println(measures);
 	}
-	
+
+
+	@Test
+	public void testEntropyPQL() throws Exception {
+
+		double quantile = 0.8;
+
+		System.out.println("RUNNING WITH STATE SPACE QUANTILE: "+quantile);
+		for (int i = 1; i <= 10; i++) {
+			long start = System.currentTimeMillis();
+			Object[] netAndMarking = TestUtils.loadModel("pql/"+i, true);
+
+			StochasticNet model = (StochasticNet) netAndMarking[0];
+
+			MeasurePlugin plugin = new MeasurePlugin();
+			MeasureConfig config = new MeasureConfig(new EntropyCalculatorQuantile(quantile));
+			ComputedMeasures measures = plugin.getMeasure(null, model, config);
+
+			System.out.println("-----------");
+			System.out.println("model "+i+":  (took "+(System.currentTimeMillis()-start)+"ms)");
+			System.out.println("-----------");
+			System.out.println(measures);
+			System.out.println("-----------");
+		}
+	}
 }

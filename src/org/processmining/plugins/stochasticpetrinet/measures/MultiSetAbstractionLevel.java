@@ -6,6 +6,9 @@ import org.apache.commons.collections15.bag.HashBag;
 import java.util.Arrays;
 import java.util.Iterator;
 
+/**
+ * Abstracting from permutations, but still keeping count of executions
+ */
 public class MultiSetAbstractionLevel extends AbstractionLevel {
 
     public String getName() {
@@ -26,6 +29,11 @@ public class MultiSetAbstractionLevel extends AbstractionLevel {
         }
         Arrays.sort(result);
         return result;
+    }
+
+    @Override
+    public double getLevel() {
+        return 1;
     }
 
 }

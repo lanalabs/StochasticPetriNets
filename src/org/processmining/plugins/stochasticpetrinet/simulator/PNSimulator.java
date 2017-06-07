@@ -35,6 +35,7 @@ import org.utils.datastructures.ComparablePair;
 import org.utils.datastructures.LimitedTreeMap;
 import org.utils.datastructures.Triple;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 /**
@@ -186,8 +187,8 @@ public class PNSimulator {
                 long time = System.currentTimeMillis();
 
                 XTrace trace = createTrace(1, config);
-                LinkedList<Triple<XTrace, Marking, Long>> statesToVisit = new LinkedList<>();
-                statesToVisit.add(new Triple<>(trace, initialMarking, time));
+                LinkedList<VisitState> statesToVisit = new LinkedList<>();
+                statesToVisit.add(new VisitState(trace, initialMarking, time, new BigDecimal(1.0)));
                 semantics.initialize(petriNet.getTransitions(), initialMarking);
                 Marking endPlaces = getEndPlaces(petriNet);
                 if (petriNet.getLabel().equals("s00000633##s00004419")) {
@@ -215,14 +216,16 @@ public class PNSimulator {
         return endPlaces;
     }
 
-    protected void addAllDifferentTracesToLog(XLog log, PetrinetGraph petriNet, LinkedList<Triple<XTrace, Marking, Long>> statesToVisit,
+    protected void addAllDifferentTracesToLog(XLog log, PetrinetGraph petriNet, LinkedList<VisitState> statesToVisit,
                                               Semantics<Marking, Transition> semantics, Map<String, Set<Integer>> numberOfDecisionTransitions, PNSimulatorConfig config, Marking endPlaces) {
 
-        while (!statesToVisit.isEmpty()) {
-            Triple<XTrace, Marking, Long> currentStateWithTime = statesToVisit.removeFirst();
-            XTrace prefix = currentStateWithTime.getFirst();
-            Marking currentMarking = currentStateWithTime.getSecond();
-            long time = currentStateWithTime.getThird();
+        BigDecimal cumulativeProb = new BigDecimal(0.0);
+        while (!statesToVisit.isEmpty() && cumulativeProb.doubleValue() < config.getQuantile()) {
+            VisitState currentStateWithTime = statesToVisit.removeFirst();
+            XTrace prefix = currentStateWithTime.getTrace();
+            Marking currentMarking = currentStateWithTime.getMarking();
+            long time = currentStateWithTime.getTime();
+            BigDecimal probability = currentStateWithTime.getProbability();
 
 //			if (prefix.size() > config.maxEventsInOneTrace*10){
 //				throw new IllegalArgumentException("Petri net contains a potential lifelock!");
@@ -245,6 +248,7 @@ public class PNSimulator {
                     XConceptExtension.instance().assignInstance(e, instance);
                 }
                 log.add(prefix);
+                cumulativeProb = cumulativeProb.add(probability);
             } else {
                 // explore all executable transitions:
                 semantics.setCurrentState(currentMarking);
@@ -259,6 +263,8 @@ public class PNSimulator {
 //					if (!numberOfDecisionTransitions.containsKey(markingTransitionCombination)){
 //						numberOfDecisionTransitions.put(markingTransitionCombination, new HashSet<Integer>());
 //					}
+
+                    BigDecimal probOfTransition = new BigDecimal(1.0/executableTransitions.size());
 
                     int numberOfTimesAlreadyInTrace = 0;
 
@@ -301,7 +307,7 @@ public class PNSimulator {
                         } catch (IllegalTransitionException e1) {
                             e1.printStackTrace();
                         }
-                        statesToVisit.addLast(new Triple<XTrace, Marking, Long>(clone, semantics.getCurrentState(), time));
+                        statesToVisit.addLast(new VisitState(clone, semantics.getCurrentState(), time, probability.multiply(probOfTransition)));
                     }
                 }
             }
@@ -575,7 +581,7 @@ public class PNSimulator {
 
 
     protected XEvent createSimulatedEvent(Transition transition, PetrinetGraph net, long firingTime, String instance) {
-        String name = transition.getLabel();
+        String name = getLabel(transition);
 
         XAttributeMap eventAttributes = new XAttributeMapImpl();
         eventAttributes.put(LIFECYCLE_TRANSITION, new XAttributeLiteralImpl(LIFECYCLE_TRANSITION,
@@ -586,6 +592,13 @@ public class PNSimulator {
         eventAttributes.put(TIME_TIMESTAMP, new XAttributeTimestampImpl(TIME_TIMESTAMP, firingTime));
         XEvent e = XFactoryRegistry.instance().currentDefault().createEvent(eventAttributes);
         return e;
+    }
+
+    private String getLabel(Transition transition) {
+        if (transition.getLabel() != null && !transition.getLabel().trim().isEmpty()){
+            return transition.getLabel();
+        }
+        return "NA";
     }
 
 //	/**

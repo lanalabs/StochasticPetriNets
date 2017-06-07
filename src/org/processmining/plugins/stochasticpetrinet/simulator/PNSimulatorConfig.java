@@ -75,6 +75,8 @@ public class PNSimulatorConfig {
      */
     private static int counter = 1;
 
+    private double quantile;
+
 
     public PNSimulatorConfig(long numberOfTraces, StochasticNet net) {
         this(numberOfTraces, net.getTimeUnit(), 1, 1, 10000, net.getExecutionPolicy());
@@ -158,5 +160,13 @@ public class PNSimulatorConfig {
 
     public TimeUnit getUnitFactor() {
         return this.unitFactor;
+    }
+
+    public void setQuantile(double quantile) {
+        this.quantile = quantile;
+    }
+
+    public double getQuantile() {
+        return quantile;
     }
 }

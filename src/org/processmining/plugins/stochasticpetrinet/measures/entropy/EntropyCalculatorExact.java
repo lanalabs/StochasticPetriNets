@@ -24,6 +24,13 @@ import java.util.Map;
 
 public class EntropyCalculatorExact extends AbstractEntropyCalculator {
 
+    protected PNSimulatorConfig config;
+
+    public EntropyCalculatorExact() {
+        this.config = new PNSimulatorConfig(Integer.MAX_VALUE, TimeUnit.MINUTES);
+        this.config.setDeterministicBoundedStateSpaceExploration(true);
+    }
+
     public String getMeasureName() {
         return "Model entropy measure (exact)";
     }
@@ -35,8 +42,7 @@ public class EntropyCalculatorExact extends AbstractEntropyCalculator {
         Semantics<Marking, Transition> semantics = StochasticNetUtils.getSemantics(net);
 
         PNSimulator simulator = new PNSimulator();
-        PNSimulatorConfig config = new PNSimulatorConfig(Integer.MAX_VALUE, TimeUnit.MINUTES);
-        config.setDeterministicBoundedStateSpaceExploration(true);
+
 
         XLog simulatedLog = simulator.simulate(context, net, semantics, config, initialMarking);
         XLogInfo info = XLogInfoFactory.createLogInfo(simulatedLog, XLogInfoImpl.STANDARD_CLASSIFIER);

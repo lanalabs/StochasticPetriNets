@@ -3,18 +3,16 @@ package org.processmining.plugins.stochasticpetrinet.measures;
 import org.reflections.Reflections;
 
 import java.lang.reflect.Modifier;
-import java.util.HashSet;
-import java.util.Set;
-import java.util.Vector;
+import java.util.*;
 
 public class MeasureConfig {
 
     /**
      * The abstraction to apply to a trace of events
      */
-    private Set<AbstractionLevel> abstractionLevels;
+    private Collection<AbstractionLevel> abstractionLevels;
 
-    private Set<MeasureProvider> measureProviders;
+    private Collection<MeasureProvider> measureProviders;
 
     public MeasureConfig() {
         this(getAbstractionLevelsDynamically());
@@ -27,22 +25,15 @@ public class MeasureConfig {
     /**
      * Creates a configuration with only a given abstraction level
      *
-     * @param level
+     * @param levels
      */
     public MeasureConfig(AbstractionLevel... levels) {
         this(levels, getMeasureProvidersDynamically());
     }
 
     public MeasureConfig(AbstractionLevel[] levels, MeasureProvider... providers) {
-        this.abstractionLevels = new HashSet<>();
-        for (AbstractionLevel level : levels) {
-            this.abstractionLevels.add(level);
-        }
-
-        this.measureProviders = new HashSet<>();
-        for (MeasureProvider provider : providers) {
-            this.measureProviders.add(provider);
-        }
+        this.abstractionLevels = Arrays.asList(levels);
+        this.measureProviders = Arrays.asList(providers);
     }
 
 
@@ -80,23 +71,24 @@ public class MeasureConfig {
                 e.printStackTrace();
             }
         }
+        Arrays.sort(levels);
         return levels;
     }
 
 
-    public Set<AbstractionLevel> getAbstractionLevels() {
+    public Collection<AbstractionLevel> getAbstractionLevels() {
         return abstractionLevels;
     }
 
-    public void setAbstractionLevel(Set<AbstractionLevel> abstractionLevels) {
+    public void setAbstractionLevel(Collection<AbstractionLevel> abstractionLevels) {
         this.abstractionLevels = abstractionLevels;
     }
 
-    public Set<MeasureProvider> getMeasureProviders() {
+    public Collection<MeasureProvider> getMeasureProviders() {
         return measureProviders;
     }
 
-    public void setMeasureProviders(Set<MeasureProvider> measureProviders) {
+    public void setMeasureProviders(Collection<MeasureProvider> measureProviders) {
         this.measureProviders = measureProviders;
     }
 

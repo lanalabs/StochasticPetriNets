@@ -64,9 +64,11 @@ public class PerformanceVisualization {
             String label = "" + m.occurrences(p);
             map.putViewSpecific(p, AttributeMap.LABEL, label);
             map.putViewSpecific(p, AttributeMap.TOOLTIP, p.getLabel());
-            map.putViewSpecific(p, AttributeMap.SHOWLABEL, !label.equals(""));
+            map.putViewSpecific(p, AttributeMap.SHOWLABEL, !label.equals("") && !label.equals("null"));
         }
         for (Transition t : sNet.getTransitions()) {
+            map.putViewSpecific(t, AttributeMap.SHOWLABEL, t.getLabel()!=null && !t.getLabel().equals("") && !t.getLabel().equals("null"));
+            map.putViewSpecific(t, AttributeMap.LABEL, t.getLabel());
             if (t instanceof TimedTransition) {
                 TimedTransition tt = (TimedTransition) t;
                 map.putViewSpecific(t, AttributeMap.LABEL, t.getLabel() + " (" + tt.getWeight() + ")");

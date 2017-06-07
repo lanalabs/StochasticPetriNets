@@ -8,6 +8,10 @@ public class EntropyCalculatorQuantile extends EntropyCalculatorExact {
 
     private final double quantile;
 
+    public EntropyCalculatorQuantile() {
+        this(0.9);
+    }
+
     /**
      * Constructs a calculator that measures the entropy of a model's possible runs up to a given quantile o
      * @param quantile
@@ -18,6 +22,7 @@ public class EntropyCalculatorQuantile extends EntropyCalculatorExact {
             throw new IllegalArgumentException("Confidence must be between 0 and 1!");
         }
         this.quantile = quantile;
+        this.config.setQuantile(quantile);
     }
 
     public String getMeasureName() {

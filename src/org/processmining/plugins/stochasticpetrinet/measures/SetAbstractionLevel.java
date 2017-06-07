@@ -5,6 +5,9 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
+/**
+ * Abstracts from sequences and only retains the set of elements in the sequence, disregards permutations and also frequencies.
+ */
 public class SetAbstractionLevel extends AbstractionLevel {
 
     public String getName() {
@@ -25,5 +28,10 @@ public class SetAbstractionLevel extends AbstractionLevel {
         }
         Arrays.sort(result);
         return result;
+    }
+
+    @Override
+    public double getLevel() {
+        return 2;
     }
 }
