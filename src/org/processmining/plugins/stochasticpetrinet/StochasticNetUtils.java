@@ -912,10 +912,10 @@ public class StochasticNetUtils {
                                                             TransClasses transClasses) {
         // event classes, costs
         Map<XEventClass, Integer> mapEvClass2Cost = new HashMap<XEventClass, Integer>();
-        XEventClasses ecLog = XLogInfoFactory.createLogInfo(originalTrace, XLogInfoImpl.STANDARD_CLASSIFIER)
+        XEventClasses ecLog = XLogInfoFactory.createLogInfo(originalTrace, classifier)
                 .getEventClasses();
         for (XEventClass c : ecLog.getClasses()) {
-            mapEvClass2Cost.put(c, 100);
+            mapEvClass2Cost.put(c, 1000);
         }
         // transition classes
         Map<TransClass, Integer> trans2Cost = new HashMap<TransClass, Integer>();
@@ -924,7 +924,7 @@ public class StochasticNetUtils {
             // check if tc corresponds with invisible transition
             boolean check = getTransitionClassIsInvisible(tc, net);
             if (!check) {
-                trans2Cost.put(tc, 100);
+                trans2Cost.put(tc, 1000);
             } else {
                 trans2Cost.put(tc, 2);
             }
