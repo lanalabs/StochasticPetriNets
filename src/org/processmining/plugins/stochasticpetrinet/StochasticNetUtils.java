@@ -203,6 +203,10 @@ public class StochasticNetUtils {
         return getInitialMarking(context, petriNet, cacheEnabled);
     }
 
+    public static TransEvClassMapping getEvClassMapping(PetrinetGraph sNet, XLog log) {
+        return getEvClassMapping(sNet, log, XLogInfoImpl.STANDARD_CLASSIFIER);
+    }
+
     /**
      * Gets a very simple mapping based on the naming of activities
      *
@@ -210,11 +214,11 @@ public class StochasticNetUtils {
      * @param log
      * @return
      */
-    public static TransEvClassMapping getEvClassMapping(PetrinetGraph sNet, XLog log) {
+    public static TransEvClassMapping getEvClassMapping(PetrinetGraph sNet, XLog log, XEventClassifier classifier) {
         XEventClass evClassDummy = EvClassLogPetrinetConnectionFactoryUI.DUMMY;
-        XEventClasses ecLog = XLogInfoFactory.createLogInfo(log, XLogInfoImpl.STANDARD_CLASSIFIER).getEventClasses();
+        XEventClasses ecLog = XLogInfoFactory.createLogInfo(log, classifier).getEventClasses();
         Iterator<Transition> transIt;
-        TransEvClassMapping mapping = new TransEvClassMapping(XLogInfoImpl.STANDARD_CLASSIFIER, evClassDummy);
+        TransEvClassMapping mapping = new TransEvClassMapping(classifier, evClassDummy);
         transIt = sNet.getTransitions().iterator();
         while (transIt.hasNext()) {
             Transition trans = transIt.next();
@@ -222,9 +226,12 @@ public class StochasticNetUtils {
             for (XEventClass ec : ecLog.getClasses()) {
                 String[] ecBaseParts = ec.getId().split("\\+|" + SEPARATOR_STRING);
                 String label = trans.getLabel() == null ? "" : trans.getLabel();
+                if (ec.getId().equals(label)){
+                    mapping.put(trans, ec);
+                }
                 String transitionLabel = label.split(SEPARATOR_STRING)[0];
                 String ecBaseName = ecBaseParts[0];
-                if (ecBaseName.equals(transitionLabel) || (ecBaseName + "+complete").equals(transitionLabel)) {
+                if (!mapping.containsKey(trans) && (ecBaseName.equals(transitionLabel) || (ecBaseName + "+complete").equals(transitionLabel))) {
                     // found the one
                     mapping.put(trans, ec);
                 }
