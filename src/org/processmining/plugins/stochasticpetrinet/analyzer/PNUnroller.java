@@ -289,7 +289,7 @@ public class PNUnroller {
     private Transition selectTransition(Collection<Transition> transitions, Map<Transition, Transition> origTransMap, Transition nodeInstance) {
         Transition trans;
         if (origTransMap != null && origTransMap.containsKey(nodeInstance)){
-            trans = origTransMap.get(nodeInstance)
+            trans = origTransMap.get(nodeInstance);
         } else {
             trans = getNameEqualTransition(transitions, nodeInstance);
         }
