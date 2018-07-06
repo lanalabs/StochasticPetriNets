@@ -230,7 +230,7 @@ public class PNUnroller {
             } else {
                 Transition nodeInstance = (Transition) nodeInstances.get(i);
                 Collection<Transition> transitions = semantics.getExecutableTransitions();
-                Transition selectedTrans = origTransMap.get(nodeInstance);
+                Transition selectedTrans = selectTransition(transitions, origTransMap, nodeInstance);
                 if ((stepType.equals(StepTypes.LMGOOD) || stepType.equals(StepTypes.MINVI) || stepType.equals(StepTypes.MREAL)) && selectedTrans != null) {
                     // find out how often the transition has been used
                     int countTrans = transitionCounter.get(selectedTrans.getLabel());
@@ -284,6 +284,16 @@ public class PNUnroller {
             }
         }
         return unrolPN;
+    }
+
+    private Transition selectTransition(Collection<Transition> transitions, Map<Transition, Transition> origTransMap, Transition nodeInstance) {
+        Transition trans;
+        if (origTransMap != null && origTransMap.containsKey(nodeInstance)){
+            trans = origTransMap.get(nodeInstance)
+        } else {
+            trans = getNameEqualTransition(transitions, nodeInstance);
+        }
+        return trans;
     }
 
     private Transition getNameEqualTransition(Collection<Transition> transitions, Transition nodeInstance) {
