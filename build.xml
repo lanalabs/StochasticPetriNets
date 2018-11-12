@@ -19,7 +19,7 @@
 		<property name="author" value="Andreas Rogge-Solti" />
 		<property name="organization" value="Wirtschaftsuniversität Wien, Austria" />
 		<property name="description" value="StochasticPetriNets" />
-		<property name="license" value="LGPL" />
+		<property name="license" value="GPL" />
 		<property name="logo" value="http://www.solti.de/andi/logo.png" />
 		
 
