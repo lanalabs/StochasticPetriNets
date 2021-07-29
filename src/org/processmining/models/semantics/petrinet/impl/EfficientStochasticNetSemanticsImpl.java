@@ -68,9 +68,17 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 		transitionOutputs = new HashMap<Short, List<Pair<Short,Short>>>();
 		
 		transitionMatrix = new short[this.transitions.length][];
+		short[][] transitionMatrixPositive = new short[this.transitions.length][];
+		short[][] transitionMatrixNegative = new short[this.transitions.length][];
 		for (short i = 0; i < this.transitions.length; i++){
 			transitionMatrix[i] = new short[this.places.length];
 			Arrays.fill(transitionMatrix[i],(short)0);
+
+			transitionMatrixPositive[i] = new short[this.places.length];
+			Arrays.fill(transitionMatrixPositive[i], (short) 0);
+
+			transitionMatrixNegative[i] = new short[this.places.length];
+			Arrays.fill(transitionMatrixNegative[i], (short) 0);
 			
 			List<Pair<Short,Short>> transitionInput = new ArrayList<Pair<Short,Short>>();
 			List<Pair<Short,Short>> transitionOutput = new ArrayList<Pair<Short,Short>>();
@@ -82,6 +90,7 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 				if (node instanceof Place){
 					int placePos = placePositionInArray.get(node);
 					transitionMatrix[i][placePos]--;
+					transitionMatrixNegative[i][placePos]--;
 				}
 			}
 			for (PetrinetEdge<? extends PetrinetNode, ? extends PetrinetNode> edge : t.getGraph().getOutEdges(t)){
@@ -89,16 +98,17 @@ public class EfficientStochasticNetSemanticsImpl implements StochasticNetSemanti
 				if (node instanceof Place){
 					int placePos = placePositionInArray.get(node);
 					transitionMatrix[i][placePos]++;
+					transitionMatrixPositive[i][placePos]++;
 				}
 			}
 			for (short place = 0; place < this.places.length; place++){
 				if (!dependentTransitions.containsKey(place)){
 					dependentTransitions.put(place, new HashSet<Short>());
 				}
-				if (transitionMatrix[i][place]>0){
-					transitionOutput.add(new Pair<Short, Short>(place,transitionMatrix[i][place]));
+				if (transitionMatrix[i][place]>0 || transitionMatrixPositive[i][place]>0) {
+					transitionOutput.add(new Pair<Short,Short>(place,transitionMatrix[i][place]));
 				}
-				if (transitionMatrix[i][place]<0){
+				if (transitionMatrix[i][place]<0 || transitionMatrixNegative[i][place]<0) {
 					dependentTransitions.get(place).add(i);
 					transitionInput.add(new Pair<Short, Short>(place,(short)-transitionMatrix[i][place]));
 				}
