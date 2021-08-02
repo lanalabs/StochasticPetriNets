@@ -550,8 +550,9 @@ public class StochasticNetUtils {
 		PNManifestReplayerParameter parameters = getParameters(originalTrace, mapping, net, initialMarking,	finalMarking, classifier, transClasses);
 		PNRepResult repResult =  (PNRepResult) replayLog(null, net, originalTrace, parameters, false);
 		if (repResult.size() > 0){
-			SyncReplayResult result = repResult.first();
-			return result;
+			throw new RuntimeException("Not implemented in this Version. Fix the Dependencies to get this to work. (If you can :-D )");
+//			SyncReplayResult result = repResult.first();
+//			return result;
 		}
 		throw new IllegalArgumentException("Could not replay trace on Model:\n"+debugTrace(originalTrace.get(0)));
 	}
